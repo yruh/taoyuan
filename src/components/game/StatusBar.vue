@@ -62,6 +62,7 @@
         <Button class="!hidden btn-danger py-0 px-2 min-h-0 md:!flex" :icon="Moon" :icon-size="12" @click.stop="handleSleep">
           {{ sleepLabel }}
         </Button>
+        <Button class="!hidden py-0 px-2 min-h-0 md:!flex" :icon="NotebookText" :icon-size="12" @click="emit('request-log')">日志</Button>
         <Button class="!hidden btn-danger py-0 px-2 min-h-0 md:!flex" :icon="SettingsIcon" @click="showSettings = true">
           <span class="hidden md:inline">设置</span>
         </Button>
@@ -80,10 +81,10 @@
   import MobileMapMenu from '@/components/game/MobileMapMenu.vue'
   import SettingsDialog from '@/components/game/SettingsDialog.vue'
   import { DAY_START_HOUR, DAY_END_HOUR } from '@/data/timeConstants'
-  import { Zap, Heart, Clock, Coins, Moon, Map, Settings as SettingsIcon } from 'lucide-vue-next'
+  import { Zap, Heart, Clock, Coins, Moon, Map, NotebookText, Settings as SettingsIcon } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
 
-  const emit = defineEmits<{ 'request-sleep': [] }>()
+  const emit = defineEmits<{ 'request-sleep': []; 'request-log': [] }>()
 
   const route = useRoute()
   const gameStore = useGameStore()

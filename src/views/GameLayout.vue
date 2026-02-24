@@ -5,7 +5,7 @@
     :class="{ 'py-10': Capacitor.isNativePlatform() }"
   >
     <!-- 状态栏 -->
-    <StatusBar @request-sleep="showSleepConfirm = true" />
+    <StatusBar @request-sleep="showSleepConfirm = true" @request-log="showMessageHistory = true" />
 
     <Button class="text-center justify-center !text-sm md:!hidden" :icon="Moon" :icon-size="12" @click.stop="showSleepConfirm = true">
       {{ sleepLabel }}
@@ -27,12 +27,16 @@
     <button class="mobile-setting-btn md:!hidden" @click="showSettings = true">
       <SettingsIcon :size="20" />
     </button>
+    <button class="mobile-log-btn md:!hidden" @click="showMessageHistory = true">
+      <NotebookText :size="20" />
+    </button>
     <!-- 虚空箱远程访问按钮 -->
     <button v-if="warehouseStore.hasVoidChest" class="mobile-void-btn" @click="showVoidModal = true">
       <Archive :size="20" />
     </button>
 
     <SettingsDialog :open="showSettings" @close="showSettings = false" />
+    <MessageHistoryDialog :open="showMessageHistory" @close="showMessageHistory = false" />
 
     <!-- 移动端地图菜单 -->
     <MobileMapMenu :open="showMobileMap" :current="currentPanel" @close="showMobileMap = false" />
@@ -259,10 +263,11 @@
   import { useGameClock } from '@/composables/useGameClock'
   import { useAudio } from '@/composables/useAudio'
   import type { Quality } from '@/types'
-  import { Moon, X, Map, Settings as SettingsIcon, Archive, ArrowDown } from 'lucide-vue-next'
+  import { Moon, X, Map, NotebookText, Settings as SettingsIcon, Archive, ArrowDown } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
   import MobileMapMenu from '@/components/game/MobileMapMenu.vue'
   import StatusBar from '@/components/game/StatusBar.vue'
+  import MessageHistoryDialog from '@/components/game/MessageHistoryDialog.vue'
   import EventDialog from '@/components/game/EventDialog.vue'
   import HeartEventDialog from '@/components/game/HeartEventDialog.vue'
   import PerkSelectDialog from '@/components/game/PerkSelectDialog.vue'
@@ -319,6 +324,8 @@
 
   /** 设置弹窗 */
   const showSettings = ref(false)
+  /** 消息记录弹窗 */
+  const showMessageHistory = ref(false)
 
   // 实时时钟生命周期
   const saveStore = useSaveStore()
@@ -520,7 +527,8 @@
 <style scoped>
   /* 移动端地图按钮 */
   .mobile-map-btn,
-  .mobile-setting-btn {
+  .mobile-setting-btn,
+  .mobile-log-btn {
     position: fixed;
     bottom: calc(calc(0.35rem * 10) + constant(safe-area-inset-bottom, 0px));
     bottom: calc(calc(0.35rem * 10) + env(safe-area-inset-bottom, 0px));
@@ -547,10 +555,15 @@
     bottom: calc(calc(0.35rem * 10) + 48px + env(safe-area-inset-bottom, 0px));
   }
 
-  .mobile-void-btn {
-    position: fixed;
+  .mobile-log-btn {
     bottom: calc(calc(0.35rem * 10) + 96px + constant(safe-area-inset-bottom, 0px));
     bottom: calc(calc(0.35rem * 10) + 96px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-void-btn {
+    position: fixed;
+    bottom: calc(calc(0.35rem * 10) + 144px + constant(safe-area-inset-bottom, 0px));
+    bottom: calc(calc(0.35rem * 10) + 144px + env(safe-area-inset-bottom, 0px));
     right: 12px;
     z-index: 40;
     width: 40px;
@@ -571,6 +584,8 @@
 
   .mobile-map-btn:hover,
   .mobile-map-btn:active,
+  .mobile-log-btn:hover,
+  .mobile-log-btn:active,
   .mobile-void-btn:hover,
   .mobile-void-btn:active {
     background: var(--color-accent);

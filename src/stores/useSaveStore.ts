@@ -29,6 +29,7 @@ import { useSecretNoteStore } from './useSecretNoteStore'
 import { useHanhaiStore } from './useHanhaiStore'
 import { useFishPondStore } from './useFishPondStore'
 import { useTutorialStore } from './useTutorialStore'
+import { useMessageStore } from './useMessageStore'
 
 const SAVE_KEY_PREFIX = 'taoyuanxiang_save_'
 const MAX_SLOTS = 3
@@ -149,6 +150,7 @@ export const useSaveStore = defineStore('save', () => {
       const hanhaiStore = useHanhaiStore()
       const fishPondStore = useFishPondStore()
       const tutorialStore = useTutorialStore()
+      const messageStore = useMessageStore()
 
       const data = {
         version: CURRENT_SAVE_VERSION,
@@ -177,6 +179,7 @@ export const useSaveStore = defineStore('save', () => {
         hanhai: hanhaiStore.serialize(),
         fishPond: fishPondStore.serialize(),
         tutorial: tutorialStore.serialize(),
+        message: messageStore.serialize(),
         savedAt: new Date().toISOString()
       }
       await adapter.setItem(`${SAVE_KEY_PREFIX}${slot}`, encrypt(JSON.stringify(data)))
@@ -237,6 +240,7 @@ export const useSaveStore = defineStore('save', () => {
       const hanhaiStore = useHanhaiStore()
       const fishPondStore = useFishPondStore()
       const tutorialStore = useTutorialStore()
+      const messageStore = useMessageStore()
 
       gameStore.deserialize(data.game)
       playerStore.deserialize(data.player)
@@ -263,6 +267,8 @@ export const useSaveStore = defineStore('save', () => {
       if (data.hanhai) hanhaiStore.deserialize(data.hanhai)
       if (data.fishPond) fishPondStore.deserialize(data.fishPond)
       if (data.tutorial) tutorialStore.deserialize(data.tutorial)
+      if (data.message) messageStore.deserialize(data.message)
+      else messageStore.$reset()
       activeSlot.value = slot
       return true
     } catch {
@@ -337,6 +343,8 @@ export const useSaveStore = defineStore('save', () => {
       const secretNoteStore = useSecretNoteStore()
       const hanhaiStore = useHanhaiStore()
       const fishPondStore = useFishPondStore()
+      const tutorialStore = useTutorialStore()
+      const messageStore = useMessageStore()
 
       const data = {
         version: CURRENT_SAVE_VERSION,
@@ -364,6 +372,8 @@ export const useSaveStore = defineStore('save', () => {
         secretNote: secretNoteStore.serialize(),
         hanhai: hanhaiStore.serialize(),
         fishPond: fishPondStore.serialize(),
+        tutorial: tutorialStore.serialize(),
+        message: messageStore.serialize(),
         savedAt: new Date().toISOString()
       }
       localStorage.setItem(`${SAVE_KEY_PREFIX}${activeSlot.value}`, encrypt(JSON.stringify(data)))

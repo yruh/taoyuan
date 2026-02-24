@@ -127,6 +127,7 @@
               <!-- 持续时间 -->
               <div class="border border-accent/20 rounded-xs p-3">
                 <p class="text-xs text-muted mb-2">持续时间</p>
+                <p class="text-[10px] text-muted/60 mb-2">长消息会自动延长停留，悬停可暂停倒计时</p>
                 <div class="flex items-center justify-center space-x-2">
                   <Button
                     class="py-0 px-1.5"

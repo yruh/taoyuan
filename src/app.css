@@ -173,24 +173,43 @@ button {
 .qmsg .qmsg-content-wrapper {
   color: rgb(var(--color-bg)) !important;
   background: var(--color-accent) !important;
+  max-width: min(92vw, 34rem) !important;
+  box-sizing: border-box;
 }
 
-.qmsg .qmsg-content-text[data-limitwidthwrap='wrap'] {
+.qmsg .qmsg-content-text {
+  line-height: 1.4 !important;
+}
+
+.qmsg .qmsg-content-text[data-limitwidthwrap='wrap'],
+.qmsg .qmsg-content-text[data-limitWidthWrap='wrap'] {
   white-space: normal !important;
   word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  max-height: min(50vh, 20rem) !important;
+  overflow-y: auto !important;
 }
 
-.qmsg .qmsg-content-text[data-limitwidthwrap='ellipsis'] {
+.qmsg .qmsg-content-text[data-limitwidthwrap='ellipsis'],
+.qmsg .qmsg-content-text[data-limitWidthWrap='ellipsis'] {
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
 
-.qmsg .qmsg-content-text[data-limitwidthwrap='no-wrap'] {
+.qmsg .qmsg-content-text[data-limitwidthwrap='no-wrap'],
+.qmsg .qmsg-content-text[data-limitWidthWrap='no-wrap'] {
   white-space: nowrap !important;
 }
 
-/* 移动端安全区域：底部通知避开三键导航栏 */
+/* 移动端安全区域：顶部/底部通知避开异形屏与导航栏 */
+.qmsg-top,
+.qmsg-topleft,
+.qmsg-topright {
+  padding-top: constant(safe-area-inset-top, 0px) !important;
+  padding-top: env(safe-area-inset-top, 0px) !important;
+}
+
 .qmsg-bottom,
 .qmsg-bottomleft,
 .qmsg-bottomright {
