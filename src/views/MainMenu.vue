@@ -86,13 +86,15 @@
               <p class="text-accent">v{{ pkg.version }}</p>
             </div>
             <div class="border border-accent/20 rounded-xs p-3">
-              <p class="text-muted text-xs mb-1">QQ 交流群</p>
-              <p class="text-accent">{{ pkg.qq }}</p>
+              <p class="text-muted text-xs mb-1">GitHub 仓库</p>
+              <a :href="pkg.github" target="_blank" class="text-accent underline break-all">
+                {{ pkg.github }}
+              </a>
             </div>
             <div class="border border-accent/20 rounded-xs p-3">
-              <p class="text-muted text-xs mb-1">GitHub 仓库</p>
-              <a :href="`https://github.com/setube/${pkg.name}`" target="_blank" class="text-accent underline break-all">
-                https://github.com/setube/{{ pkg.name }}
+              <p class="text-muted text-xs mb-1">在线版本</p>
+              <a :href="pkg.homepage" target="_blank" class="text-accent underline break-all">
+                {{ pkg.homepage }}
               </a>
             </div>
             <div class="border border-accent/20 rounded-xs p-3">
@@ -100,6 +102,10 @@
               <a :href="`https://www.taptap.cn/app/${pkg.tapid}`" target="_blank" class="text-accent underline break-all">
                 https://www.taptap.cn/app/{{ pkg.tapid }}
               </a>
+            </div>
+            <div class="border border-accent/20 rounded-xs p-3">
+              <p class="text-muted text-xs mb-1">改版说明</p>
+              <p class="text-xs leading-relaxed">当前仓库为改版维护分支，持续同步更新并优化移动端与构建流程。</p>
             </div>
           </div>
         </div>
@@ -330,7 +336,7 @@
 
   const router = useRouter()
   const { startBgm } = useAudio()
-  const pkg = _pkg as typeof _pkg & { title: string; qq: string; version: string; name: string }
+  const pkg = _pkg as typeof _pkg & { title: string; version: string; tapid: string; github: string; homepage: string }
 
   const gameStore = useGameStore()
   const saveStore = useSaveStore()

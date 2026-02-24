@@ -10,6 +10,13 @@
 
 一款文字版田园模拟经营游戏，灵感来自星露谷物语，采用像素 + 中国风视觉设计。纯客户端运行，无需后端服务器。
 
+## 改版说明
+
+- 本仓库为二次改版
+- 原项目仓库：[https://github.com/setube/taoyuan](https://github.com/setube/taoyuan)
+- 仓库地址：[https://github.com/yruh/taoyuan](https://github.com/yruh/taoyuan)
+- 在线版本：[https://yruh.github.io/taoyuan/](https://yruh.github.io/taoyuan/)
+
 ## 游戏特色
 
 **角色创建** — 输入名字、选择性别，6 种田庄各有独特加成（溪流钓鱼加成、竹林采集加成、山丘挖矿加成等），NPC 根据性别使用不同称呼
@@ -158,10 +165,10 @@ src/
 - **UI 风格**：扁平硬边按钮、1px 细边框、最大 2px 圆角、4px 倍数间距
 - **响应式**：移动端底部导航 + 桌面端侧边栏，768px 断点
 
-## 交流
+## 项目链接
 
-- QQ 群：920930589
-- GitHub：[https://github.com/setube/taoyuan](https://github.com/setube/taoyuan)
+- GitHub：[https://github.com/yruh/taoyuan](https://github.com/yruh/taoyuan)
+- 在线体验：[https://yruh.github.io/taoyuan/](https://yruh.github.io/taoyuan/)
 
 ## 许可证
 
