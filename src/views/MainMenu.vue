@@ -98,12 +98,6 @@
               </a>
             </div>
             <div class="border border-accent/20 rounded-xs p-3">
-              <p class="text-muted text-xs mb-1">TapTap</p>
-              <a :href="`https://www.taptap.cn/app/${pkg.tapid}`" target="_blank" class="text-accent underline break-all">
-                https://www.taptap.cn/app/{{ pkg.tapid }}
-              </a>
-            </div>
-            <div class="border border-accent/20 rounded-xs p-3">
               <p class="text-muted text-xs mb-1">改版说明</p>
               <p class="text-xs leading-relaxed">当前仓库为改版维护分支，持续同步更新并优化移动端与构建流程。</p>
             </div>
@@ -336,7 +330,7 @@
 
   const router = useRouter()
   const { startBgm } = useAudio()
-  const pkg = _pkg as typeof _pkg & { title: string; version: string; tapid: string; github: string; homepage: string }
+  const pkg = _pkg as typeof _pkg & { title: string; version: string; github: string; homepage: string }
 
   const gameStore = useGameStore()
   const saveStore = useSaveStore()
