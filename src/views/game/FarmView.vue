@@ -1618,11 +1618,13 @@
 
   const doGhBatchHarvest = () => {
     const skillStore = useSkillStore()
-    const results = farmStore.greenhouseBatchHarvest()
-    if (results.length === 0) return
+    const harvestablePlots = farmStore.greenhousePlots.filter(p => p.state === 'harvestable')
+    if (harvestablePlots.length === 0) return
     let harvested = 0
-    for (const { cropId } of results) {
-      if (!playerStore.consumeStamina(1)) break
+    for (const plot of harvestablePlots) {
+      if (playerStore.stamina - 1 < 1 || !playerStore.consumeStamina(1)) break
+      const cropId = farmStore.greenhouseHarvestPlot(plot.id)
+      if (!cropId) continue
       harvested++
       const quality = skillStore.rollCropQualityWithBonus(0)
       inventoryStore.addItem(cropId, 1, quality)
@@ -1631,6 +1633,8 @@
       sfxHarvest()
       showFloat(`温室收获 ×${harvested}`, 'success')
       addLog(`在温室一键收获了${harvested}株作物。(-${harvested}体力)`)
+    } else {
+      addLog('体力不足，无法温室一键收获。')
     }
   }
 

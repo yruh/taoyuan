@@ -30,6 +30,7 @@ export const QUALITY_NAMES: Record<Quality, string> = {
 
 // 模块级单例状态
 const selectedSeed = ref<string | null>(null)
+const MIN_BATCH_STAMINA_LEFT = 1
 
 /** 处理地块点击：翻耕/种植/浇水/收获 */
 export const handlePlotClick = (plotId: number) => {
@@ -332,7 +333,7 @@ export const handleBatchWater = () => {
       1,
       Math.floor(baseCost * fixedMult * (1 - staminaReduction))
     )
-    if (!playerStore.consumeStamina(cost)) break
+    if (playerStore.stamina - cost < MIN_BATCH_STAMINA_LEFT || !playerStore.consumeStamina(cost)) break
     farmStore.waterPlot(plot.id)
     skillStore.addExp('farming', 2)
     watered++
@@ -387,7 +388,7 @@ export const handleBatchTill = () => {
       1,
       Math.floor(3 * tillFixedMult)
     )
-    if (!playerStore.consumeStamina(cost)) break
+    if (playerStore.stamina - cost < MIN_BATCH_STAMINA_LEFT || !playerStore.consumeStamina(cost)) break
     farmStore.tillPlot(plot.id)
     tilled++
   }
@@ -525,7 +526,7 @@ export const handleBatchPlant = (cropId: string) => {
       1,
       Math.floor(3 * plantFixedMult)
     )
-    if (!playerStore.consumeStamina(cost)) break
+    if (playerStore.stamina - cost < MIN_BATCH_STAMINA_LEFT || !playerStore.consumeStamina(cost)) break
     inventoryStore.removeItem(cropDef.seedId)
     farmStore.plantCrop(plot.id, cropDef.id)
     planted++
@@ -713,7 +714,7 @@ export const handleBatchCurePest = () => {
           (1 - batchRingGlobalReduction)
       )
     )
-    if (!playerStore.consumeStamina(cost)) break
+    if (playerStore.stamina - cost < MIN_BATCH_STAMINA_LEFT || !playerStore.consumeStamina(cost)) break
     farmStore.curePest(plot.id)
     cured++
   }
@@ -809,7 +810,7 @@ export const handleBatchClearWeed = () => {
           (1 - batchRingGlobalReduction)
       )
     )
-    if (!playerStore.consumeStamina(cost)) break
+    if (playerStore.stamina - cost < MIN_BATCH_STAMINA_LEFT || !playerStore.consumeStamina(cost)) break
     farmStore.clearWeed(plot.id)
     cleared++
   }
