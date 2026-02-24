@@ -1,16 +1,39 @@
 <template>
   <div>
-    <h3 class="text-accent text-sm mb-3">
-      <Home :size="14" class="inline" />
-      畜棚
-    </h3>
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-accent text-sm">
+        <Home :size="14" class="inline" />
+        畜棚
+      </h3>
+      <Button v-if="unpettedCount > 0" :icon="Hand" @click="handlePetAll">一键抚摸（{{ unpettedCount }}只）</Button>
+    </div>
+
+    <p v-if="tutorialHint" class="text-[10px] text-muted/50 mb-2">{{ tutorialHint }}</p>
 
     <!-- 宠物区域 -->
     <div class="mb-4 border border-accent/20 rounded-xs p-3">
       <p class="text-xs text-muted mb-2">宠物</p>
       <template v-if="animalStore.pet">
         <div class="flex items-center justify-between mb-1">
-          <span class="text-xs text-accent">{{ animalStore.pet.type === 'cat' ? '猫' : '狗' }} — {{ animalStore.pet.name }}</span>
+          <div class="flex items-center space-x-1">
+            <template v-if="renamingId === 'pet'">
+              <input
+                v-model="renameInput"
+                class="bg-bg border border-accent/30 rounded-xs px-1 py-0.5 text-xs text-text w-20 outline-none"
+                maxlength="8"
+                @keyup.enter="confirmRename"
+                @keyup.escape="cancelRename"
+              />
+              <Button class="py-0 px-1" @click="confirmRename">确定</Button>
+              <Button class="py-0 px-1" @click="cancelRename">取消</Button>
+            </template>
+            <template v-else>
+              <span class="text-xs text-accent">{{ animalStore.pet.type === 'cat' ? '猫' : '狗' }} — {{ animalStore.pet.name }}</span>
+              <button class="text-muted hover:text-accent" @click="startRename('pet', animalStore.pet!.name)">
+                <Pencil :size="10" />
+              </button>
+            </template>
+          </div>
           <Button class="py-0 px-1" :icon="Hand" :disabled="animalStore.pet.wasPetted" @click="handlePetThePet">
             {{ animalStore.pet.wasPetted ? '已摸' : '抚摸' }}
           </Button>
@@ -43,6 +66,7 @@
       </div>
 
       <template v-if="isBuildingBuilt(bDef.type)">
+        <p v-if="animalStore.hasAutoPetter(bDef.type)" class="text-[10px] text-success mb-2">自动抚摸机运行中 — 每日自动抚摸所有动物</p>
         <!-- 鸡舍孵化器（鸡舍2级以上） -->
         <div v-if="bDef.type === 'coop' && getBuildingLevel('coop') >= 2" class="mb-3 p-2 border border-accent/10 rounded-xs">
           <p class="text-xs text-accent mb-1">
@@ -100,7 +124,25 @@
         <div v-if="getAnimalsInBuilding(bDef.type).length > 0" class="flex flex-col space-y-1 max-h-60 overflow-y-auto">
           <div v-for="animal in getAnimalsInBuilding(bDef.type)" :key="animal.id" class="border border-accent/10 rounded-xs p-2">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-xs text-accent">{{ animal.name }}</span>
+              <div class="flex items-center space-x-1">
+                <template v-if="renamingId === animal.id">
+                  <input
+                    v-model="renameInput"
+                    class="bg-bg border border-accent/30 rounded-xs px-1 py-0.5 text-xs text-text w-20 outline-none"
+                    maxlength="8"
+                    @keyup.enter="confirmRename"
+                    @keyup.escape="cancelRename"
+                  />
+                  <Button class="py-0 px-1" @click="confirmRename">确定</Button>
+                  <Button class="py-0 px-1" @click="cancelRename">取消</Button>
+                </template>
+                <template v-else>
+                  <span class="text-xs text-accent">{{ animal.name }}</span>
+                  <button class="text-muted hover:text-accent" @click="startRename(animal.id, animal.name)">
+                    <Pencil :size="10" />
+                  </button>
+                </template>
+              </div>
               <div class="flex items-center space-x-1">
                 <Button class="py-0 px-1" :icon="Hand" :disabled="animal.wasPetted" @click="handlePetAnimal(animal.id)">
                   {{ animal.wasPetted ? '已摸' : '抚摸' }}
@@ -167,7 +209,25 @@
       <template v-if="animalStore.stableBuilt">
         <div v-if="animalStore.getHorse" class="border border-accent/10 rounded-xs p-2">
           <div class="flex items-center justify-between mb-1">
-            <span class="text-xs text-accent">{{ animalStore.getHorse.name }}</span>
+            <div class="flex items-center space-x-1">
+              <template v-if="renamingId === animalStore.getHorse.id">
+                <input
+                  v-model="renameInput"
+                  class="bg-bg border border-accent/30 rounded-xs px-1 py-0.5 text-xs text-text w-20 outline-none"
+                  maxlength="8"
+                  @keyup.enter="confirmRename"
+                  @keyup.escape="cancelRename"
+                />
+                <Button class="py-0 px-1" @click="confirmRename">确定</Button>
+                <Button class="py-0 px-1" @click="cancelRename">取消</Button>
+              </template>
+              <template v-else>
+                <span class="text-xs text-accent">{{ animalStore.getHorse.name }}</span>
+                <button class="text-muted hover:text-accent" @click="startRename(animalStore.getHorse!.id, animalStore.getHorse!.name)">
+                  <Pencil :size="10" />
+                </button>
+              </template>
+            </div>
             <div class="flex items-center space-x-1">
               <Button
                 class="py-0 px-1"
@@ -491,19 +551,34 @@
 
 <script setup lang="ts">
   import { ref, computed } from 'vue'
-  import { Hammer, ShoppingCart, Hand, Apple, Home, ArrowUp, Egg, X, Coins, Syringe } from 'lucide-vue-next'
+  import { Hammer, ShoppingCart, Hand, Apple, Home, ArrowUp, Egg, X, Coins, Syringe, Pencil } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
-  import { useAnimalStore, useInventoryStore, usePlayerStore, useGameStore } from '@/stores'
+  import { useAnimalStore } from '@/stores/useAnimalStore'
+  import { useGameStore } from '@/stores/useGameStore'
+  import { useInventoryStore } from '@/stores/useInventoryStore'
+  import { usePlayerStore } from '@/stores/usePlayerStore'
   import { ANIMAL_BUILDINGS, ANIMAL_DEFS, HAY_ITEM_ID, getItemById, getBuildingUpgrade, INCUBATION_MAP, FEED_DEFS } from '@/data'
   import { ACTION_TIME_COSTS } from '@/data/timeConstants'
   import type { AnimalBuildingType, AnimalType, AnimalDef } from '@/types'
   import { addLog } from '@/composables/useGameLog'
   import { handleEndDay } from '@/composables/useEndDay'
+  import { useTutorialStore } from '@/stores/useTutorialStore'
 
   const animalStore = useAnimalStore()
   const inventoryStore = useInventoryStore()
   const playerStore = usePlayerStore()
   const gameStore = useGameStore()
+  const tutorialStore = useTutorialStore()
+
+  const tutorialHint = computed(() => {
+    if (!tutorialStore.enabled || gameStore.year > 1) return null
+    const coopBuilt = animalStore.buildings.find(b => b.type === 'coop')?.built ?? false
+    const barnBuilt = animalStore.buildings.find(b => b.type === 'barn')?.built ?? false
+    if (!coopBuilt && !barnBuilt) return '先去商铺的万物铺建造鸡舍或畜棚，然后就可以购买和饲养动物了。'
+    if (animalStore.animals.length > 0 && animalStore.animals.every(a => !a.wasPetted))
+      return '每天抚摸动物可以增进友好度，「一键抚摸」可以批量操作。'
+    return null
+  })
 
   // === 购买弹窗 ===
 
@@ -823,6 +898,29 @@
     }
   }
 
+  const unpettedCount = computed(() => {
+    let count = animalStore.animals.filter(a => !a.wasPetted).length
+    if (animalStore.pet && !animalStore.pet.wasPetted) count++
+    return count
+  })
+
+  const handlePetAll = () => {
+    const STAMINA_COST = 2
+    if (!playerStore.consumeStamina(STAMINA_COST)) {
+      addLog('体力不足，无法一键抚摸。')
+      return
+    }
+    const count = animalStore.petAllAnimals()
+    if (count > 0) {
+      addLog(`一口气抚摸了${count}只动物，大家都很开心！`)
+      const tr = gameStore.advanceTime(ACTION_TIME_COSTS.batchPet)
+      if (tr.message) addLog(tr.message)
+      if (tr.passedOut) handleEndDay()
+    } else {
+      addLog('今天已经全部抚摸过了。')
+    }
+  }
+
   const handleStartIncubation = (itemId: string) => {
     const result = animalStore.startIncubation(itemId)
     addLog(result.message)
@@ -855,11 +953,22 @@
   const handleBuyFeed = () => {
     const feed = FEED_DEFS.find(f => f.id === selectedFeed.value)
     if (!feed) return
+    // 检查背包主区是否有空间（已有同类栈或有空位），防止溢出到临时背包导致无法使用
+    const hasStack = inventoryStore.items.some(s => s.itemId === feed.id && s.quality === 'normal' && s.quantity < 99)
+    if (!hasStack && inventoryStore.isFull) {
+      addLog('背包已满，无法购买。')
+      return
+    }
     if (!playerStore.spendMoney(feed.price)) {
       addLog(`金币不足，无法购买${feed.name}。`)
       return
     }
-    inventoryStore.addItem(selectedFeed.value)
+    if (!inventoryStore.addItem(feed.id)) {
+      // addItem 异常失败，退款
+      playerStore.earnMoney(feed.price)
+      addLog('购买失败，已退款。')
+      return
+    }
     addLog(`购买了1份${feed.name}，花费${feed.price}文。`)
   }
 
@@ -883,5 +992,30 @@
     const result = animalStore.healAllSick()
     if (result.healedCount > 0) addLog(`用兽药治疗了${result.healedCount}只动物。`)
     if (result.noMedicineCount > 0) addLog(`兽药不足，${result.noMedicineCount}只动物未能治疗。`)
+  }
+
+  // === 改名 ===
+
+  const renamingId = ref<string | null>(null)
+  const renameInput = ref('')
+
+  const startRename = (id: string, currentName: string) => {
+    renamingId.value = id
+    renameInput.value = currentName
+  }
+
+  const confirmRename = () => {
+    if (!renamingId.value) return
+    const success = animalStore.renameAnimal(renamingId.value, renameInput.value)
+    if (success) {
+      addLog(`改名为「${renameInput.value.trim()}」。`)
+    } else {
+      addLog('改名失败，名称需要1-8个字。')
+    }
+    renamingId.value = null
+  }
+
+  const cancelRename = () => {
+    renamingId.value = null
   }
 </script>

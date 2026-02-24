@@ -291,7 +291,8 @@
   import { ClipboardList, Calendar, Clock, Plus, CheckCircle, CircleCheck, Circle, Star, BookOpen, X } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
   import type { QuestInstance } from '@/types'
-  import { useQuestStore, useInventoryStore } from '@/stores'
+  import { useInventoryStore } from '@/stores/useInventoryStore'
+  import { useQuestStore } from '@/stores/useQuestStore'
   import { getItemById, getStoryQuestById, CHAPTER_TITLES } from '@/data'
   import { addLog } from '@/composables/useGameLog'
 

@@ -68,10 +68,10 @@ export const ACTION_TIME_COSTS = {
   // 钓鱼
   fishStart: 1,
   // 挖矿
-  mineOre: 0.5,
-  combat: 0.5,
-  nextFloor: 0.33,
-  revealTile: 0.1,
+  mineOre: 0.25,
+  combat: 0.25,
+  nextFloor: 0.17,
+  revealTile: 0.05,
   // 采集
   forage: 1,
   chopTree: 1,
@@ -91,6 +91,7 @@ export const ACTION_TIME_COSTS = {
   // 畜棚
   feedAnimals: 0.5,
   petAnimal: 0.17,
+  batchPet: 0.5,
   graze: 1,
   // 农舍
   collectCave: 0.17,
@@ -121,6 +122,7 @@ export const TAB_TO_LOCATION_GROUP: Record<string, LocationGroup | null> = {
   farm: 'farm',
   animal: 'farm',
   home: 'farm',
+  cottage: 'farm',
   village: 'village_area',
   shop: 'village_area',
   cooking: 'village_area',
@@ -142,26 +144,50 @@ export const TAB_TO_LOCATION_GROUP: Record<string, LocationGroup | null> = {
 
 // === 移动时间 ===
 export const TRAVEL_TIME: Record<string, number> = {
-  'farm->village_area': 0.5,
-  'farm->nature': 0.5,
-  'farm->mine': 1,
-  'village_area->farm': 0.5,
-  'village_area->nature': 0.5,
-  'village_area->mine': 1,
-  'nature->farm': 0.5,
-  'nature->village_area': 0.5,
-  'nature->mine': 1,
-  'mine->farm': 1,
-  'mine->village_area': 1,
-  'mine->nature': 1,
-  'farm->hanhai': 2,
-  'hanhai->farm': 2,
-  'village_area->hanhai': 2,
-  'hanhai->village_area': 2,
-  'nature->hanhai': 2,
-  'hanhai->nature': 2,
-  'mine->hanhai': 1.5,
-  'hanhai->mine': 1.5
+  'farm->village_area': 0.17,
+  'farm->nature': 0.17,
+  'farm->mine': 0.33,
+  'village_area->farm': 0.17,
+  'village_area->nature': 0.17,
+  'village_area->mine': 0.33,
+  'nature->farm': 0.17,
+  'nature->village_area': 0.17,
+  'nature->mine': 0.33,
+  'mine->farm': 0.33,
+  'mine->village_area': 0.33,
+  'mine->nature': 0.33,
+  'farm->hanhai': 0.5,
+  'hanhai->farm': 0.5,
+  'village_area->hanhai': 0.5,
+  'hanhai->village_area': 0.5,
+  'nature->hanhai': 0.5,
+  'hanhai->nature': 0.5,
+  'mine->hanhai': 0.5,
+  'hanhai->mine': 0.5
+}
+
+// === 移动体力消耗 ===
+export const TRAVEL_STAMINA: Record<string, number> = {
+  'farm->village_area': 1,
+  'farm->nature': 1,
+  'farm->mine': 2,
+  'village_area->farm': 1,
+  'village_area->nature': 1,
+  'village_area->mine': 2,
+  'nature->farm': 1,
+  'nature->village_area': 1,
+  'nature->mine': 2,
+  'mine->farm': 2,
+  'mine->village_area': 2,
+  'mine->nature': 2,
+  'farm->hanhai': 3,
+  'hanhai->farm': 3,
+  'village_area->hanhai': 3,
+  'hanhai->village_area': 3,
+  'nature->hanhai': 3,
+  'hanhai->nature': 3,
+  'mine->hanhai': 3,
+  'hanhai->mine': 3
 }
 
 const LOCATION_GROUP_NAMES: Record<LocationGroup, string> = {

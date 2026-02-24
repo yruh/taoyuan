@@ -1099,8 +1099,6 @@ export const useMiningStore = defineStore('mining', () => {
       return { success: false, message: '楼梯暂时无法使用。' }
     }
 
-    const floor = getActiveFloorData()
-
     if (isInSkullCavern.value) {
       // 骷髅矿穴：无上限，无安全点
       skullCavernFloor.value++
@@ -1110,12 +1108,6 @@ export const useMiningStore = defineStore('mining', () => {
         useAchievementStore().recordSkullCavernFloor(skullCavernFloor.value)
       }
     } else {
-      // 检查安全点（只在到达更高层时更新，避免电梯返回低层后覆盖进度）
-      // 必须在 MAX_MINE_FLOOR 检查之前执行，否则120层安全点永远不会被记录
-      if (floor?.isSafePoint && currentFloor.value > safePointFloor.value) {
-        safePointFloor.value = currentFloor.value
-      }
-
       // 主矿洞：最多 120 层
       if (currentFloor.value >= MAX_MINE_FLOOR) {
         // 到达120层后自动转入骷髅矿穴
@@ -1131,6 +1123,12 @@ export const useMiningStore = defineStore('mining', () => {
 
       currentFloor.value++
       useAchievementStore().recordMineFloor(currentFloor.value)
+
+      // 到达新的安全点时保存（只在到达更高层时更新，避免电梯返回低层后覆盖进度）
+      const newFloorData = getFloor(currentFloor.value)
+      if (newFloorData?.isSafePoint && currentFloor.value > safePointFloor.value) {
+        safePointFloor.value = currentFloor.value
+      }
     }
 
     // 生成新层格子
@@ -1154,6 +1152,13 @@ export const useMiningStore = defineStore('mining', () => {
 
   /** 离开矿洞 */
   const leaveMine = (): string => {
+    // 离开前保存安全点（防止玩家到达安全点楼层后直接离开）
+    if (!isInSkullCavern.value) {
+      const floor = getActiveFloorData()
+      if (floor?.isSafePoint && currentFloor.value > safePointFloor.value) {
+        safePointFloor.value = currentFloor.value
+      }
+    }
     isExploring.value = false
     combatIsBoss.value = false
     floorGrid.value = []

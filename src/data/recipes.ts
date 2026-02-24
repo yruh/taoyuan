@@ -321,6 +321,22 @@ export const RECIPES: RecipeDef[] = [
     description: '清淡养胃的白粥。'
   },
   {
+    id: 'rice_ball',
+    name: '饭团',
+    ingredients: [{ itemId: 'rice', quantity: 1 }],
+    effect: { staminaRestore: 12, healthRestore: 3 },
+    unlockSource: '初始自带',
+    description: '简单捏制的米饭团子，方便携带。'
+  },
+  {
+    id: 'steamed_bun',
+    name: '馒头',
+    ingredients: [{ itemId: 'wheat_flour', quantity: 1 }],
+    effect: { staminaRestore: 12, healthRestore: 3 },
+    unlockSource: '初始自带',
+    description: '松软的白面馒头，最朴素的主食。'
+  },
+  {
     id: 'roasted_sweet_potato',
     name: '烤红薯',
     ingredients: [{ itemId: 'sweet_potato', quantity: 2 }],

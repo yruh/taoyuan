@@ -60,7 +60,10 @@ export const useHanhaiStore = defineStore('hanhai', () => {
       return { success: false, message: '金钱不足。' }
     }
     const inventoryStore = useInventoryStore()
-    inventoryStore.addItem(item.itemId, 1)
+    if (!inventoryStore.addItem(item.itemId, 1)) {
+      playerStore.earnMoney(item.price)
+      return { success: false, message: '背包已满，无法购买。' }
+    }
     return { success: true, message: `购买了${item.name}。` }
   }
 

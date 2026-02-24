@@ -179,13 +179,13 @@ const PROCESSED_ITEMS: ItemDef[] = [
     staminaRestore: 30,
     healthRestore: 18
   },
-  { id: 'rice_vinegar', name: '米醋', category: 'processed', description: '家酿老陈醋。', sellPrice: 190, edible: false },
+  { id: 'rice_vinegar', name: '米醋', category: 'processed', description: '家酿老陈醋。', sellPrice: 290, edible: false },
   {
     id: 'pickled_cabbage',
     name: '腌白菜',
     category: 'processed',
     description: '开胃的腌白菜。',
-    sellPrice: 120,
+    sellPrice: 155,
     edible: true,
     staminaRestore: 10,
     healthRestore: 5
@@ -195,7 +195,7 @@ const PROCESSED_ITEMS: ItemDef[] = [
     name: '萝卜干',
     category: 'processed',
     description: '香脆的萝卜干。',
-    sellPrice: 160,
+    sellPrice: 245,
     edible: true,
     staminaRestore: 12,
     healthRestore: 5
@@ -220,8 +220,8 @@ const PROCESSED_ITEMS: ItemDef[] = [
     staminaRestore: 20,
     healthRestore: 10
   },
-  { id: 'sesame_oil', name: '芝麻油', category: 'processed', description: '醇香的小磨麻油。', sellPrice: 100, edible: false },
-  { id: 'tea_oil', name: '茶油', category: 'processed', description: '珍贵的山茶油。', sellPrice: 250, edible: false },
+  { id: 'sesame_oil', name: '芝麻油', category: 'processed', description: '醇香的小磨麻油。', sellPrice: 260, edible: false },
+  { id: 'tea_oil', name: '茶油', category: 'processed', description: '珍贵的山茶油。', sellPrice: 620, edible: false },
   {
     id: 'peach_wine',
     name: '桃花酒',
@@ -247,7 +247,7 @@ const PROCESSED_ITEMS: ItemDef[] = [
     name: '玉米酒',
     category: 'processed',
     description: '淡雅清香的玉米酒。',
-    sellPrice: 255,
+    sellPrice: 330,
     edible: true,
     staminaRestore: 18,
     healthRestore: 10
@@ -257,7 +257,7 @@ const PROCESSED_ITEMS: ItemDef[] = [
     name: '泡椒',
     category: 'processed',
     description: '酸辣开胃的泡椒。',
-    sellPrice: 180,
+    sellPrice: 270,
     edible: true,
     staminaRestore: 10,
     healthRestore: 5
@@ -267,18 +267,18 @@ const PROCESSED_ITEMS: ItemDef[] = [
     name: '腌姜',
     category: 'processed',
     description: '酸甜脆嫩的腌姜。',
-    sellPrice: 200,
+    sellPrice: 315,
     edible: true,
     staminaRestore: 12,
     healthRestore: 5
   },
-  { id: 'mayonnaise', name: '蛋黄酱', category: 'processed', description: '用鸡蛋制成的浓郁蛋黄酱。', sellPrice: 80, edible: false },
+  { id: 'mayonnaise', name: '蛋黄酱', category: 'processed', description: '用鸡蛋制成的浓郁蛋黄酱。', sellPrice: 115, edible: false },
   {
     id: 'duck_mayonnaise',
     name: '鸭蛋黄酱',
     category: 'processed',
     description: '用鸭蛋制成的高级蛋黄酱。',
-    sellPrice: 120,
+    sellPrice: 215,
     edible: false
   },
   {
@@ -286,7 +286,7 @@ const PROCESSED_ITEMS: ItemDef[] = [
     name: '鹅蛋黄酱',
     category: 'processed',
     description: '用鹅蛋制成的浓稠蛋黄酱。',
-    sellPrice: 140,
+    sellPrice: 250,
     edible: false
   },
   {
@@ -294,7 +294,7 @@ const PROCESSED_ITEMS: ItemDef[] = [
     name: '乌鸡蛋黄酱',
     category: 'processed',
     description: '用乌鸡蛋制成的滋补蛋黄酱。',
-    sellPrice: 170,
+    sellPrice: 295,
     edible: false
   },
   {
@@ -302,7 +302,7 @@ const PROCESSED_ITEMS: ItemDef[] = [
     name: '鸵鸟蛋黄酱',
     category: 'processed',
     description: '用鸵鸟蛋制成的大份蛋黄酱。',
-    sellPrice: 250,
+    sellPrice: 450,
     edible: false
   },
   {
@@ -310,7 +310,7 @@ const PROCESSED_ITEMS: ItemDef[] = [
     name: '鹌鹑蛋黄酱',
     category: 'processed',
     description: '用鹌鹑蛋制成的精致蛋黄酱。',
-    sellPrice: 60,
+    sellPrice: 170,
     edible: false
   }
 ]
@@ -426,7 +426,7 @@ const DRIED_ITEMS: ItemDef[] = [
     name: '干蘑菇',
     category: 'processed',
     description: '脱水保存的蘑菇，浓缩了鲜味。',
-    sellPrice: 75,
+    sellPrice: 135,
     edible: true,
     staminaRestore: 18,
     healthRestore: 9
@@ -486,7 +486,7 @@ const DRIED_ITEMS: ItemDef[] = [
     name: '果脯',
     category: 'processed',
     description: '野果脱水制成的果脯，方便保存。',
-    sellPrice: 50,
+    sellPrice: 90,
     edible: true,
     staminaRestore: 12,
     healthRestore: 6
@@ -862,7 +862,7 @@ const FLOWER_HONEY_ITEMS: ItemDef[] = [
     name: '桂花蜜',
     category: 'processed',
     description: '馥郁芬芳的桂花蜂蜜。',
-    sellPrice: 300,
+    sellPrice: 450,
     edible: true,
     staminaRestore: 30,
     healthRestore: 15
@@ -882,7 +882,7 @@ const FLOWER_HONEY_ITEMS: ItemDef[] = [
     name: '雪莲蜜',
     category: 'processed',
     description: '珍贵的雪莲花蜂蜜。',
-    sellPrice: 400,
+    sellPrice: 730,
     edible: true,
     staminaRestore: 40,
     healthRestore: 20
@@ -891,7 +891,7 @@ const FLOWER_HONEY_ITEMS: ItemDef[] = [
 
 /** 松露油 */
 const TRUFFLE_OIL_ITEM: ItemDef[] = [
-  { id: 'truffle_oil', name: '松露油', category: 'processed', description: '珍贵的松露油，烹饪佳品。', sellPrice: 500, edible: false }
+  { id: 'truffle_oil', name: '松露油', category: 'processed', description: '珍贵的松露油，烹饪佳品。', sellPrice: 680, edible: false }
 ]
 
 /** 奶酪物品 */
@@ -940,10 +940,10 @@ const CHEESE_ITEMS: ItemDef[] = [
 
 /** 布料物品 */
 const CLOTH_ITEMS: ItemDef[] = [
-  { id: 'cloth', name: '布匹', category: 'material', description: '用羊毛纺织的布匹。', sellPrice: 500, edible: false },
+  { id: 'cloth', name: '布匹', category: 'material', description: '用羊毛纺织的布匹。', sellPrice: 660, edible: false },
   { id: 'silk_cloth', name: '丝绸', category: 'material', description: '华美的丝绸。', sellPrice: 200, edible: false },
-  { id: 'alpaca_cloth', name: '羊驼绒', category: 'material', description: '极其柔软的羊驼绒布。', sellPrice: 400, edible: false },
-  { id: 'felt', name: '毛毡', category: 'material', description: '用兔毛压制的毛毡。', sellPrice: 250, edible: false }
+  { id: 'alpaca_cloth', name: '羊驼绒', category: 'material', description: '极其柔软的羊驼绒布。', sellPrice: 530, edible: false },
+  { id: 'felt', name: '毛毡', category: 'material', description: '用兔毛压制的毛毡。', sellPrice: 340, edible: false }
 ]
 
 /** 金属锭物品 */
@@ -956,14 +956,14 @@ const BAR_ITEMS: ItemDef[] = [
 
 /** 木炭物品 */
 const CHARCOAL_ITEMS: ItemDef[] = [
-  { id: 'charcoal', name: '木炭', category: 'material', description: '烧制的木炭，可用作燃料和制作。', sellPrice: 40, edible: false }
+  { id: 'charcoal', name: '木炭', category: 'material', description: '烧制的木炭，可用作燃料和制作。', sellPrice: 55, edible: false }
 ]
 
 /** 面粉物品 */
 const FLOUR_ITEMS: ItemDef[] = [
-  { id: 'rice_flour', name: '米粉', category: 'material', description: '用稻米磨成的细腻米粉。', sellPrice: 100, edible: false },
-  { id: 'wheat_flour', name: '面粉', category: 'material', description: '用冬小麦磨成的面粉。', sellPrice: 90, edible: false },
-  { id: 'cornmeal', name: '玉米粉', category: 'material', description: '用玉米磨成的粗粉。', sellPrice: 110, edible: false }
+  { id: 'rice_flour', name: '米粉', category: 'material', description: '用稻米磨成的细腻米粉。', sellPrice: 160, edible: false },
+  { id: 'wheat_flour', name: '面粉', category: 'material', description: '用冬小麦磨成的面粉。', sellPrice: 130, edible: false },
+  { id: 'cornmeal', name: '玉米粉', category: 'material', description: '用玉米磨成的粗粉。', sellPrice: 180, edible: false }
 ]
 
 /** 茶饮物品 */
@@ -973,7 +973,7 @@ const TEA_DRINK_ITEMS: ItemDef[] = [
     name: '绿茶',
     category: 'processed',
     description: '清香的绿茶饮品。',
-    sellPrice: 200,
+    sellPrice: 620,
     edible: true,
     staminaRestore: 25,
     healthRestore: 12
@@ -983,7 +983,7 @@ const TEA_DRINK_ITEMS: ItemDef[] = [
     name: '菊花茶',
     category: 'processed',
     description: '清热明目的菊花茶。',
-    sellPrice: 160,
+    sellPrice: 470,
     edible: true,
     staminaRestore: 20,
     healthRestore: 10
@@ -993,7 +993,7 @@ const TEA_DRINK_ITEMS: ItemDef[] = [
     name: '桂花茶',
     category: 'processed',
     description: '馥郁芬芳的桂花茶。',
-    sellPrice: 250,
+    sellPrice: 780,
     edible: true,
     staminaRestore: 30,
     healthRestore: 15
@@ -1017,7 +1017,7 @@ const TOFU_ITEMS: ItemDef[] = [
     name: '豆腐',
     category: 'processed',
     description: '鲜嫩的豆腐。',
-    sellPrice: 150,
+    sellPrice: 500,
     edible: true,
     staminaRestore: 20,
     healthRestore: 10
@@ -1027,7 +1027,7 @@ const TOFU_ITEMS: ItemDef[] = [
     name: '花生豆腐',
     category: 'processed',
     description: '香浓的花生豆腐。',
-    sellPrice: 120,
+    sellPrice: 380,
     edible: true,
     staminaRestore: 18,
     healthRestore: 9
@@ -1037,7 +1037,7 @@ const TOFU_ITEMS: ItemDef[] = [
     name: '芝麻酱',
     category: 'processed',
     description: '浓香的芝麻酱。',
-    sellPrice: 100,
+    sellPrice: 175,
     edible: true,
     staminaRestore: 15,
     healthRestore: 8
@@ -1071,7 +1071,7 @@ const HERB_PRODUCT_ITEMS: ItemDef[] = [
     name: '鹿茸粉',
     category: 'processed',
     description: '研磨的鹿茸粉。',
-    sellPrice: 600,
+    sellPrice: 950,
     edible: true,
     staminaRestore: 60,
     healthRestore: 30
@@ -1081,7 +1081,15 @@ const HERB_PRODUCT_ITEMS: ItemDef[] = [
     name: '兽药',
     category: 'misc',
     description: '治疗生病的牲畜，立即痊愈。',
-    sellPrice: 30,
+    sellPrice: 50,
+    edible: false
+  },
+  {
+    id: 'stamina_fruit',
+    name: '仙桃',
+    category: 'misc',
+    description: '蕴含远古灵气的果实，食用后永久提升体力上限。极其稀有。',
+    sellPrice: 5000,
     edible: false
   }
 ]
@@ -1118,7 +1126,7 @@ const FEED_ITEMS: ItemDef[] = [
 const INCENSE_ITEMS: ItemDef[] = [
   { id: 'pine_incense', name: '松香', category: 'gift', description: '清新的松香，送礼佳品。', sellPrice: 100, edible: false },
   { id: 'camphor_incense', name: '樟脑香', category: 'gift', description: '提神醒脑的樟脑香。', sellPrice: 150, edible: false },
-  { id: 'osmanthus_incense', name: '桂花香', category: 'gift', description: '馥郁的桂花香。', sellPrice: 350, edible: false }
+  { id: 'osmanthus_incense', name: '桂花香', category: 'gift', description: '馥郁的桂花香。', sellPrice: 780, edible: false }
 ]
 
 /** 武器图鉴物品 */
@@ -1447,7 +1455,8 @@ const ITEM_SOURCE_OVERRIDES: Record<string, string> = {
   // 草药加工品
   herbal_paste: '加工制作',
   ginseng_extract: '加工制作',
-  antler_powder: '加工制作'
+  antler_powder: '加工制作',
+  stamina_fruit: '深渊宝箱(极稀有) / 制作'
 }
 
 /** 获取物品来源描述 */
@@ -1458,3 +1467,65 @@ export const getItemSource = (itemId: string): string => {
   if (!def) return '未知'
   return CATEGORY_SOURCE[def.category]
 }
+
+/** 箱子阶梯定义 */
+import type { ChestTier } from '@/types'
+
+export const CHEST_DEFS: Record<
+  ChestTier,
+  {
+    name: string
+    capacity: number
+    craftCost: { itemId: string; quantity: number }[]
+    craftMoney: number
+    description: string
+  }
+> = {
+  wood: {
+    name: '木箱',
+    capacity: 9,
+    craftCost: [{ itemId: 'wood', quantity: 50 }],
+    craftMoney: 500,
+    description: '基础储物箱，可存放9格物品。'
+  },
+  copper: {
+    name: '铜箱',
+    capacity: 18,
+    craftCost: [{ itemId: 'copper_bar', quantity: 15 }],
+    craftMoney: 2000,
+    description: '坚固的铜制储物箱，可存放18格物品。'
+  },
+  iron: {
+    name: '铁箱',
+    capacity: 27,
+    craftCost: [
+      { itemId: 'iron_bar', quantity: 10 },
+      { itemId: 'wood', quantity: 20 }
+    ],
+    craftMoney: 5000,
+    description: '耐用的铁制储物箱，可存放27格物品。'
+  },
+  gold: {
+    name: '金箱',
+    capacity: 36,
+    craftCost: [
+      { itemId: 'gold_bar', quantity: 8 },
+      { itemId: 'iron_bar', quantity: 5 }
+    ],
+    craftMoney: 10000,
+    description: '华贵的金制储物箱，可存放36格物品。'
+  },
+  void: {
+    name: '虚空箱',
+    capacity: 27,
+    craftCost: [
+      { itemId: 'iridium_bar', quantity: 5 },
+      { itemId: 'void_ore', quantity: 20 }
+    ],
+    craftMoney: 25000,
+    description: '可远程存取，并可设为作坊原料箱/成品箱。容量27格。'
+  }
+}
+
+/** 箱子阶梯顺序 */
+export const CHEST_TIER_ORDER: ChestTier[] = ['wood', 'copper', 'iron', 'gold', 'void']

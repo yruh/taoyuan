@@ -577,7 +577,10 @@
 <script setup lang="ts">
   import { ref, computed, onMounted, onUnmounted } from 'vue'
   import { Tent, X, Dices, Trophy, Bug, Gem, Check, CircleDot, Spade, Crosshair, Map } from 'lucide-vue-next'
-  import { useHanhaiStore, usePlayerStore, useMiningStore, useInventoryStore } from '@/stores'
+  import { useHanhaiStore } from '@/stores/useHanhaiStore'
+  import { useInventoryStore } from '@/stores/useInventoryStore'
+  import { useMiningStore } from '@/stores/useMiningStore'
+  import { usePlayerStore } from '@/stores/usePlayerStore'
   import {
     HANHAI_SHOP_ITEMS,
     ROULETTE_BET_TIERS,

@@ -370,6 +370,14 @@ export const useFishingStore = defineStore('fishing', () => {
       quality = qualityOrder[newIdx]!
     }
 
+    // 溪流田庄雨天品质+1档
+    if (gameStore.farmMapType === 'riverland' && gameStore.isRainy) {
+      const idx = qualityOrder.indexOf(quality)
+      if (idx < qualityOrder.length - 1) {
+        quality = qualityOrder[idx + 1]!
+      }
+    }
+
     // 野生鱼饵：概率双倍（诱饵师专精翻倍）
     const luremasterCatchMult = skillStore.getSkill('fishing').perk10 === 'luremaster' ? 2 : 1
     const doubleCatchChance = (activeBaitDef.value?.doubleCatchChance ?? 0) * luremasterCatchMult

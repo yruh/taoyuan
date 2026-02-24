@@ -7,6 +7,7 @@
       </h3>
       <Button class="py-0 px-1" :icon="Map" @click="showMapModal = true" />
     </div>
+    <p v-if="tutorialHint" class="text-[10px] text-muted/50 mb-2">{{ tutorialHint }}</p>
 
     <!-- 骷髅矿穴 -->
     <div v-if="miningStore.isSkullCavernUnlocked()" class="border border-accent/20 rounded-xs p-3 mb-4">
@@ -471,7 +472,7 @@
     <Transition name="panel-fade">
       <div
         v-if="showCombatItems"
-        class="fixed inset-0 bg-black/60 flex items-center justify-center z-70 p-4"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-[70] p-4"
         @click.self="showCombatItems = false"
       >
         <div class="game-panel max-w-xs w-full">
@@ -665,7 +666,13 @@
     BookMarked
   } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
-  import { useMiningStore, useGameStore, usePlayerStore, useInventoryStore, useSkillStore } from '@/stores'
+  import { useAchievementStore } from '@/stores/useAchievementStore'
+  import { useGameStore } from '@/stores/useGameStore'
+  import { useInventoryStore } from '@/stores/useInventoryStore'
+  import { useMiningStore } from '@/stores/useMiningStore'
+  import { usePlayerStore } from '@/stores/usePlayerStore'
+  import { useSkillStore } from '@/stores/useSkillStore'
+  import { useTutorialStore } from '@/stores/useTutorialStore'
   import { ZONE_NAMES, getFloor, BOSS_MONSTERS } from '@/data'
   import { getWeaponById, getEnchantmentById, getWeaponDisplayName, WEAPON_TYPE_NAMES } from '@/data/weapons'
   import { getRingById, getHatById, getShoeById } from '@/data'
@@ -684,7 +691,17 @@
   const playerStore = usePlayerStore()
   const inventoryStore = useInventoryStore()
   const skillStore = useSkillStore()
+  const achievementStore = useAchievementStore()
+  const tutorialStore = useTutorialStore()
   const { startBattleBgm, resumeNormalBgm } = useAudio()
+
+  const tutorialHint = computed(() => {
+    if (!tutorialStore.enabled || gameStore.year > 1) return null
+    if (achievementStore.stats.highestMineFloor === 0)
+      return '矿洞是6x6的网格，点击格子探索。遇到矿石可以开采，遇到怪物需要战斗。找到楼梯可下一层。'
+    return null
+  })
+
   const exploreLog = ref<string[]>([])
 
   const showMapModal = ref(false)

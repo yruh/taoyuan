@@ -133,7 +133,7 @@
 <script setup lang="ts">
   import { ref, computed } from 'vue'
   import { Wheat, Package } from 'lucide-vue-next'
-  import { useInventoryStore } from '@/stores'
+  import { useInventoryStore } from '@/stores/useInventoryStore'
   import { getItemById } from '@/data'
   import type { Quality } from '@/types'
   import {

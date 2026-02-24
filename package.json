@@ -4,7 +4,7 @@
   "qq": "920930589",
   "tapid": "816558",
   "private": true,
-  "version": "1.8.0",
+  "version": "1.9.1",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -14,11 +14,17 @@
     "lint": "eslint src --ext .ts,.vue",
     "type-check": "vue-tsc -b",
     "check": "pnpm run type-check && pnpm run lint",
-    "build:electron": "vue-tsc -b && vite build && esbuild electron/main.js --bundle --platform=node --format=esm --outfile=dist-electron/main.js --external:electron && esbuild electron/preload.js --bundle --platform=node --format=cjs --outfile=dist-electron/preload.js --external:electron && electron-builder"
+    "build:electron": "vue-tsc -b && vite build && esbuild electron/main.js --bundle --platform=node --format=esm --outfile=dist-electron/main.js --external:electron && esbuild electron/preload.js --bundle --platform=node --format=cjs --outfile=dist-electron/preload.js --external:electron && electron-builder",
+    "build:android": "pnpm run build && npx cap sync android",
+    "build:apk": "pnpm run build:android && cd android && ./gradlew assembleRelease"
   },
   "description": "一款文字版田园模拟经营游戏，灵感来自星露谷物语",
   "author": "setube",
   "dependencies": {
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/app": "^8.0.1",
+    "@capacitor/core": "^8.1.0",
+    "@capacitor/filesystem": "^8.1.2",
     "@vueuse/core": "^14.2.0",
     "crypto-js": "^4.2.0",
     "file-saver": "^2.0.5",
@@ -30,6 +36,7 @@
     "vue-router": "^5.0.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.1.0",
     "@eslint/js": "^9.39.2",
     "@types/crypto-js": "^4.2.2",
     "@types/file-saver": "^2.0.7",

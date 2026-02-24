@@ -12,10 +12,12 @@
 }
 
 :root {
-  /* 传统中国色 */
-  --color-bg: #1a1a1a;
-  --color-panel: #2b2d3c;
-  --color-text: #e8e4d9;
+  /* 主题色（RGB 数值，配合 Tailwind 透明度修饰符） */
+  --color-bg: 26 26 26;
+  --color-panel: 43 45 60;
+  --color-text: 232 228 217;
+
+  /* 固定色（不随主题变化） */
   --color-accent: #c8a45c;
   --color-danger: #c34043;
   --color-success: #5a9e6f;
@@ -50,8 +52,8 @@ body.no-select {
 /* 全局基础样式 */
 body {
   margin: 0;
-  background-color: var(--color-bg);
-  color: var(--color-text);
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--color-text));
   font-family: var(--font-game);
   min-height: 100vh;
   -webkit-font-smoothing: none;
@@ -85,8 +87,8 @@ button {
   justify-content: center;
   align-items: center;
   padding: var(--spacing-2) var(--spacing-4);
-  background-color: var(--color-panel);
-  color: var(--color-text);
+  background-color: rgb(var(--color-panel));
+  color: rgb(var(--color-text));
   border: 1px solid rgba(200, 164, 92, 0.3);
   border-radius: 2px;
   font-size: 0.75rem;
@@ -116,7 +118,7 @@ button {
 
 /* 像素风面板 */
 .game-panel {
-  background-color: var(--color-panel);
+  background-color: rgb(var(--color-panel));
   border: 1px solid rgba(200, 164, 92, 0.3);
   border-radius: 2px;
   padding: var(--spacing-3);
@@ -135,7 +137,7 @@ button {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg);
+  background: rgb(var(--color-bg));
 }
 
 ::-webkit-scrollbar-thumb {
@@ -164,12 +166,12 @@ button {
 }
 
 .btn:disabled:hover {
-  background-color: var(--color-panel);
-  color: var(--color-text);
+  background-color: rgb(var(--color-panel));
+  color: rgb(var(--color-text));
 }
 
 .qmsg .qmsg-content-wrapper {
-  color: var(--color-bg) !important;
+  color: rgb(var(--color-bg)) !important;
   background: var(--color-accent) !important;
 }
 

@@ -43,6 +43,20 @@
                 <Button :icon="bgmEnabled ? Headphones : HeadphoneOff" :icon-size="12" class="py-1 px-3" @click="toggleBgm">音乐</Button>
               </div>
             </div>
+
+            <!-- 新手提示 -->
+            <div class="border border-accent/20 rounded-xs p-3">
+              <p class="text-xs text-muted mb-2">新手提示</p>
+              <p class="text-[10px] text-muted/50 mb-2">柳村长的晨间建议和面板引导文字</p>
+              <div class="flex items-center justify-center space-x-2">
+                <Button class="py-1 px-3" :class="{ '!bg-accent !text-bg': tutorialStore.enabled }" @click="tutorialStore.enabled = true">
+                  开
+                </Button>
+                <Button class="py-1 px-3" :class="{ '!bg-accent !text-bg': !tutorialStore.enabled }" @click="tutorialStore.enabled = false">
+                  关
+                </Button>
+              </div>
+            </div>
           </template>
 
           <!-- ===== 外观 ===== -->
@@ -90,7 +104,7 @@
 
           <!-- ===== 通知 ===== -->
           <template v-if="activeTab === 'notification'">
-            <div class="max-h-[20vh] overflow-y-auto flex flex-col space-y-3">
+            <div class="max-h-[40vh] overflow-y-auto flex flex-col space-y-3">
               <!-- 通知位置 -->
               <div class="border border-accent/20 rounded-xs p-3">
                 <p class="text-xs text-muted mb-2">弹出位置</p>
@@ -277,6 +291,7 @@
   import { useAudio } from '@/composables/useAudio'
   import { useGameClock } from '@/composables/useGameClock'
   import { useSettingsStore, type QmsgPosition, type QmsgLimitWidthWrap } from '@/stores/useSettingsStore'
+  import { useTutorialStore } from '@/stores/useTutorialStore'
   import { THEMES } from '@/data/themes'
   import SaveManager from '@/components/game/SaveManager.vue'
 
@@ -323,6 +338,7 @@
   const { sfxEnabled, bgmEnabled, toggleSfx, toggleBgm } = useAudio()
   const { isPaused, gameSpeed, togglePause, cycleSpeed } = useGameClock()
   const settingsStore = useSettingsStore()
+  const tutorialStore = useTutorialStore()
 
   const showSaveManager = ref(false)
 

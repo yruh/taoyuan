@@ -66,7 +66,10 @@ export const useShopStore = defineStore('shop', () => {
     if (inventoryStore.isAllFull && !inventoryStore.items.some(s => s.itemId === seedId && s.quantity + quantity <= 99)) return false
     const totalCost = applyDiscount(seed.price) * quantity
     if (!playerStore.spendMoney(totalCost)) return false
-    inventoryStore.addItem(seedId, quantity)
+    if (!inventoryStore.addItem(seedId, quantity)) {
+      playerStore.earnMoney(totalCost)
+      return false
+    }
     return true
   }
 
@@ -154,7 +157,10 @@ export const useShopStore = defineStore('shop', () => {
     if (inventoryStore.isAllFull && !inventoryStore.items.some(s => s.itemId === itemId && s.quantity + quantity <= 99)) return false
     const totalCost = applyDiscount(price) * quantity
     if (!playerStore.spendMoney(totalCost)) return false
-    inventoryStore.addItem(itemId, quantity)
+    if (!inventoryStore.addItem(itemId, quantity)) {
+      playerStore.earnMoney(totalCost)
+      return false
+    }
     return true
   }
 
@@ -222,7 +228,10 @@ export const useShopStore = defineStore('shop', () => {
     if (inventoryStore.isAllFull && !inventoryStore.items.some(s => s.itemId === itemId && s.quantity < 99)) return false
     const finalPrice = applyDiscount(item.price)
     if (!playerStore.spendMoney(finalPrice)) return false
-    inventoryStore.addItem(itemId)
+    if (!inventoryStore.addItem(itemId)) {
+      playerStore.earnMoney(finalPrice)
+      return false
+    }
     item.quantity--
     return true
   }

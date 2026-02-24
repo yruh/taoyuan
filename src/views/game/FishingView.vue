@@ -4,6 +4,7 @@
       <Fish :size="14" class="inline" />
       {{ currentLocationName }}钓鱼
     </h3>
+    <p v-if="tutorialHint" class="text-[10px] text-muted/50 mb-2">{{ tutorialHint }}</p>
 
     <!-- 钓鱼地点 -->
     <div class="border border-accent/20 rounded-xs p-3 mb-4">
@@ -348,7 +349,13 @@
 <script setup lang="ts">
   import { ref, computed } from 'vue'
   import { Fish, X, Target, MapPin, Box, CircleDot } from 'lucide-vue-next'
-  import { useFishingStore, useGameStore, useInventoryStore, usePlayerStore, useSkillStore, useAchievementStore } from '@/stores'
+  import { useAchievementStore } from '@/stores/useAchievementStore'
+  import { useFishingStore } from '@/stores/useFishingStore'
+  import { useGameStore } from '@/stores/useGameStore'
+  import { useInventoryStore } from '@/stores/useInventoryStore'
+  import { usePlayerStore } from '@/stores/usePlayerStore'
+  import { useSkillStore } from '@/stores/useSkillStore'
+  import { useTutorialStore } from '@/stores/useTutorialStore'
   import { getBaitById, getTackleById } from '@/data/processing'
   import { FISHING_LOCATIONS } from '@/data/fish'
   import type { BaitType, TackleType, FishingLocation, FishDef, MiniGameParams, MiniGameResult } from '@/types'
@@ -365,6 +372,13 @@
   const playerStore = usePlayerStore()
   const skillStore = useSkillStore()
   const achievementStore = useAchievementStore()
+  const tutorialStore = useTutorialStore()
+
+  const tutorialHint = computed(() => {
+    if (!tutorialStore.enabled || gameStore.year > 1) return null
+    if (achievementStore.stats.totalFishCaught === 0) return '选择一个钓点后点击「开始钓鱼」。鱼上钩后需要完成小游戏来捕获。'
+    return null
+  })
 
   // === State ===
 

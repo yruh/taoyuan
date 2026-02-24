@@ -15,7 +15,7 @@
           <p class="map-area-title">田庄</p>
           <div class="map-area-grid">
             <button v-for="t in farmGroup" :key="t.key" class="map-loc" :class="{ 'map-loc-active': current === t.key }" @click="go(t.key)">
-              <component :is="t.icon" :size="18" />
+              <component :is="t.getIcon ? t.getIcon() : t.icon" :size="18" />
               <span>{{ t.label }}</span>
             </button>
           </div>
@@ -35,7 +35,7 @@
                 :class="{ 'map-loc-active': current === t.key }"
                 @click="go(t.key)"
               >
-                <component :is="t.icon" :size="18" />
+                <component :is="t.getIcon ? t.getIcon() : t.icon" :size="18" />
                 <span>{{ t.label }}</span>
               </button>
             </div>
@@ -50,7 +50,7 @@
                 :class="{ 'map-loc-active': current === t.key }"
                 @click="go(t.key)"
               >
-                <component :is="t.icon" :size="18" />
+                <component :is="t.getIcon ? t.getIcon() : t.icon" :size="18" />
                 <span>{{ t.label }}</span>
               </button>
             </div>
@@ -70,7 +70,7 @@
               :class="{ 'map-loc-active': current === t.key }"
               @click="go(t.key)"
             >
-              <component :is="t.icon" :size="18" />
+              <component :is="t.getIcon ? t.getIcon() : t.icon" :size="18" />
               <span>{{ t.label }}</span>
             </button>
           </div>
@@ -89,7 +89,7 @@
               :class="{ 'map-loc-active': current === t.key }"
               @click="go(t.key)"
             >
-              <component :is="t.icon" :size="18" />
+              <component :is="t.getIcon ? t.getIcon() : t.icon" :size="18" />
               <span>{{ t.label }}</span>
             </button>
           </div>
@@ -116,7 +116,7 @@
 
   const pick = (keys: PanelKey[]) => keys.map(k => tabMap.value.get(k)!).filter(Boolean)
 
-  const farmGroup = computed(() => pick(['farm', 'animal', 'home', 'breeding', 'fishpond']))
+  const farmGroup = computed(() => pick(['farm', 'animal', 'cottage', 'home', 'breeding', 'fishpond']))
   const villageGroup = computed(() => pick(['village', 'shop', 'museum', 'guild']))
   const wildGroup = computed(() => pick(['forage', 'fishing', 'mining', 'hanhai']))
   const craftGroup = computed(() => pick(['cooking', 'workshop', 'upgrade']))
@@ -159,8 +159,8 @@
     padding: 6px 8px;
     min-width: 52px;
     font-size: 10px;
-    color: var(--color-text);
-    background: var(--color-bg);
+    color: rgb(var(--color-text));
+    background: rgb(var(--color-bg));
     border: 1px solid rgba(200, 164, 92, 0.2);
     border-radius: 2px;
     cursor: pointer;

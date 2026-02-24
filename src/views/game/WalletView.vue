@@ -69,7 +69,7 @@
 <script setup lang="ts">
   import { ref, computed } from 'vue'
   import { Wallet, CircleCheck, Lock, X } from 'lucide-vue-next'
-  import { useWalletStore } from '@/stores'
+  import { useWalletStore } from '@/stores/useWalletStore'
   import { WALLET_ITEMS } from '@/data/wallet'
   import type { WalletItemDef } from '@/types'
 

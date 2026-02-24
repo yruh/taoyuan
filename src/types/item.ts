@@ -97,3 +97,18 @@ export interface OwnedWeapon {
   defId: string
   enchantmentId: string | null
 }
+
+/** 箱子阶梯 */
+export type ChestTier = 'wood' | 'copper' | 'iron' | 'gold' | 'void'
+
+/** 虚空箱子角色 */
+export type VoidChestRole = 'none' | 'input' | 'output'
+
+/** 箱子实例 */
+export interface Chest {
+  id: string
+  tier: ChestTier
+  label: string
+  items: InventoryItem[]
+  voidRole: VoidChestRole
+}

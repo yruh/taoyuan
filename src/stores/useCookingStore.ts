@@ -8,6 +8,7 @@ import { useSkillStore } from './useSkillStore'
 import { useAchievementStore } from './useAchievementStore'
 import { useWalletStore } from './useWalletStore'
 import { useHomeStore } from './useHomeStore'
+import { getCombinedItemCount, removeCombinedItem } from '@/composables/useCombinedInventory'
 
 export const useCookingStore = defineStore('cooking', () => {
   const inventoryStore = useInventoryStore()
@@ -50,7 +51,7 @@ export const useCookingStore = defineStore('cooking', () => {
       const skill = skillStore.getSkill(recipe.requiredSkill.type)
       if (skill.level < recipe.requiredSkill.level) return false
     }
-    return recipe.ingredients.every(ing => inventoryStore.getItemCount(ing.itemId) >= ing.quantity)
+    return recipe.ingredients.every(ing => getCombinedItemCount(ing.itemId) >= ing.quantity)
   }
 
   /** 烹饪 */
@@ -61,14 +62,14 @@ export const useCookingStore = defineStore('cooking', () => {
 
     // 检查材料
     for (const ing of recipe.ingredients) {
-      if (inventoryStore.getItemCount(ing.itemId) < ing.quantity) {
+      if (getCombinedItemCount(ing.itemId) < ing.quantity) {
         return { success: false, message: '材料不足。' }
       }
     }
 
     // 消耗材料
     for (const ing of recipe.ingredients) {
-      inventoryStore.removeItem(ing.itemId, ing.quantity)
+      removeCombinedItem(ing.itemId, ing.quantity)
     }
 
     // 添加食物到背包

@@ -43,7 +43,7 @@
                 class="absolute right-0 top-full mt-1 z-10 flex flex-col border border-accent/30 rounded-xs overflow-hidden w-30"
               >
                 <Button
-                  v-if="!isWebView"
+                  v-if="!Capacitor.isNativePlatform()"
                   :icon="Download"
                   :icon-size="12"
                   class="text-center !rounded-none justify-center text-sm"
@@ -67,7 +67,7 @@
       </div>
 
       <!-- 导入存档 -->
-      <template v-if="!isWebView">
+      <template v-if="!Capacitor.isNativePlatform()">
         <Button :icon="Upload" class="text-center justify-center text-sm w-full" @click="triggerImport">导入存档</Button>
         <input ref="fileInputRef" type="file" accept=".tyx" class="hidden" @change="handleImportFile" />
       </template>
@@ -100,13 +100,12 @@
   import { SEASON_NAMES } from '@/stores/useGameStore'
   import { useSaveStore, type SaveSlotInfo } from '@/stores/useSaveStore'
   import { showFloat } from '@/composables/useGameLog'
+  import { Capacitor } from '@capacitor/core'
 
   defineProps<{ allowLoad?: boolean }>()
   const emit = defineEmits<{ close: []; load: [slot: number]; change: [] }>()
 
   const saveStore = useSaveStore()
-
-  const isWebView = window.__WEBVIEW__
 
   const slots = ref<SaveSlotInfo[]>([])
   const menuOpen = ref<number | null>(null)

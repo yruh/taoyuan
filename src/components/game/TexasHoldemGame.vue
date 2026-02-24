@@ -584,7 +584,7 @@
 
   .poker-card-reveal {
     background: rgba(232, 228, 217, 0.08);
-    color: var(--color-text);
+    color: rgb(var(--color-text));
     animation: poker-flip 0.4s ease;
   }
 

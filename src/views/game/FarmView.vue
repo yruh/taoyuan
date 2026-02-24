@@ -21,9 +21,39 @@
       </div>
     </div>
 
+    <!-- 新手引导 -->
+    <p v-if="tutorialHint" class="text-[10px] text-muted/50 mb-2">{{ tutorialHint }}</p>
+
     <!-- 批量操作入口 -->
     <div class="mb-3">
       <Button class="w-full md:w-auto" :icon-size="12" :icon="Wrench" @click="showBatchActions = true">一键操作</Button>
+    </div>
+
+    <!-- 田庄特殊功能 -->
+    <div v-if="gameStore.farmMapType === 'riverland' && gameStore.creekCatch.length > 0" class="mb-3">
+      <div
+        class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-2 cursor-pointer hover:bg-accent/5"
+        @click="handleCollectCreekCatch"
+      >
+        <div>
+          <p class="text-xs text-accent">溪流鱼获</p>
+          <p class="text-[10px] text-muted">溪流中捕获了{{ gameStore.creekCatch.length }}条鱼</p>
+        </div>
+        <span class="text-xs text-success">收取</span>
+      </div>
+    </div>
+
+    <div v-if="gameStore.farmMapType === 'hilltop' && gameStore.surfaceOrePatch" class="mb-3">
+      <div
+        class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-2 cursor-pointer hover:bg-accent/5"
+        @click="handleMineSurfaceOre"
+      >
+        <div>
+          <p class="text-xs text-accent">地表矿脉</p>
+          <p class="text-[10px] text-muted">发现{{ surfaceOreName }}&times;{{ gameStore.surfaceOrePatch.quantity }}</p>
+        </div>
+        <span class="text-xs text-success">开采（-5体力）</span>
+      </div>
     </div>
 
     <!-- 批量操作弹窗 -->
@@ -185,7 +215,7 @@
             <div class="flex-1 h-1 bg-bg rounded-xs border border-accent/10">
               <div
                 class="h-full rounded-xs bg-success transition-all"
-                :style="{ width: Math.floor((activePlot.growthDays / (Number(plotCropGrowthDays) || 1)) * 100) + '%' }"
+                :style="{ width: Math.min(100, Math.floor((activePlot.growthDays / (Number(plotCropGrowthDays) || 1)) * 100)) + '%' }"
               />
             </div>
             <span class="text-xs text-muted whitespace-nowrap">
@@ -515,7 +545,7 @@
               <div class="flex-1 h-1 bg-bg rounded-xs border border-accent/10">
                 <div
                   class="h-full rounded-xs bg-success transition-all"
-                  :style="{ width: Math.floor((tree.growthDays / 28) * 100) + '%' }"
+                  :style="{ width: Math.min(100, Math.floor((tree.growthDays / 28) * 100)) + '%' }"
                 />
               </div>
               <span class="text-[10px] text-muted whitespace-nowrap">{{ tree.growthDays }}/28天</span>
@@ -634,7 +664,9 @@
               <div class="flex-1 h-1 bg-bg rounded-xs border border-accent/10">
                 <div
                   class="h-full rounded-xs bg-success transition-all"
-                  :style="{ width: Math.floor((tree.growthDays / (getWildTreeDef(tree.type)?.growthDays ?? 28)) * 100) + '%' }"
+                  :style="{
+                    width: Math.min(100, Math.floor((tree.growthDays / (getWildTreeDef(tree.type)?.growthDays ?? 28)) * 100)) + '%'
+                  }"
                 />
               </div>
               <span class="text-[10px] text-muted whitespace-nowrap">
@@ -824,7 +856,9 @@
                 <div class="flex-1 h-1 bg-bg rounded-xs border border-accent/10">
                   <div
                     class="h-full rounded-xs bg-success transition-all"
-                    :style="{ width: Math.floor((activeGhPlot.growthDays / (Number(ghPlotCropGrowthDays) || 1)) * 100) + '%' }"
+                    :style="{
+                      width: Math.min(100, Math.floor((activeGhPlot.growthDays / (Number(ghPlotCropGrowthDays) || 1)) * 100)) + '%'
+                    }"
                   />
                 </div>
                 <span class="text-xs text-muted whitespace-nowrap">{{ activeGhPlot.growthDays }}/{{ ghPlotCropGrowthDays }}天</span>
@@ -901,18 +935,16 @@
     Flower2
   } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
-  import {
-    useFarmStore,
-    useInventoryStore,
-    useGameStore,
-    useHomeStore,
-    usePlayerStore,
-    useSkillStore,
-    useShopStore,
-    useBreedingStore,
-    useWalletStore,
-    SEASON_NAMES
-  } from '@/stores'
+  import { useBreedingStore } from '@/stores/useBreedingStore'
+  import { useFarmStore } from '@/stores/useFarmStore'
+  import { useGameStore, SEASON_NAMES } from '@/stores/useGameStore'
+  import { useHomeStore } from '@/stores/useHomeStore'
+  import { useInventoryStore } from '@/stores/useInventoryStore'
+  import { usePlayerStore } from '@/stores/usePlayerStore'
+  import { useShopStore } from '@/stores/useShopStore'
+  import { useSkillStore } from '@/stores/useSkillStore'
+  import { useTutorialStore } from '@/stores/useTutorialStore'
+  import { useWalletStore } from '@/stores/useWalletStore'
   import { getCropById, getCropsBySeason, getItemById } from '@/data'
   import { getStarRating } from '@/data/breeding'
   import { FRUIT_TREE_DEFS, MAX_FRUIT_TREES } from '@/data/fruitTrees'
@@ -923,6 +955,7 @@
   import { ACTION_TIME_COSTS } from '@/data/timeConstants'
   import { addLog, showFloat } from '@/composables/useGameLog'
   import { navigateToPanel } from '@/composables/useNavigation'
+  import { handleEndDay } from '@/composables/useEndDay'
   import { getShopById, isShopAvailable, getShopClosedReason } from '@/data/shops'
   import {
     handlePlotClick,
@@ -951,6 +984,73 @@
   const playerStore = usePlayerStore()
   const shopStore = useShopStore()
   const breedingStore = useBreedingStore()
+
+  // === 田庄特殊功能 ===
+
+  const tutorialStore = useTutorialStore()
+  const tutorialHint = computed(() => {
+    if (!tutorialStore.enabled || gameStore.year > 1) return null
+    if (farmStore.plots.every(p => p.state === 'wasteland')) return '点击下方「一键操作」→「一键开垦」来开垦荒地，或直接点击地块逐一操作。'
+    const hasPlanted = farmStore.plots.some(p => p.state === 'planted' || p.state === 'growing' || p.state === 'harvestable')
+    if (!hasPlanted && farmStore.plots.some(p => p.state === 'tilled'))
+      return '已开垦的地块可以种植作物。使用「一键种植」可批量播种背包中的种子。'
+    if (farmStore.plots.some(p => (p.state === 'planted' || p.state === 'growing') && !p.watered) && !gameStore.isRainy)
+      return '作物需要每天浇水才会生长。「一键浇水」可一次浇完所有作物。'
+    if (farmStore.plots.some(p => p.state === 'harvestable')) return '金色高亮的地块表示作物已成熟，点击「一键收获」即可批量收获。'
+    return null
+  })
+
+  const surfaceOreName = computed(() => {
+    const patch = gameStore.surfaceOrePatch
+    if (!patch) return ''
+    return getItemById(patch.oreId)?.name ?? '矿石'
+  })
+
+  const handleCollectCreekCatch = () => {
+    const catches = gameStore.creekCatch
+    if (catches.length === 0) return
+    const names: string[] = []
+    const failed: typeof catches = []
+    for (const c of catches) {
+      const added = inventoryStore.addItem(c.fishId, 1, c.quality)
+      if (added) {
+        const fishDef = getItemById(c.fishId)
+        if (fishDef) names.push(fishDef.name)
+      } else {
+        failed.push(c)
+      }
+    }
+    gameStore.creekCatch = failed
+    if (names.length > 0) {
+      addLog(`收取了溪流鱼获：${names.join('、')}。`)
+    }
+    if (failed.length > 0) {
+      addLog('背包已满，部分鱼获未能收取。')
+    }
+  }
+
+  const handleMineSurfaceOre = () => {
+    const patch = gameStore.surfaceOrePatch
+    if (!patch) return
+    if (!playerStore.consumeStamina(5)) {
+      addLog('体力不足，无法开采。')
+      return
+    }
+    const added = inventoryStore.addItem(patch.oreId, patch.quantity)
+    if (!added) {
+      playerStore.restoreStamina(5)
+      addLog('背包已满，无法开采。')
+      return
+    }
+    const oreName = getItemById(patch.oreId)?.name ?? '矿石'
+    const skillStore = useSkillStore()
+    skillStore.addExp('mining', 8)
+    gameStore.surfaceOrePatch = null
+    addLog(`开采了地表矿脉，获得了${patch.quantity}个${oreName}。(+8挖矿经验)`)
+    const tr = gameStore.advanceTime(1)
+    if (tr.message) addLog(tr.message)
+    if (tr.passedOut) handleEndDay()
+  }
 
   // === 出货箱 ===
 
@@ -1138,11 +1238,7 @@
   }
 
   /** 洒水器覆盖范围（含放置洒水器的地块自身） */
-  const sprinklerCoverage = computed(() => {
-    const set = new Set(farmStore.getAllWateredBySprinklers())
-    for (const s of farmStore.sprinklers) set.add(s.plotId)
-    return set
-  })
+  const sprinklerCoverage = computed(() => farmStore.getAllWateredBySprinklers())
 
   const isSprinklerCovered = (plotId: number): boolean => sprinklerCoverage.value.has(plotId)
 
@@ -1152,7 +1248,7 @@
 
   const unwateredCount = computed(() => farmStore.plots.filter(needsWater).length)
   const wastelandCount = computed(() => farmStore.plots.filter(p => p.state === 'wasteland').length)
-  const harvestableCount = computed(() => farmStore.plots.filter(p => p.state === 'harvestable' && p.giantCropGroup === null).length)
+  const harvestableCount = computed(() => farmStore.plots.filter(p => p.state === 'harvestable').length)
   const tilledEmptyCount = computed(() => farmStore.plots.filter(p => p.state === 'tilled').length)
   const fertilizableCount = computed(() => farmStore.plots.filter(p => p.state !== 'wasteland' && !p.fertilizer).length)
   const infestedCount = computed(() => farmStore.plots.filter(p => p.infested).length)
@@ -1219,8 +1315,8 @@
   }
 
   const getPlotDisplay = (plot: (typeof farmStore.plots)[number]): { icon: Component; color: string; bg: string } => {
-    // 巨型作物特殊显示
-    if (plot.giantCropGroup !== null) {
+    // 巨型作物特殊显示（仅在已成熟时才显示巨型图标）
+    if (plot.giantCropGroup !== null && plot.state === 'harvestable') {
       return { icon: Star, color: 'text-accent', bg: 'bg-accent/10' }
     }
     // 虫害显示

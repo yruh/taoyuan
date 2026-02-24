@@ -26,6 +26,7 @@ import {
 import { getCropById } from '@/data/crops'
 import { addLog } from '@/composables/useGameLog'
 import { useAchievementStore } from './useAchievementStore'
+import { useGameStore } from './useGameStore'
 
 export const useBreedingStore = defineStore('breeding', () => {
   // === 状态 ===
@@ -159,7 +160,7 @@ export const useBreedingStore = defineStore('breeding', () => {
         const hybrid = findPossibleHybridById(result.hybridId)
         compendium.value.push({
           hybridId: result.hybridId,
-          discoveredYear: 1,
+          discoveredYear: useGameStore().year,
           bestTotalStats: result.sweetness + result.yield + result.resistance,
           timesGrown: 0
         })
@@ -249,7 +250,7 @@ export const useBreedingStore = defineStore('breeding', () => {
         const hybrid = findPossibleHybridById(result.hybridId)
         compendium.value.push({
           hybridId: result.hybridId,
-          discoveredYear: 1,
+          discoveredYear: useGameStore().year,
           bestTotalStats: result.sweetness + result.yield + result.resistance,
           timesGrown: 0
         })
@@ -301,7 +302,7 @@ export const useBreedingStore = defineStore('breeding', () => {
       if (!existing) {
         compendium.value.push({
           hybridId: hybrid.id,
-          discoveredYear: 1,
+          discoveredYear: useGameStore().year,
           bestTotalStats: result.sweetness + result.yield + result.resistance,
           timesGrown: 0
         })

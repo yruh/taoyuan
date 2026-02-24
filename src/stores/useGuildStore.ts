@@ -90,7 +90,10 @@ export const useGuildStore = defineStore('guild', () => {
 
     if (playerStore.money < item.price) return false
     playerStore.spendMoney(item.price)
-    inventoryStore.addItem(item.itemId, 1)
+    if (!inventoryStore.addItem(item.itemId, 1)) {
+      playerStore.earnMoney(item.price)
+      return false
+    }
     return true
   }
 

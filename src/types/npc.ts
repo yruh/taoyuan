@@ -91,6 +91,16 @@ export type PregnancyStage = 'early' | 'mid' | 'late' | 'ready'
 /** 提议回应 */
 export type ProposalResponse = 'accept' | 'decline' | 'wait'
 
+/** 雇工任务类型 */
+export type FarmHelperTask = 'water' | 'feed' | 'harvest' | 'weed'
+
+/** 雇工状态 */
+export interface HiredHelper {
+  npcId: string
+  task: FarmHelperTask
+  dailyWage: number
+}
+
 /** 孕期状态 */
 export interface PregnancyState {
   stage: PregnancyStage

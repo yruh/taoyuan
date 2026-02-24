@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useAudio } from '@/composables/useAudio'
-import { getThemeByKey, type ThemeKey } from '@/data/themes'
+import { getThemeByKey, hexToRgb, type ThemeKey } from '@/data/themes'
 import { applyQmsgConfig } from '@/composables/useGameLog'
 import type { ItemCategory } from '@/types'
 
@@ -36,9 +36,9 @@ export const useSettingsStore = defineStore('settings', () => {
 
   const applyTheme = () => {
     const t = getThemeByKey(theme.value)
-    document.documentElement.style.setProperty('--color-bg', t.bg)
-    document.documentElement.style.setProperty('--color-panel', t.panel)
-    document.documentElement.style.setProperty('--color-text', t.text)
+    document.documentElement.style.setProperty('--color-bg', hexToRgb(t.bg))
+    document.documentElement.style.setProperty('--color-panel', hexToRgb(t.panel))
+    document.documentElement.style.setProperty('--color-text', hexToRgb(t.text))
   }
 
   const changeFontSize = (delta: number) => {
@@ -117,6 +117,11 @@ export const useSettingsStore = defineStore('settings', () => {
     sfxEnabled.value = data?.sfxEnabled ?? true
     bgmEnabled.value = data?.bgmEnabled ?? true
   }
+
+  // 初始化时立即同步到 Qmsg，确保新游戏/首次加载也能生效
+  syncQmsgConfig()
+  applyFontSize()
+  applyTheme()
 
   return {
     fontSize,

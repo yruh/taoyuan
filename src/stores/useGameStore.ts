@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { Season, Weather, Location, LocationGroup, FarmMapType } from '@/types'
+import type { Season, Weather, Location, LocationGroup, FarmMapType, Quality } from '@/types'
 import {
   DAY_START_HOUR,
   PASSOUT_HOUR,
@@ -11,11 +11,13 @@ import {
   getTimePeriod,
   TAB_TO_LOCATION_GROUP,
   TRAVEL_TIME,
+  TRAVEL_STAMINA,
   getLocationGroupName
 } from '@/data/timeConstants'
 import { useCookingStore } from './useCookingStore'
 import { useAnimalStore } from './useAnimalStore'
 import { useInventoryStore } from './useInventoryStore'
+import { usePlayerStore } from './usePlayerStore'
 
 /** 季节顺序 */
 const SEASON_ORDER: Season[] = ['spring', 'summer', 'autumn', 'winter']
@@ -65,6 +67,12 @@ export const useGameStore = defineStore('game', () => {
   const farmMapType = ref<FarmMapType>('standard')
   const midnightWarned = ref(false)
   const dailyLuck = ref(0)
+
+  /** 山丘田庄：地表矿脉（日结生成，在农场面板开采后清除） */
+  const surfaceOrePatch = ref<{ oreId: string; quantity: number } | null>(null)
+
+  /** 溪流田庄：溪流鱼获（日结生成，在农场面板收取后清除） */
+  const creekCatch = ref<{ fishId: string; quality: Quality }[]>([])
 
   const seasonIndex = computed(() => SEASON_ORDER.indexOf(season.value))
   const seasonName = computed(() => SEASON_NAMES[season.value])
@@ -163,11 +171,20 @@ export const useGameStore = defineStore('game', () => {
     if (targetGroup === currentLocationGroup.value) return { ok: true, timeCost: 0, passedOut: false, message: '' }
 
     const cost = getTravelCost(targetTab)
+
+    // 体力消耗：有马减半（向下取整）
+    const key = `${currentLocationGroup.value}->${targetGroup}`
+    const baseStamina = TRAVEL_STAMINA[key] ?? 1
+    const animalStore = useAnimalStore()
+    const staminaCost = animalStore.hasHorse ? Math.floor(baseStamina / 2) : baseStamina
+    const playerStore = usePlayerStore()
+    playerStore.consumeStamina(staminaCost)
+
     const result = advanceTime(cost)
     const targetName = getLocationGroupName(targetGroup)
     currentLocationGroup.value = targetGroup
 
-    const travelMsg = cost > 0 ? `前往${targetName}，路上花了${Math.round(cost * 60)}分钟。` : ''
+    const travelMsg = cost > 0 ? `前往${targetName}，路上花了${Math.round(cost * 60)}分钟，消耗${staminaCost}点体力。` : ''
     return {
       ok: true,
       timeCost: cost,
@@ -240,7 +257,9 @@ export const useGameStore = defineStore('game', () => {
       currentLocation: currentLocation.value,
       currentLocationGroup: currentLocationGroup.value,
       farmMapType: farmMapType.value,
-      dailyLuck: dailyLuck.value
+      dailyLuck: dailyLuck.value,
+      surfaceOrePatch: surfaceOrePatch.value,
+      creekCatch: creekCatch.value
     }
   }
 
@@ -257,6 +276,8 @@ export const useGameStore = defineStore('game', () => {
     currentLocationGroup.value = data.currentLocationGroup ?? 'farm'
     farmMapType.value = data.farmMapType ?? 'standard'
     dailyLuck.value = data.dailyLuck ?? 0
+    surfaceOrePatch.value = data.surfaceOrePatch ?? null
+    creekCatch.value = data.creekCatch ?? []
     isGameStarted.value = true
   }
 
@@ -273,6 +294,8 @@ export const useGameStore = defineStore('game', () => {
     farmMapType,
     midnightWarned,
     dailyLuck,
+    surfaceOrePatch,
+    creekCatch,
     seasonIndex,
     seasonName,
     weatherName,

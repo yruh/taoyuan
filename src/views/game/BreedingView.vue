@@ -404,7 +404,10 @@
   import { ref, computed } from 'vue'
   import { FlaskConical, Plus, Check, X, Dna, Trash2, Sprout, PackageOpen, Star, Lock } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
-  import { useBreedingStore, usePlayerStore, useInventoryStore, useGameStore } from '@/stores'
+  import { useBreedingStore } from '@/stores/useBreedingStore'
+  import { useGameStore } from '@/stores/useGameStore'
+  import { usePlayerStore } from '@/stores/usePlayerStore'
+  import { getCombinedItemCount, removeCombinedItem } from '@/composables/useCombinedInventory'
   import { getCropById } from '@/data/crops'
   import { getItemById } from '@/data/items'
   import {
@@ -424,7 +427,6 @@
 
   const breedingStore = useBreedingStore()
   const playerStore = usePlayerStore()
-  const inventoryStore = useInventoryStore()
   const gameStore = useGameStore()
 
   // === Tabs ===
@@ -622,7 +624,7 @@
   const showCraftModal = ref(false)
 
   const canCraftStation = computed(() => {
-    return breedingStore.canCraftStation(playerStore.money, (id: string) => inventoryStore.getItemCount(id))
+    return breedingStore.canCraftStation(playerStore.money, (id: string) => getCombinedItemCount(id))
   })
 
   const craftMaterials = computed(() => {
@@ -630,8 +632,8 @@
       itemId: m.itemId,
       name: getItemById(m.itemId)?.name ?? m.itemId,
       required: m.quantity,
-      owned: inventoryStore.getItemCount(m.itemId),
-      enough: inventoryStore.getItemCount(m.itemId) >= m.quantity
+      owned: getCombinedItemCount(m.itemId),
+      enough: getCombinedItemCount(m.itemId) >= m.quantity
     }))
   })
 
@@ -639,7 +641,7 @@
     if (!canCraftStation.value) return
     breedingStore.craftStation(
       (amount: number) => playerStore.spendMoney(amount),
-      (id: string, qty: number) => inventoryStore.removeItem(id, qty)
+      (id: string, qty: number) => removeCombinedItem(id, qty)
     )
     addLog('建造了一台育种台。')
     showCraftModal.value = false

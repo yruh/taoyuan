@@ -2,7 +2,7 @@
   <div
     class="flex min-h-screen flex-col items-center justify-center space-y-8 px-4"
     @click.once="startBgm"
-    :class="{ 'py-10': isWebView }"
+    :class="{ 'py-10': Capacitor.isNativePlatform() }"
     @click="slotMenuOpen = null"
   >
     <!-- 标题 -->
@@ -41,7 +41,7 @@
               class="absolute right-0 top-full mt-1 z-10 flex flex-col border border-accent/30 rounded-xs overflow-hidden w-30"
             >
               <Button
-                v-if="!isWebView"
+                v-if="!Capacitor.isNativePlatform()"
                 class="text-center !rounded-none justify-center !text-sm"
                 :icon="Download"
                 :icon-size="12"
@@ -63,7 +63,7 @@
       </div>
 
       <!-- 导入存档 -->
-      <template v-if="!isWebView">
+      <template v-if="!Capacitor.isNativePlatform()">
         <Button class="text-center justify-center" :icon="Upload" @click="triggerImport">导入存档</Button>
         <input ref="fileInputRef" type="file" accept=".tyx" class="hidden" @change="handleImportFile" />
       </template>
@@ -322,8 +322,11 @@
   import { FARM_MAP_DEFS } from '@/data/farmMaps'
   import _pkg from '../../package.json'
   import { useAudio } from '@/composables/useAudio'
-  import { showFloat } from '@/composables/useGameLog'
+  import { showFloat, addLog } from '@/composables/useGameLog'
+  import { resetAllStoresForNewGame } from '@/composables/useResetGame'
+  import { useTutorialStore } from '@/stores/useTutorialStore'
   import type { FarmMapType, Gender } from '@/types'
+  import { Capacitor } from '@capacitor/core'
 
   const router = useRouter()
   const { startBgm } = useAudio()
@@ -363,9 +366,6 @@
     showFarmConfirm.value = true
   }
 
-  // 判断是否webview环境
-  const isWebView = window.__WEBVIEW__
-
   const handlePrivacyAgree = () => {
     localStorage.setItem('taoyuan_privacy_agreed', '1')
     showPrivacy.value = false
@@ -400,6 +400,8 @@
       showFloat('存档槽位已满，请先删除一个旧存档。')
       return
     }
+    // 重置所有游戏 store 到初始状态，防止上一个存档数据残留
+    resetAllStoresForNewGame()
     playerStore.setIdentity((charName.value.trim() || '未命名').slice(0, 4), charGender.value)
     gameStore.startNewGame(selectedMap.value)
     // 标准农场初始6×6，其余4×4
@@ -444,6 +446,12 @@
       )
     }
     questStore.initMainQuest()
+    // 新手引导：游戏开始时立即显示欢迎提示
+    const tutorialStore = useTutorialStore()
+    if (tutorialStore.enabled) {
+      addLog('柳村长说：「欢迎来到桃源乡！背包里有白菜种子，去农场开垦土地、播种吧。」')
+      tutorialStore.markTipShown('tip_welcome')
+    }
     void router.push('/game')
   }
 

@@ -260,14 +260,28 @@
               <div class="flex space-x-1 shrink-0 ml-2">
                 <Button
                   class="py-0 px-1.5"
-                  :class="inventoryStore.equippedRingSlot1 === idx ? '!bg-accent !text-bg' : ''"
+                  :class="
+                    inventoryStore.equippedRingSlot1 === idx
+                      ? '!bg-accent !text-bg'
+                      : isRingBlockedForSlot(idx, 0)
+                        ? 'opacity-30 cursor-not-allowed'
+                        : ''
+                  "
+                  :disabled="isRingBlockedForSlot(idx, 0)"
                   @click.stop="handleToggleRingSlot(idx, 0)"
                 >
                   槽1
                 </Button>
                 <Button
                   class="py-0 px-1.5"
-                  :class="inventoryStore.equippedRingSlot2 === idx ? '!bg-accent !text-bg' : ''"
+                  :class="
+                    inventoryStore.equippedRingSlot2 === idx
+                      ? '!bg-accent !text-bg'
+                      : isRingBlockedForSlot(idx, 1)
+                        ? 'opacity-30 cursor-not-allowed'
+                        : ''
+                  "
+                  :disabled="isRingBlockedForSlot(idx, 1)"
                   @click.stop="handleToggleRingSlot(idx, 1)"
                 >
                   槽2
@@ -619,10 +633,20 @@
           </div>
           <div class="flex flex-col space-y-1.5">
             <div class="flex space-x-1.5">
-              <Button class="flex-1 justify-center" @click="handleEquipRingFromPopup(0)">
+              <Button
+                class="flex-1 justify-center"
+                :class="activeRingIdx !== null && isRingBlockedForSlot(activeRingIdx, 0) ? 'opacity-30 cursor-not-allowed' : ''"
+                :disabled="activeRingIdx !== null && isRingBlockedForSlot(activeRingIdx, 0)"
+                @click="handleEquipRingFromPopup(0)"
+              >
                 {{ inventoryStore.equippedRingSlot1 === activeRingIdx ? '卸下槽1' : '装备槽1' }}
               </Button>
-              <Button class="flex-1 justify-center" @click="handleEquipRingFromPopup(1)">
+              <Button
+                class="flex-1 justify-center"
+                :class="activeRingIdx !== null && isRingBlockedForSlot(activeRingIdx, 1) ? 'opacity-30 cursor-not-allowed' : ''"
+                :disabled="activeRingIdx !== null && isRingBlockedForSlot(activeRingIdx, 1)"
+                @click="handleEquipRingFromPopup(1)"
+              >
                 {{ inventoryStore.equippedRingSlot2 === activeRingIdx ? '卸下槽2' : '装备槽2' }}
               </Button>
             </div>
@@ -714,8 +738,12 @@
   import { ref, computed } from 'vue'
   import { Apple, Archive, ArrowDown01, ArrowRight, BookMarked, Filter, Package, X, Zap } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
-  import { useInventoryStore, usePlayerStore, useSkillStore, useGameStore, useCookingStore } from '@/stores'
+  import { useCookingStore } from '@/stores/useCookingStore'
+  import { useGameStore } from '@/stores/useGameStore'
+  import { useInventoryStore } from '@/stores/useInventoryStore'
+  import { usePlayerStore } from '@/stores/usePlayerStore'
   import { useSettingsStore } from '@/stores/useSettingsStore'
+  import { useSkillStore } from '@/stores/useSkillStore'
   import { getItemById, getItemSource } from '@/data'
   import { getRecipeById } from '@/data/recipes'
   import { getWeaponById, getWeaponDisplayName, getWeaponSellPrice, getEnchantmentById, WEAPON_TYPE_NAMES } from '@/data/weapons'
@@ -888,12 +916,21 @@
     return inventoryStore.equippedRingSlot1 === idx || inventoryStore.equippedRingSlot2 === idx
   }
 
+  /** 检查戒指是否因同defId冲突被另一槽位阻止 */
+  const isRingBlockedForSlot = (ringIdx: number, slot: 0 | 1): boolean => {
+    const otherSlotIdx = slot === 0 ? inventoryStore.equippedRingSlot2 : inventoryStore.equippedRingSlot1
+    if (otherSlotIdx < 0 || otherSlotIdx === ringIdx) return false
+    if (otherSlotIdx >= inventoryStore.ownedRings.length) return false
+    return inventoryStore.ownedRings[ringIdx]?.defId === inventoryStore.ownedRings[otherSlotIdx]?.defId
+  }
+
   /** 切换戒指槽位（点击高亮按钮 → 卸下；点击非高亮按钮 → 装备/换位） */
   const handleToggleRingSlot = (ringIdx: number, slot: 0 | 1) => {
     const slotRef = slot === 0 ? inventoryStore.equippedRingSlot1 : inventoryStore.equippedRingSlot2
     if (slotRef === ringIdx) {
       inventoryStore.unequipRing(slot)
     } else {
+      if (isRingBlockedForSlot(ringIdx, slot)) return
       inventoryStore.equipRing(ringIdx, slot)
     }
   }
@@ -1010,6 +1047,7 @@
 
   const handleEquipRingFromPopup = (slot: 0 | 1) => {
     if (activeRingIdx.value === null) return
+    if (isRingBlockedForSlot(activeRingIdx.value, slot)) return
     const slotRef = slot === 0 ? inventoryStore.equippedRingSlot1 : inventoryStore.equippedRingSlot2
     if (slotRef === activeRingIdx.value) {
       inventoryStore.unequipRing(slot)
@@ -1224,7 +1262,7 @@
   }
 
   /** 可使用的特殊物品 */
-  const USABLE_ITEMS = new Set(['rain_totem'])
+  const USABLE_ITEMS = new Set(['rain_totem', 'stamina_fruit'])
 
   const isUsable = (itemId: string): boolean => {
     return USABLE_ITEMS.has(itemId)
@@ -1235,6 +1273,15 @@
       if (!inventoryStore.removeItem(itemId, 1, quality)) return
       gameStore.setTomorrowWeather('rainy')
       addLog('你使用了雨图腾，明天将会下雨。')
+    }
+    if (itemId === 'stamina_fruit') {
+      if (playerStore.staminaCapLevel >= 4) {
+        addLog('体力上限已达到最高，无法再使用仙桃。')
+        return
+      }
+      if (!inventoryStore.removeItem(itemId, 1, quality)) return
+      playerStore.upgradeMaxStamina()
+      addLog(`食用了仙桃，体力上限永久提升至${playerStore.maxStamina}！`)
     }
     // 物品消耗完则关闭弹窗
     if (!inventoryStore.items.find(i => i.itemId === itemId && i.quality === quality)) {

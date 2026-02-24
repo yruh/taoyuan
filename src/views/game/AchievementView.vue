@@ -476,18 +476,16 @@
   import { BookOpen, CircleCheck, Circle, Send, X, ScrollText, Lock } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
   import { ref, computed } from 'vue'
-  import {
-    useAchievementStore,
-    useInventoryStore,
-    useShopStore,
-    useAnimalStore,
-    useSecretNoteStore,
-    useSkillStore,
-    useNpcStore,
-    useQuestStore,
-    useMuseumStore,
-    useGuildStore
-  } from '@/stores'
+  import { useAchievementStore } from '@/stores/useAchievementStore'
+  import { useAnimalStore } from '@/stores/useAnimalStore'
+  import { useGuildStore } from '@/stores/useGuildStore'
+  import { useInventoryStore } from '@/stores/useInventoryStore'
+  import { useMuseumStore } from '@/stores/useMuseumStore'
+  import { useNpcStore } from '@/stores/useNpcStore'
+  import { useQuestStore } from '@/stores/useQuestStore'
+  import { useSecretNoteStore } from '@/stores/useSecretNoteStore'
+  import { useShopStore } from '@/stores/useShopStore'
+  import { useSkillStore } from '@/stores/useSkillStore'
   import { ACHIEVEMENTS, COMMUNITY_BUNDLES } from '@/data/achievements'
   import { ITEMS, getItemById } from '@/data/items'
   import { HYBRID_DEFS } from '@/data/breeding'

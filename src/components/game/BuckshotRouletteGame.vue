@@ -350,7 +350,7 @@
   @keyframes buckshot-hit {
     0%,
     100% {
-      background-color: var(--color-panel);
+      background-color: rgb(var(--color-panel));
     }
     50% {
       background-color: rgba(195, 64, 67, 0.4);

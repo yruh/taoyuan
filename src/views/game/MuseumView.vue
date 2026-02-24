@@ -182,7 +182,7 @@
   import { ref, computed } from 'vue'
   import { Landmark, Send, X, CircleCheck, Circle, Package, Lock } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
-  import { useMuseumStore } from '@/stores'
+  import { useMuseumStore } from '@/stores/useMuseumStore'
   import { MUSEUM_ITEMS, MUSEUM_CATEGORIES, MUSEUM_MILESTONES } from '@/data/museum'
   import type { MuseumItemDef, MuseumCategory } from '@/types'
   import { getItemById } from '@/data/items'

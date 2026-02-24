@@ -8,7 +8,9 @@ import type {
   ChildState,
   PregnancyState,
   PregnancyStage,
-  ProposalResponse
+  ProposalResponse,
+  FarmHelperTask,
+  HiredHelper
 } from '@/types'
 import { NPCS, getNpcById, getHeartEventsForNpc, RECIPES } from '@/data'
 import { WEATHER_TIPS, getFortuneTip, getLivingTip, getRecipeTipMessage, NO_RECIPE_TIP, TIP_NPC_IDS } from '@/data/npcTips'
@@ -17,6 +19,8 @@ import { useInventoryStore } from './useInventoryStore'
 import { useGameStore } from './useGameStore'
 import { usePlayerStore } from './usePlayerStore'
 import { useCookingStore } from './useCookingStore'
+import { useFarmStore } from './useFarmStore'
+import { useAnimalStore } from './useAnimalStore'
 
 /** 好感等级阈值 (10心制, 每心250点, 上限2500) */
 const FRIENDSHIP_THRESHOLDS: { level: FriendshipLevel; min: number }[] = [
@@ -73,6 +77,153 @@ export const useNpcStore = defineStore('npc', () => {
 
   /** 婚礼对象NPC ID */
   const weddingNpcId = ref<string | null>(null)
+
+  // ============================================================
+  // 雇工系统
+  // ============================================================
+
+  const hiredHelpers = ref<HiredHelper[]>([])
+  const MAX_HELPERS = 2
+
+  /** 雇工日薪 */
+  const HELPER_WAGES: Record<FarmHelperTask, number> = {
+    water: 100,
+    feed: 150,
+    harvest: 200,
+    weed: 100
+  }
+
+  /** 雇工任务名称 */
+  const HELPER_TASK_NAMES: Record<FarmHelperTask, string> = {
+    water: '浇水',
+    feed: '喂食',
+    harvest: '收获',
+    weed: '除草除虫'
+  }
+
+  /** 可雇佣的NPC列表（好感>=1000 且 未被雇佣 且 非配偶/知己） */
+  const getHireableNpcs = (): { npcId: string; name: string; friendship: number }[] => {
+    return npcStates.value
+      .filter(s => {
+        if (s.friendship < 1000) return false
+        if (s.married || s.zhiji) return false
+        if (hiredHelpers.value.some(h => h.npcId === s.npcId)) return false
+        return true
+      })
+      .map(s => {
+        const def = getNpcById(s.npcId)
+        return { npcId: s.npcId, name: def?.name ?? s.npcId, friendship: s.friendship }
+      })
+  }
+
+  /** 雇佣NPC */
+  const hireHelper = (npcId: string, task: FarmHelperTask): { success: boolean; message: string } => {
+    const state = getNpcState(npcId)
+    if (!state) return { success: false, message: 'NPC不存在。' }
+    if (state.friendship < 1000) return { success: false, message: '好感度不足（需要4心/1000）。' }
+    if (state.married || state.zhiji) return { success: false, message: '伴侣和知己不可雇佣。' }
+    if (hiredHelpers.value.length >= MAX_HELPERS) return { success: false, message: `最多雇佣${MAX_HELPERS}名帮手。` }
+    if (hiredHelpers.value.some(h => h.npcId === npcId)) return { success: false, message: '此人已被雇佣。' }
+
+    const npcDef = getNpcById(npcId)
+    const name = npcDef?.name ?? npcId
+    hiredHelpers.value.push({ npcId, task, dailyWage: HELPER_WAGES[task] })
+    return { success: true, message: `${name}开始帮你${HELPER_TASK_NAMES[task]}了！(日薪${HELPER_WAGES[task]}文)` }
+  }
+
+  /** 解雇 */
+  const dismissHelper = (npcId: string): { success: boolean; message: string } => {
+    const idx = hiredHelpers.value.findIndex(h => h.npcId === npcId)
+    if (idx < 0) return { success: false, message: '此人未被雇佣。' }
+
+    const npcDef = getNpcById(npcId)
+    const name = npcDef?.name ?? npcId
+    hiredHelpers.value.splice(idx, 1)
+    return { success: true, message: `${name}已离开。` }
+  }
+
+  /** 每日雇工结算（useEndDay调用） */
+  const processDailyHelpers = (): { messages: string[]; dismissedNpcs: string[] } => {
+    const playerStore = usePlayerStore()
+    const farmStore = useFarmStore()
+    const animalStore = useAnimalStore()
+    const inventoryStore = useInventoryStore()
+    const messages: string[] = []
+    const dismissed: string[] = []
+
+    for (const helper of [...hiredHelpers.value]) {
+      const npcDef = getNpcById(helper.npcId)
+      const name = npcDef?.name ?? '雇工'
+      const state = getNpcState(helper.npcId)
+
+      // 已变为配偶/知己 → 自动解雇（不收工资）
+      if (state && (state.married || state.zhiji)) {
+        hiredHelpers.value = hiredHelpers.value.filter(h => h.npcId !== helper.npcId)
+        messages.push(`${name}已成为你的${state.married ? '伴侣' : '知己'}，不再担任雇工。`)
+        dismissed.push(helper.npcId)
+        continue
+      }
+
+      const efficiency = state && state.friendship >= 2000 ? 1.5 : 1.0
+
+      // 扣工资
+      if (!playerStore.spendMoney(helper.dailyWage)) {
+        hiredHelpers.value = hiredHelpers.value.filter(h => h.npcId !== helper.npcId)
+        messages.push(`付不起${name}的工资，${name}不干了。`)
+        dismissed.push(helper.npcId)
+        continue
+      }
+
+      switch (helper.task) {
+        case 'water': {
+          const unwatered = farmStore.plots.filter(p => (p.state === 'planted' || p.state === 'growing') && !p.watered)
+          const count = Math.min(unwatered.length, Math.floor(4 * efficiency) + Math.floor(Math.random() * 3))
+          for (let i = 0; i < count; i++) farmStore.waterPlot(unwatered[i]!.id)
+          if (count > 0) messages.push(`${name}帮你浇了${count}块地。(-${helper.dailyWage}文)`)
+          else messages.push(`${name}今天没什么可浇的。(-${helper.dailyWage}文)`)
+          break
+        }
+        case 'feed': {
+          const result = animalStore.feedAll()
+          if (result.fedCount > 0) messages.push(`${name}帮你喂了${result.fedCount}只牲畜。(-${helper.dailyWage}文)`)
+          else messages.push(`${name}今天没什么需要喂的。(-${helper.dailyWage}文)`)
+          break
+        }
+        case 'harvest': {
+          const harvestable = farmStore.plots.filter(p => p.state === 'harvestable')
+          const count = Math.min(harvestable.length, Math.floor(5 * efficiency))
+          let harvested = 0
+          for (let i = 0; i < count; i++) {
+            const result = farmStore.harvestPlot(harvestable[i]!.id)
+            if (result.cropId) {
+              inventoryStore.addItem(result.cropId, 1, 'normal')
+              harvested++
+            }
+          }
+          if (harvested > 0) messages.push(`${name}帮你收了${harvested}块地的庄稼。(-${helper.dailyWage}文)`)
+          else messages.push(`${name}今天没什么可收的。(-${helper.dailyWage}文)`)
+          break
+        }
+        case 'weed': {
+          let cleared = 0
+          for (const plot of farmStore.plots) {
+            if (plot.weedy) {
+              farmStore.clearWeed(plot.id)
+              cleared++
+            }
+            if (plot.infested) {
+              farmStore.curePest(plot.id)
+              cleared++
+            }
+          }
+          if (cleared > 0) messages.push(`${name}清理了${cleared}处杂草和虫害。(-${helper.dailyWage}文)`)
+          else messages.push(`${name}今天田里挺干净的。(-${helper.dailyWage}文)`)
+          break
+        }
+      }
+    }
+    return { messages, dismissedNpcs: dismissed }
+  }
 
   /** 子女名字池（按性别） */
   const CHILD_NAMES_MALE = ['小龙', '小宝', '团子', '年年']
@@ -166,14 +317,42 @@ export const useNpcStore = defineStore('npc', () => {
     // 已婚NPC有特殊对话
     if (state.married) {
       const playerStore = usePlayerStore()
+      const gameStore = useGameStore()
       const name = playerStore.playerName
+
       const marriedDialogues = [
         `${name}，今天辛苦了，早点回来吃饭。`,
         `我给${name}留了饭菜，还热着呢。`,
         '田里的活干完了吗？别太累了。',
-        `有${name}在身边，每天都很开心。`
+        `有${name}在身边，每天都很开心。`,
+        '今天想吃什么？我去准备。',
+        '家里收拾好了，你歇会儿吧。',
+        `和${name}在一起的日子，真好。`,
+        `${name}，今天精神不错嘛。`
       ]
-      const message = marriedDialogues[Math.floor(Math.random() * marriedDialogues.length)]!
+
+      const seasonDialogues: Record<string, string[]> = {
+        spring: [`春天到了，院子里的花都开了呢。`, `${name}，春播忙完了吗？`],
+        summer: [`好热啊……${name}多喝水。`, '夏天的西瓜最解暑了。'],
+        autumn: [`秋天的风真舒服。${name}，要不要一起散步？`, '丰收的季节，辛苦种的东西都有了回报。'],
+        winter: [`外面好冷，${name}快进屋暖和暖和。`, '冬天就该窝在家里喝热茶。']
+      }
+
+      const weatherDialogues: Record<string, string | null> = {
+        rainy: '下雨了，田里不用浇水，在家歇歇吧。',
+        stormy: '外面风雨好大，今天别出远门了。',
+        snowy: '下雪了呢，外面白茫茫的，真好看。',
+        windy: '风好大，出门小心别着凉了。',
+        sunny: null,
+        cloudy: null,
+        green_rain: null
+      }
+
+      const pool = [...marriedDialogues, ...(seasonDialogues[gameStore.season] ?? [])]
+      const weatherLine = weatherDialogues[gameStore.weather]
+      if (weatherLine) pool.push(weatherLine)
+
+      const message = pool[Math.floor(Math.random() * pool.length)]!
       return { message, friendshipGain: 20 }
     }
 
@@ -808,6 +987,7 @@ export const useNpcStore = defineStore('npc', () => {
       childCountdown: 0,
       weddingCountdown: weddingCountdown.value,
       weddingNpcId: weddingNpcId.value,
+      hiredHelpers: hiredHelpers.value,
       friendshipVersion: 2
     }
   }
@@ -875,17 +1055,24 @@ export const useNpcStore = defineStore('npc', () => {
 
     weddingCountdown.value = (data as any).weddingCountdown ?? 0
     weddingNpcId.value = (data as any).weddingNpcId ?? null
+    hiredHelpers.value = (data as any).hiredHelpers ?? []
   }
 
   return {
     npcStates,
     children,
+    nextChildId,
     daysMarried,
     daysZhiji,
     pregnancy,
     childProposalPending,
+    childProposalDeclinedCount,
+    daysSinceProposalDecline,
     weddingCountdown,
     weddingNpcId,
+    hiredHelpers,
+    HELPER_WAGES,
+    HELPER_TASK_NAMES,
     getNpcState,
     getFriendshipLevel,
     isBirthday,
@@ -905,6 +1092,10 @@ export const useNpcStore = defineStore('npc', () => {
     cancelWedding,
     divorce,
     releaseChild,
+    getHireableNpcs,
+    hireHelper,
+    dismissHelper,
+    processDailyHelpers,
     checkChildProposal,
     triggerChildProposal,
     respondToChildProposal,

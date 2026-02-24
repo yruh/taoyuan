@@ -53,7 +53,7 @@
 <script setup lang="ts">
   import { type Component } from 'vue'
   import { Star, Wheat, TreePine, Fish, Pickaxe, Sword } from 'lucide-vue-next'
-  import { useSkillStore } from '@/stores'
+  import { useSkillStore } from '@/stores/useSkillStore'
   import type { SkillType, SkillPerk5, SkillPerk10 } from '@/types'
 
   const skillStore = useSkillStore()

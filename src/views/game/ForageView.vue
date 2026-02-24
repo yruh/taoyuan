@@ -77,17 +77,14 @@
 <script setup lang="ts">
   import { ref, computed } from 'vue'
   import { TreePine, Search } from 'lucide-vue-next'
-  import {
-    usePlayerStore,
-    useInventoryStore,
-    useSkillStore,
-    useGameStore,
-    useAchievementStore,
-    useQuestStore,
-    useCookingStore,
-    useWalletStore,
-    SEASON_NAMES
-  } from '@/stores'
+  import { useAchievementStore } from '@/stores/useAchievementStore'
+  import { useCookingStore } from '@/stores/useCookingStore'
+  import { useGameStore, SEASON_NAMES } from '@/stores/useGameStore'
+  import { useInventoryStore } from '@/stores/useInventoryStore'
+  import { usePlayerStore } from '@/stores/usePlayerStore'
+  import { useQuestStore } from '@/stores/useQuestStore'
+  import { useSkillStore } from '@/stores/useSkillStore'
+  import { useWalletStore } from '@/stores/useWalletStore'
   import type { Quality } from '@/types'
   import { getForageItems, getItemById } from '@/data'
   import { WEATHER_FORAGE_MODIFIER } from '@/data/forage'

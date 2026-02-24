@@ -696,6 +696,193 @@ export const PROCESSING_RECIPES: ProcessingRecipeDef[] = [
     processingDays: 1,
     description: '从雪莲中提取种子。'
   },
+  {
+    id: 'seed_from_rapeseed',
+    machineType: 'seed_maker',
+    name: '油菜种子',
+    inputItemId: 'rapeseed',
+    inputQuantity: 1,
+    outputItemId: 'seed_rapeseed',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从油菜中提取种子。'
+  },
+  {
+    id: 'seed_from_broad_bean',
+    machineType: 'seed_maker',
+    name: '蚕豆种子',
+    inputItemId: 'broad_bean',
+    inputQuantity: 1,
+    outputItemId: 'seed_broad_bean',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从蚕豆中提取种子。'
+  },
+  {
+    id: 'seed_from_peach',
+    machineType: 'seed_maker',
+    name: '桃种子',
+    inputItemId: 'peach',
+    inputQuantity: 1,
+    outputItemId: 'seed_peach',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从桃中提取种子。'
+  },
+  {
+    id: 'seed_from_green_bean',
+    machineType: 'seed_maker',
+    name: '豆角种子',
+    inputItemId: 'green_bean',
+    inputQuantity: 1,
+    outputItemId: 'seed_green_bean',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从豆角中提取种子。'
+  },
+  {
+    id: 'seed_from_loofah',
+    machineType: 'seed_maker',
+    name: '丝瓜种子',
+    inputItemId: 'loofah',
+    inputQuantity: 1,
+    outputItemId: 'seed_loofah',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从丝瓜中提取种子。'
+  },
+  {
+    id: 'seed_from_eggplant',
+    machineType: 'seed_maker',
+    name: '茄子种子',
+    inputItemId: 'eggplant',
+    inputQuantity: 1,
+    outputItemId: 'seed_eggplant',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从茄子中提取种子。'
+  },
+  {
+    id: 'seed_from_chili',
+    machineType: 'seed_maker',
+    name: '辣椒种子',
+    inputItemId: 'chili',
+    inputQuantity: 1,
+    outputItemId: 'seed_chili',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从辣椒中提取种子。'
+  },
+  {
+    id: 'seed_from_lotus_seed',
+    machineType: 'seed_maker',
+    name: '莲子种子',
+    inputItemId: 'lotus_seed',
+    inputQuantity: 1,
+    outputItemId: 'seed_lotus_seed',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从莲子中提取种子。'
+  },
+  {
+    id: 'seed_from_corn',
+    machineType: 'seed_maker',
+    name: '玉米种子',
+    inputItemId: 'corn',
+    inputQuantity: 1,
+    outputItemId: 'seed_corn',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从玉米中提取种子。'
+  },
+  {
+    id: 'seed_from_yam',
+    machineType: 'seed_maker',
+    name: '山药种子',
+    inputItemId: 'yam',
+    inputQuantity: 1,
+    outputItemId: 'seed_yam',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从山药中提取种子。'
+  },
+  {
+    id: 'seed_from_peanut',
+    machineType: 'seed_maker',
+    name: '花生种子',
+    inputItemId: 'peanut',
+    inputQuantity: 1,
+    outputItemId: 'seed_peanut',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从花生中提取种子。'
+  },
+  {
+    id: 'seed_from_jujube',
+    machineType: 'seed_maker',
+    name: '红枣种子',
+    inputItemId: 'jujube',
+    inputQuantity: 1,
+    outputItemId: 'seed_jujube',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从红枣中提取种子。'
+  },
+  {
+    id: 'seed_from_ginger',
+    machineType: 'seed_maker',
+    name: '生姜种子',
+    inputItemId: 'ginger',
+    inputQuantity: 1,
+    outputItemId: 'seed_ginger',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从生姜中提取种子。'
+  },
+  {
+    id: 'seed_from_napa_cabbage',
+    machineType: 'seed_maker',
+    name: '白菜种子',
+    inputItemId: 'napa_cabbage',
+    inputQuantity: 1,
+    outputItemId: 'seed_napa_cabbage',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从白菜中提取种子。'
+  },
+  {
+    id: 'seed_from_spinach',
+    machineType: 'seed_maker',
+    name: '菠菜种子',
+    inputItemId: 'spinach',
+    inputQuantity: 1,
+    outputItemId: 'seed_spinach',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从菠菜中提取种子。'
+  },
+  {
+    id: 'seed_from_mustard_green',
+    machineType: 'seed_maker',
+    name: '芥菜种子',
+    inputItemId: 'mustard_green',
+    inputQuantity: 1,
+    outputItemId: 'seed_mustard_green',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从芥菜中提取种子。'
+  },
+  {
+    id: 'seed_from_chives',
+    machineType: 'seed_maker',
+    name: '韭菜种子',
+    inputItemId: 'chives',
+    inputQuantity: 1,
+    outputItemId: 'seed_chives',
+    outputQuantity: 2,
+    processingDays: 1,
+    description: '从韭菜中提取种子。'
+  },
   // 结晶复制机
   {
     id: 'dup_quartz',
@@ -1768,6 +1955,18 @@ export const SCARECROW = {
     { itemId: 'firewood', quantity: 5 }
   ],
   craftMoney: 150
+}
+
+export const AUTO_PETTER = {
+  id: 'auto_petter',
+  name: '自动抚摸机',
+  description: '安装到畜舍后，每天自动抚摸所有动物。需要大型畜舍（2级）。',
+  craftCost: [
+    { itemId: 'gold_bar', quantity: 10 },
+    { itemId: 'iron_bar', quantity: 20 },
+    { itemId: 'copper_bar', quantity: 20 }
+  ],
+  craftMoney: 5000
 }
 
 /** 炸弹定义 */

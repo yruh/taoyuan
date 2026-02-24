@@ -13,6 +13,7 @@ import {
 import { usePlayerStore } from './usePlayerStore'
 import { useInventoryStore } from './useInventoryStore'
 import { useFarmStore } from './useFarmStore'
+import { getCombinedItemCount, removeCombinedItem } from '@/composables/useCombinedInventory'
 
 /** 酒窖陈酿槽 */
 interface CellarSlot {
@@ -49,20 +50,19 @@ export const useHomeStore = defineStore('home', () => {
   /** 升级农舍 */
   const upgradeFarmhouse = (): boolean => {
     const playerStore = usePlayerStore()
-    const inventoryStore = useInventoryStore()
 
     const upgrade = nextUpgrade.value
     if (!upgrade) return false
 
     // 检查材料
     for (const mat of upgrade.materialCost) {
-      if (inventoryStore.getItemCount(mat.itemId) < mat.quantity) return false
+      if (getCombinedItemCount(mat.itemId) < mat.quantity) return false
     }
     if (!playerStore.spendMoney(upgrade.cost)) return false
 
     // 扣除材料
     for (const mat of upgrade.materialCost) {
-      inventoryStore.removeItem(mat.itemId, mat.quantity)
+      removeCombinedItem(mat.itemId, mat.quantity)
     }
 
     farmhouseLevel.value = upgrade.level
@@ -107,17 +107,16 @@ export const useHomeStore = defineStore('home', () => {
   /** 解锁温室 */
   const unlockGreenhouse = (): boolean => {
     const playerStore = usePlayerStore()
-    const inventoryStore = useInventoryStore()
 
     if (greenhouseUnlocked.value) return false
 
     for (const mat of GREENHOUSE_MATERIAL_COST) {
-      if (inventoryStore.getItemCount(mat.itemId) < mat.quantity) return false
+      if (getCombinedItemCount(mat.itemId) < mat.quantity) return false
     }
     if (!playerStore.spendMoney(GREENHOUSE_UNLOCK_COST)) return false
 
     for (const mat of GREENHOUSE_MATERIAL_COST) {
-      inventoryStore.removeItem(mat.itemId, mat.quantity)
+      removeCombinedItem(mat.itemId, mat.quantity)
     }
 
     greenhouseUnlocked.value = true

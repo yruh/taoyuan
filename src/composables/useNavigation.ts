@@ -1,15 +1,18 @@
 import type { Component } from 'vue'
 import router from '@/router'
-import { useGameStore } from '@/stores'
+import { useGameStore } from '@/stores/useGameStore'
 import { isShopOpen, TAB_TO_LOCATION_GROUP } from '@/data/timeConstants'
 import { addLog } from './useGameLog'
 import { handleEndDay } from './useEndDay'
 import { sfxClick, useAudio } from './useAudio'
 import { useGameClock } from './useGameClock'
+import { useTutorialStore } from '@/stores/useTutorialStore'
 import {
   Wheat,
   Egg,
   Home,
+  Heart,
+  Building,
   Users,
   Store,
   TreePine,
@@ -30,6 +33,7 @@ import {
   Tent,
   Waves
 } from 'lucide-vue-next'
+import { useNpcStore } from '@/stores/useNpcStore'
 
 export type PanelKey =
   | 'farm'
@@ -54,11 +58,13 @@ export type PanelKey =
   | 'guild'
   | 'hanhai'
   | 'fishpond'
+  | 'cottage'
 
-export const TABS: { key: PanelKey; label: string; icon: Component }[] = [
+export const TABS: { key: PanelKey; label: string; icon: Component; getIcon?: () => Component }[] = [
   { key: 'farm', label: '农场', icon: Wheat },
   { key: 'animal', label: '畜棚', icon: Egg },
-  { key: 'home', label: '农舍', icon: Home },
+  { key: 'cottage', label: '小屋', icon: Home, getIcon: () => (useNpcStore().getSpouse() ? Heart : Home) },
+  { key: 'home', label: '设施', icon: Building },
   { key: 'breeding', label: '育种', icon: FlaskConical },
   { key: 'fishpond', label: '鱼塘', icon: Waves },
   { key: 'village', label: '桃源村', icon: Users },
@@ -111,6 +117,7 @@ export const navigateToPanel = (panelKey: PanelKey) => {
   sfxClick()
   startBgm()
   void router.push({ name: panelKey })
+  useTutorialStore().markPanelVisited(panelKey)
 
   // UI 面板（无地点）暂停时钟，游戏面板恢复
   const { pauseClock, resumeClock } = useGameClock()

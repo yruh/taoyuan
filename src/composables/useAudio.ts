@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import type { Season, Weather, TimePeriod } from '@/types'
 import type * as ToneNs from 'tone'
-import { useGameStore } from '@/stores'
+import { useGameStore } from '@/stores/useGameStore'
 import { getTimePeriod } from '@/data/timeConstants'
 
 // ====== Tone.js 延迟加载（避免模块初始化时创建 AudioContext） ======

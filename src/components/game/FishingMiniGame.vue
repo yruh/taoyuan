@@ -27,7 +27,7 @@
         <div
           class="absolute w-full rounded-[1px]"
           :class="isOverlap ? 'bg-success/80' : 'bg-success/40'"
-          :style="{ bottom: hookPos + 'px', height: hookHeight + 'px' }"
+          :style="{ top: (CONTAINER_HEIGHT - hookPos - hookHeight) + 'px', height: hookHeight + 'px' }"
         />
       </div>
 

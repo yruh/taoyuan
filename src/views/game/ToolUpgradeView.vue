@@ -105,8 +105,8 @@
               </div>
               <div v-for="mat in selectedUpgradeCost.materials" :key="mat.itemId" class="flex items-center justify-between mt-0.5">
                 <span class="text-xs text-muted">{{ getItemById(mat.itemId)?.name ?? mat.itemId }}</span>
-                <span class="text-xs" :class="inventoryStore.getItemCount(mat.itemId) >= mat.quantity ? '' : 'text-danger'">
-                  {{ inventoryStore.getItemCount(mat.itemId) }}/{{ mat.quantity }}
+                <span class="text-xs" :class="getCombinedItemCount(mat.itemId) >= mat.quantity ? '' : 'text-danger'">
+                  {{ getCombinedItemCount(mat.itemId) }}/{{ mat.quantity }}
                 </span>
               </div>
               <template v-if="selectedFriendshipReq">
@@ -181,7 +181,11 @@
 <script setup lang="ts">
   import { ref, computed } from 'vue'
   import { ArrowUp, Wrench, Clock, CircleCheck, X } from 'lucide-vue-next'
-  import { useInventoryStore, usePlayerStore, useNpcStore, useGameStore } from '@/stores'
+  import { useGameStore } from '@/stores/useGameStore'
+  import { useInventoryStore } from '@/stores/useInventoryStore'
+  import { useNpcStore } from '@/stores/useNpcStore'
+  import { usePlayerStore } from '@/stores/usePlayerStore'
+  import { getCombinedItemCount, removeCombinedItem } from '@/composables/useCombinedInventory'
   import { getUpgradeCost, TOOL_NAMES, TIER_NAMES, getItemById } from '@/data'
   import { ACTION_TIME_COSTS } from '@/data/timeConstants'
   import { addLog } from '@/composables/useGameLog'
@@ -257,7 +261,7 @@
 
     if (playerStore.money < cost.money) return false
     for (const mat of cost.materials) {
-      if (inventoryStore.getItemCount(mat.itemId) < mat.quantity) return false
+      if (getCombinedItemCount(mat.itemId) < mat.quantity) return false
     }
     return true
   }
@@ -278,9 +282,9 @@
 
     if (playerStore.money < cost.money) return '金币不足'
     for (const mat of cost.materials) {
-      if (inventoryStore.getItemCount(mat.itemId) < mat.quantity) {
+      if (getCombinedItemCount(mat.itemId) < mat.quantity) {
         const itemName = getItemById(mat.itemId)?.name ?? mat.itemId
-        return `${itemName}不足（${inventoryStore.getItemCount(mat.itemId)}/${mat.quantity}）`
+        return `${itemName}不足（${getCombinedItemCount(mat.itemId)}/${mat.quantity}）`
       }
     }
     return ''
@@ -298,7 +302,7 @@
 
     playerStore.spendMoney(cost.money)
     for (const mat of cost.materials) {
-      inventoryStore.removeItem(mat.itemId, mat.quantity)
+      removeCombinedItem(mat.itemId, mat.quantity)
     }
     inventoryStore.startUpgrade(type, cost.toTier)
 

@@ -22,9 +22,10 @@ import {
   getPondableFish,
   isPondableFish
 } from '@/data/fishPond'
-import { getGen1BreedsForFish, findBreedByParents } from '@/data/pondBreeds'
+import { getGen1BreedsForFish, findBreedByParents, getBreedById, getBreedsByGeneration } from '@/data/pondBreeds'
 import { usePlayerStore } from './usePlayerStore'
 import { useInventoryStore } from './useInventoryStore'
+import { getCombinedItemCount, removeCombinedItem } from '@/composables/useCombinedInventory'
 import { useSkillStore } from './useSkillStore'
 
 let _idCounter = 0
@@ -70,14 +71,13 @@ export const useFishPondStore = defineStore('fishPond', () => {
   const buildPond = (): boolean => {
     if (pond.value.built) return false
     const playerStore = usePlayerStore()
-    const inventoryStore = useInventoryStore()
 
     for (const mat of POND_BUILD_COST.materials) {
-      if (inventoryStore.getItemCount(mat.itemId) < mat.quantity) return false
+      if (getCombinedItemCount(mat.itemId) < mat.quantity) return false
     }
     if (!playerStore.spendMoney(POND_BUILD_COST.money)) return false
     for (const mat of POND_BUILD_COST.materials) {
-      inventoryStore.removeItem(mat.itemId, mat.quantity)
+      removeCombinedItem(mat.itemId, mat.quantity)
     }
 
     pond.value.built = true
@@ -93,14 +93,13 @@ export const useFishPondStore = defineStore('fishPond', () => {
     const cost = POND_UPGRADE_COSTS[nextLevel]
 
     const playerStore = usePlayerStore()
-    const inventoryStore = useInventoryStore()
 
     for (const mat of cost.materials) {
-      if (inventoryStore.getItemCount(mat.itemId) < mat.quantity) return false
+      if (getCombinedItemCount(mat.itemId) < mat.quantity) return false
     }
     if (!playerStore.spendMoney(cost.money)) return false
     for (const mat of cost.materials) {
-      inventoryStore.removeItem(mat.itemId, mat.quantity)
+      removeCombinedItem(mat.itemId, mat.quantity)
     }
 
     pond.value.level = nextLevel
@@ -396,11 +395,14 @@ export const useFishPondStore = defineStore('fishPond', () => {
                 discoveredBreeds.value.add(recipe.breedId)
               }
             }
-            // 无匹配配方时分配随机 Gen1 品种
+            // 无匹配配方时：后代继承父母同代品种（而非总是回退到Gen1）
             if (!childBreedId) {
-              const g1Breeds = getGen1BreedsForFish(def.fishId)
-              if (g1Breeds.length > 0) {
-                const rnd = g1Breeds[Math.floor(Math.random() * g1Breeds.length)]!
+              const parentABreed = parentA.breedId ? getBreedById(parentA.breedId) : null
+              const parentBBreed = parentB.breedId ? getBreedById(parentB.breedId) : null
+              const parentGen = Math.min(parentABreed?.generation ?? 1, parentBBreed?.generation ?? 1) as 1 | 2 | 3 | 4 | 5
+              const sameGenBreeds = getBreedsByGeneration(parentGen).filter(b => b.baseFishId === def!.fishId)
+              if (sameGenBreeds.length > 0) {
+                const rnd = sameGenBreeds[Math.floor(Math.random() * sameGenBreeds.length)]!
                 childBreedId = rnd.breedId
                 childName = rnd.name
                 discoveredBreeds.value.add(rnd.breedId)

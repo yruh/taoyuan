@@ -22,7 +22,7 @@
 <script setup lang="ts">
   import { computed } from 'vue'
   import type { SkillType, SkillPerk5, SkillPerk10 } from '@/types'
-  import { useSkillStore } from '@/stores'
+  import { useSkillStore } from '@/stores/useSkillStore'
 
   const props = defineProps<{
     skillType: SkillType

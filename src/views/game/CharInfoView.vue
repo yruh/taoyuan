@@ -298,7 +298,12 @@
 <script setup lang="ts">
   import { ref, computed } from 'vue'
   import { User, X } from 'lucide-vue-next'
-  import { usePlayerStore, useInventoryStore, useSkillStore, useWalletStore, useNpcStore, useGameStore, SEASON_NAMES } from '@/stores'
+  import { useGameStore, SEASON_NAMES } from '@/stores/useGameStore'
+  import { useInventoryStore } from '@/stores/useInventoryStore'
+  import { useNpcStore } from '@/stores/useNpcStore'
+  import { usePlayerStore } from '@/stores/usePlayerStore'
+  import { useSkillStore } from '@/stores/useSkillStore'
+  import { useWalletStore } from '@/stores/useWalletStore'
   import { TOOL_NAMES, TIER_NAMES, getNpcById } from '@/data'
   import { getWeaponById, getEnchantmentById, getWeaponDisplayName } from '@/data/weapons'
   import { getRingById } from '@/data/rings'

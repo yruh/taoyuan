@@ -17,7 +17,9 @@ import { useInventoryStore } from './useInventoryStore'
 import { usePlayerStore } from './usePlayerStore'
 import { useSkillStore } from './useSkillStore'
 import { useBreedingStore } from './useBreedingStore'
+import { useWarehouseStore } from './useWarehouseStore'
 import { addLog } from '@/composables/useGameLog'
+import { hasCombinedItem, removeCombinedItem, getLowestCombinedQuality } from '@/composables/useCombinedInventory'
 
 /** 最大放置机器数 */
 const MAX_MACHINES = 15
@@ -38,7 +40,7 @@ export const useProcessingStore = defineStore('processing', () => {
   /** 检查是否有足够材料制造某样东西 */
   const canCraft = (craftCost: { itemId: string; quantity: number }[], craftMoney: number): boolean => {
     if (playerStore.money < craftMoney) return false
-    return craftCost.every(c => inventoryStore.hasItem(c.itemId, c.quantity))
+    return craftCost.every(c => hasCombinedItem(c.itemId, c.quantity))
   }
 
   /** 消耗材料 */
@@ -46,7 +48,7 @@ export const useProcessingStore = defineStore('processing', () => {
     if (!canCraft(craftCost, craftMoney)) return false
     if (!playerStore.spendMoney(craftMoney)) return false
     for (const c of craftCost) {
-      if (!inventoryStore.removeItem(c.itemId, c.quantity)) {
+      if (!removeCombinedItem(c.itemId, c.quantity)) {
         // 回退（简化处理：理论上不会到这里因为canCraft已检查）
         playerStore.earnMoney(craftMoney)
         return false
@@ -133,13 +135,9 @@ export const useProcessingStore = defineStore('processing', () => {
 
   // === 加工操作 ===
 
-  /** 检测背包中某物品的最低品质（removeItem 默认消耗顺序） */
+  /** 检测背包+仓库中某物品的最低品质（removeItem 默认消耗顺序） */
   const getLowestQuality = (itemId: string): Quality => {
-    const order: Quality[] = ['normal', 'fine', 'excellent', 'supreme']
-    for (const q of order) {
-      if (inventoryStore.getItemCount(itemId, q) > 0) return q
-    }
-    return 'normal'
+    return getLowestCombinedQuality(itemId)
   }
 
   /** 向已放置的机器投入原料开始加工 */
@@ -153,7 +151,7 @@ export const useProcessingStore = defineStore('processing', () => {
     let quality: Quality = 'normal'
     if (recipe.inputItemId !== null) {
       quality = getLowestQuality(recipe.inputItemId)
-      if (!inventoryStore.removeItem(recipe.inputItemId, recipe.inputQuantity)) return false
+      if (!removeCombinedItem(recipe.inputItemId, recipe.inputQuantity, quality)) return false
     }
 
     slot.recipeId = recipeId
@@ -173,7 +171,17 @@ export const useProcessingStore = defineStore('processing', () => {
     const recipe = getProcessingRecipeById(slot.recipeId)
     if (!recipe) return null
 
-    inventoryStore.addItem(recipe.outputItemId, recipe.outputQuantity, slot.inputQuality ?? 'normal')
+    // 优先放入虚空成品箱，箱子满则回退到背包
+    const warehouseStore = useWarehouseStore()
+    const voidOutput = warehouseStore.getVoidOutputChest()
+    if (
+      voidOutput &&
+      warehouseStore.addItemToChest(voidOutput.id, recipe.outputItemId, recipe.outputQuantity, slot.inputQuality ?? 'normal')
+    ) {
+      // 成功放入成品箱
+    } else {
+      inventoryStore.addItem(recipe.outputItemId, recipe.outputQuantity, slot.inputQuality ?? 'normal')
+    }
 
     // 种子制造机额外触发育种种子生成
     if (slot.machineType === 'seed_maker' && slot.inputItemId) {
@@ -195,17 +203,44 @@ export const useProcessingStore = defineStore('processing', () => {
     return recipe.outputItemId
   }
 
-  /** 拆除机器（返还到背包） */
+  /** 拆除机器（退回加工原料 + 已完成产物 + 机器制作材料） */
   const removeMachine = (slotIndex: number): boolean => {
     const slot = machines.value[slotIndex]
     if (!slot) return false
-    // 如果正在加工，退回原料（保留品质）
-    if (slot.recipeId && !slot.ready && slot.inputItemId) {
+
+    // 如果已完成：先收取产物
+    if (slot.recipeId && slot.ready) {
+      const recipe = getProcessingRecipeById(slot.recipeId)
+      if (recipe) {
+        const warehouseStore = useWarehouseStore()
+        const voidOutput = warehouseStore.getVoidOutputChest()
+        if (
+          voidOutput &&
+          warehouseStore.addItemToChest(voidOutput.id, recipe.outputItemId, recipe.outputQuantity, slot.inputQuality ?? 'normal')
+        ) {
+          // 成功放入成品箱
+        } else {
+          inventoryStore.addItem(recipe.outputItemId, recipe.outputQuantity, slot.inputQuality ?? 'normal')
+        }
+      }
+    }
+    // 如果正在加工：退回原料
+    else if (slot.recipeId && !slot.ready && slot.inputItemId) {
       const recipe = getProcessingRecipeById(slot.recipeId)
       if (recipe && recipe.inputItemId) {
         inventoryStore.addItem(recipe.inputItemId, recipe.inputQuantity, slot.inputQuality ?? 'normal')
       }
     }
+
+    // 退还机器制作材料
+    const machineDef = PROCESSING_MACHINES.find(m => m.id === slot.machineType)
+    if (machineDef) {
+      for (const mat of machineDef.craftCost) {
+        inventoryStore.addItem(mat.itemId, mat.quantity)
+      }
+      playerStore.earnMoney(machineDef.craftMoney)
+    }
+
     machines.value.splice(slotIndex, 1)
     return true
   }
@@ -240,44 +275,33 @@ export const useProcessingStore = defineStore('processing', () => {
 
   const dailyUpdate = () => {
     const collected: string[] = []
+    const readyNames: string[] = []
+    const warehouseStore = useWarehouseStore()
+    const voidOutput = warehouseStore.getVoidOutputChest()
     for (const slot of machines.value) {
       if (!slot.recipeId || slot.ready) continue
       slot.daysProcessed++
       if (slot.daysProcessed >= slot.totalDays) {
-        // 自动收取产物（继承投入品质）
         const recipe = getProcessingRecipeById(slot.recipeId)
         if (recipe) {
-          const outputQuality = slot.inputQuality ?? 'normal'
-          inventoryStore.addItem(recipe.outputItemId, recipe.outputQuantity, outputQuality)
-          collected.push(recipe.name)
-
-          // 种子制造机额外触发育种种子生成
-          if (slot.machineType === 'seed_maker' && slot.inputItemId) {
-            const breedingStore = useBreedingStore()
-            const farmingLevel = skillStore.farmingLevel
-            if (breedingStore.trySeedMakerGeneticSeed(slot.inputItemId, farmingLevel)) {
-              addLog('种子制造机额外产出了一颗育种种子！')
-            }
-          }
-
-          // 尝试自动续产：无需原料的配方直接重启，需要原料的检查背包
           if (recipe.inputItemId === null) {
+            // 无需原料的机器（蜂箱、蚯蚓箱）：自动收取并重启
+            if (
+              voidOutput &&
+              warehouseStore.addItemToChest(voidOutput.id, recipe.outputItemId, recipe.outputQuantity, slot.inputQuality ?? 'normal')
+            ) {
+              // 成功放入成品箱
+            } else {
+              inventoryStore.addItem(recipe.outputItemId, recipe.outputQuantity, slot.inputQuality ?? 'normal')
+            }
+            collected.push(recipe.name)
             slot.daysProcessed = 0
             slot.inputQuality = undefined
-            slot.ready = false
-          } else if (inventoryStore.hasItem(recipe.inputItemId, recipe.inputQuantity)) {
-            slot.inputQuality = getLowestQuality(recipe.inputItemId)
-            inventoryStore.removeItem(recipe.inputItemId, recipe.inputQuantity)
-            slot.daysProcessed = 0
             slot.ready = false
           } else {
-            // 背包没有原料，重置为空闲
-            slot.recipeId = null
-            slot.inputItemId = null
-            slot.inputQuality = undefined
-            slot.daysProcessed = 0
-            slot.totalDays = 0
-            slot.ready = false
+            // 需要原料的机器：标记为完成，等待玩家手动收取
+            slot.ready = true
+            readyNames.push(recipe.name)
           }
         } else {
           slot.ready = true
@@ -293,6 +317,16 @@ export const useProcessingStore = defineStore('processing', () => {
         .map(([name, count]) => (count > 1 ? `${name}x${count}` : name))
         .join('、')
       addLog(`工坊自动收取了：${summary}。`)
+    }
+    if (readyNames.length > 0) {
+      const counts = new Map<string, number>()
+      for (const name of readyNames) {
+        counts.set(name, (counts.get(name) ?? 0) + 1)
+      }
+      const summary = Array.from(counts.entries())
+        .map(([name, count]) => (count > 1 ? `${name}x${count}` : name))
+        .join('、')
+      addLog(`加工完成：${summary}，去工坊收取吧。`)
     }
   }
 

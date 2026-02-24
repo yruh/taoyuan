@@ -18,14 +18,20 @@ import { useFishingStore } from '@/stores/useFishingStore'
 import { useBreedingStore } from '@/stores/useBreedingStore'
 import { useHanhaiStore } from '@/stores/useHanhaiStore'
 import { useFishPondStore } from '@/stores/useFishPondStore'
-import { getItemById, getTodayEvent, getNpcById, getCropById } from '@/data'
+import { useTutorialStore } from '@/stores/useTutorialStore'
+import { getItemById, getTodayEvent, getNpcById, getCropById, getForageItems } from '@/data'
+import { getFertilizerById } from '@/data/processing'
+import { FISH } from '@/data/fish'
 import { RECIPES } from '@/data/recipes'
 import { CAVE_UNLOCK_EARNINGS } from '@/data/buildings'
 import { TOOL_NAMES, TIER_NAMES } from '@/data/upgrades'
 import { addLog, showFloat } from './useGameLog'
 import { getDailyMarketInfo, MARKET_CATEGORY_NAMES } from '@/data/market'
-import { showEvent, showFestival, triggerWeddingEvent, triggerPetAdoption } from './useDialogs'
+import { showEvent, showFestival, triggerWeddingEvent, triggerPetAdoption, showFarmEvent } from './useDialogs'
 import { sfxSleep, useAudio } from './useAudio'
+import { MORNING_NARRATIONS, NARRATIONS_NO_LOSS, MORNING_CHOICE_EVENTS, MORNING_EASTER_EGGS } from '@/data/farmEvents'
+import { MORNING_TIPS } from '@/data/tutorials'
+import type { MorningEffect } from '@/data/farmEvents'
 import router from '@/router'
 
 const NPC_NAME_MAP: Record<string, string> = {
@@ -289,6 +295,77 @@ const _isSettling = ref(false)
 /** 是否正在日结算中 */
 export const isSettling = () => _isSettling.value
 
+// ==================== 晨间随机事件 ====================
+
+/** 应用晨间效果 */
+const applyMorningEffect = (effect?: MorningEffect) => {
+  if (!effect) return
+  const playerStore = usePlayerStore()
+  const inventoryStore = useInventoryStore()
+  const npcStore = useNpcStore()
+  const farmStore = useFarmStore()
+
+  switch (effect.type) {
+    case 'loseCrop': {
+      const growing = farmStore.plots.filter(p => p.state === 'growing' || p.state === 'harvestable')
+      if (growing.length > 0) {
+        const target = growing[Math.floor(Math.random() * growing.length)]!
+        const cropName = getCropById(target.cropId ?? '')?.name ?? '作物'
+        target.state = 'tilled'
+        target.cropId = null
+        target.growthDays = 0
+        target.watered = false
+        target.harvestCount = 0
+        target.seedGenetics = null
+        addLog(`一株${cropName}被糟蹋了。`)
+      }
+      break
+    }
+    case 'gainItem':
+      inventoryStore.addItem(effect.itemId, effect.qty)
+      break
+    case 'gainMoney':
+      playerStore.earnMoney(effect.amount)
+      break
+    case 'gainFriendship':
+      for (const s of npcStore.npcStates) {
+        s.friendship += effect.amount
+      }
+      break
+  }
+}
+
+/** 掷骰：晨间随机事件 */
+const rollMorningEvent = ():
+  | { type: 'narration'; message: string; effect?: MorningEffect }
+  | { type: 'choice'; event: (typeof MORNING_CHOICE_EVENTS)[number] }
+  | { type: 'easter'; message: string; effect?: MorningEffect }
+  | null => {
+  const roll = Math.random()
+
+  // 95% 什么都没发生
+  if (roll >= 0.05) return null
+
+  // 0.2% 彩蛋 (roll < 0.002)
+  if (roll < 0.002) {
+    const egg = MORNING_EASTER_EGGS[Math.floor(Math.random() * MORNING_EASTER_EGGS.length)]!
+    return { type: 'easter', message: egg.message, effect: egg.effect }
+  }
+
+  // 0.8% 选项事件 (roll < 0.01)
+  if (roll < 0.01) {
+    const event = MORNING_CHOICE_EVENTS[Math.floor(Math.random() * MORNING_CHOICE_EVENTS.length)]!
+    return { type: 'choice', event }
+  }
+
+  // 4% 小偷/动物旁白
+  const farmStore = useFarmStore()
+  const hasCrops = farmStore.plots.some(p => p.state === 'growing' || p.state === 'harvestable')
+  const pool = hasCrops ? MORNING_NARRATIONS : NARRATIONS_NO_LOSS
+  const narration = pool[Math.floor(Math.random() * pool.length)]!
+  return { type: 'narration', message: narration.message, effect: narration.effect }
+}
+
 /** 日结算处理 */
 export const handleEndDay = async () => {
   if (_isSettling.value) return // 重入保护
@@ -308,6 +385,11 @@ export const handleEndDay = async () => {
   const animalStore = useAnimalStore()
   const homeStore = useHomeStore()
   const questStore = useQuestStore()
+  const skillStore = useSkillStore()
+  const tutorialStore = useTutorialStore()
+
+  // 新手引导：记录体力低标记（在 dailyReset 之前）
+  if (playerStore.stamina < 20) tutorialStore.setFlag('staminaWasLow')
 
   // 恢复模式
   let recoveryMode: 'normal' | 'late' | 'passout'
@@ -328,13 +410,19 @@ export const handleEndDay = async () => {
 
   // 戒指效果：作物生长加速
   const ringGrowthBonus = inventoryStore.getRingEffectValue('crop_growth_bonus')
+  const walletGrowthBonus = useWalletStore().getCropGrowthBonus()
   if (ringGrowthBonus > 0) {
     for (const plot of farmStore.plots) {
       if ((plot.state === 'growing' || plot.state === 'planted') && plot.watered) {
         plot.growthDays += ringGrowthBonus
         const crop = getCropById(plot.cropId!)
-        if (crop && plot.growthDays >= crop.growthDays) {
-          plot.state = 'harvestable'
+        if (crop) {
+          const fertDef = plot.fertilizer ? getFertilizerById(plot.fertilizer) : null
+          const speedup = (fertDef?.growthSpeedup ?? 0) + walletGrowthBonus
+          const effectiveDays = Math.max(1, Math.floor(crop.growthDays * (1 - speedup)))
+          if (plot.growthDays >= effectiveDays) {
+            plot.state = 'harvestable'
+          }
         }
       }
     }
@@ -346,8 +434,13 @@ export const handleEndDay = async () => {
       if ((plot.state === 'growing' || plot.state === 'planted') && plot.watered) {
         plot.growthDays += 0.5
         const crop = getCropById(plot.cropId!)
-        if (crop && plot.growthDays >= crop.growthDays) {
-          plot.state = 'harvestable'
+        if (crop) {
+          const fertDef = plot.fertilizer ? getFertilizerById(plot.fertilizer) : null
+          const speedup = (fertDef?.growthSpeedup ?? 0) + walletGrowthBonus
+          const effectiveDays = Math.max(1, Math.floor(crop.growthDays * (1 - speedup)))
+          if (plot.growthDays >= effectiveDays) {
+            plot.state = 'harvestable'
+          }
         }
       }
     }
@@ -391,6 +484,17 @@ export const handleEndDay = async () => {
     addLog(`${pestResult.weedDeaths}株作物被杂草覆盖窒息而死！及时除草可以拯救作物。`)
   }
 
+  // 晨间随机事件（偷菜旁白）
+  const morningEvent = rollMorningEvent()
+  if (morningEvent) {
+    if (morningEvent.type === 'choice') {
+      showFarmEvent(morningEvent.event)
+    } else {
+      addLog(morningEvent.message)
+      applyMorningEffect(morningEvent.effect)
+    }
+  }
+
   // 巨型作物检查
   const giantCrops = farmStore.checkGiantCrops()
   for (const gc of giantCrops) {
@@ -403,23 +507,49 @@ export const handleEndDay = async () => {
     const spouseDef = getNpcById(spouse.npcId)
     const spouseName = spouseDef?.name ?? '配偶'
     const bonusChance = spouse.friendship >= 2500 ? 0.1 : 0
-    if (Math.random() < 0.4 + bonusChance) {
+    const highBond = spouse.friendship >= 3000 ? 0.15 : 0
+
+    // 浇水：50% + bonus + highBond，3-6块
+    if (Math.random() < 0.5 + bonusChance + highBond) {
       const unwatered = farmStore.plots.filter(p => (p.state === 'planted' || p.state === 'growing') && !p.watered)
-      const count = Math.min(unwatered.length, 2 + Math.floor(Math.random() * 3))
+      const count = Math.min(unwatered.length, 3 + Math.floor(Math.random() * 4))
       for (let i = 0; i < count; i++) farmStore.waterPlot(unwatered[i]!.id)
       if (count > 0) addLog(`${spouseName}帮你浇了${count}块地。`)
     }
-    if (Math.random() < 0.3 + bonusChance) {
+
+    // 喂食：40% + bonus
+    if (Math.random() < 0.4 + bonusChance) {
       const result = animalStore.feedAll()
       if (result.fedCount > 0) addLog(`${spouseName}帮你喂了所有牲畜。`)
     }
-    if (spouse.friendship >= 2000 && Math.random() < 0.25 + bonusChance) {
-      const foods = ['rice_ball', 'congee', 'steamed_bun', 'tea']
+
+    // 做饭：30% + bonus（好感>=2000）
+    if (spouse.friendship >= 2000 && Math.random() < 0.3 + bonusChance) {
+      const foods = ['food_rice_ball', 'food_congee', 'food_steamed_bun', 'food_honey_tea', 'food_stir_fry', 'food_dumpling']
       const food = foods[Math.floor(Math.random() * foods.length)]!
       inventoryStore.addItem(food)
       addLog(`${spouseName}做了一份${getItemById(food)?.name ?? '食物'}。`)
     }
+
+    // 收获：30%（好感>=3000），最多3块
+    if (spouse.friendship >= 3000 && Math.random() < 0.3 + bonusChance) {
+      const harvestable = farmStore.plots.filter(p => p.state === 'harvestable')
+      const harvestCount = Math.min(harvestable.length, 3)
+      let harvested = 0
+      for (let i = 0; i < harvestCount; i++) {
+        const hResult = farmStore.harvestPlot(harvestable[i]!.id)
+        if (hResult.cropId) {
+          inventoryStore.addItem(hResult.cropId, 1, 'normal')
+          harvested++
+        }
+      }
+      if (harvested > 0) addLog(`${spouseName}帮你收了${harvested}块地的庄稼。`)
+    }
   }
+
+  // 雇工每日结算
+  const helperResult = npcStore.processDailyHelpers()
+  for (const msg of helperResult.messages) addLog(msg)
 
   // 知己每日加成（在 dailyReset 之前）
   const zhiji = npcStore.getZhiji()
@@ -492,7 +622,7 @@ export const handleEndDay = async () => {
         break
       case 'chun_lan':
         if (Math.random() < 0.25 + bonusChance2) {
-          inventoryStore.addItem('tea')
+          inventoryStore.addItem('green_tea_drink')
           addLog(`${zhijiName}送来了一壶好茶。`)
         }
         break
@@ -641,18 +771,10 @@ export const handleEndDay = async () => {
     addLog(`解锁了钱袋物品：${name}！`)
   }
 
-  // 委托每日更新
+  // 委托每日更新（当天结算：倒计时递减、过期处理）
   const expiredQuests = questStore.dailyUpdate()
   for (const eq of expiredQuests) {
     addLog(`委托「${eq.description}」已过期。`)
-  }
-  questStore.generateDailyQuests(gameStore.season, gameStore.day)
-
-  // 每7天生成一个特殊订单 (第7/14/21/28天, 梯度递增)
-  const specialOrderDays: Record<number, number> = { 7: 1, 14: 2, 21: 3, 28: 4 }
-  const tier = specialOrderDays[gameStore.day]
-  if (tier && !questStore.specialOrder) {
-    questStore.generateSpecialOrder(gameStore.season, tier)
   }
 
   // 主线任务进度检查
@@ -701,6 +823,16 @@ export const handleEndDay = async () => {
 
   const { seasonChanged, oldSeason } = gameStore.nextDay()
 
+  // 为新的一天生成委托（在 nextDay 之后，使用新季节和新日期）
+  questStore.generateDailyQuests(gameStore.season, gameStore.day)
+
+  // 每7天生成一个特殊订单 (第7/14/21/28天, 梯度递增)
+  const specialOrderDays: Record<number, number> = { 7: 1, 14: 2, 21: 3, 28: 4 }
+  const tier = specialOrderDays[gameStore.day]
+  if (tier && !questStore.specialOrder) {
+    questStore.generateSpecialOrder(gameStore.season, tier)
+  }
+
   // 新一天如果下雨，立即浇水所有作物（让玩家看到已浇水状态）
   if (gameStore.isRainy) {
     for (const plot of farmStore.plots) {
@@ -746,6 +878,17 @@ export const handleEndDay = async () => {
       addLog('新的一年开始了！农场经过一冬有些荒废，需要重新开垦。')
     }
     farmStore.fruitTreeSeasonUpdate(oldSeason === 'winter')
+
+    // 桃源田庄：换季自动施肥
+    if (gameStore.farmMapType === 'standard') {
+      const fertCount = farmStore.applyFertileSoil()
+      if (fertCount > 0) {
+        addLog(`桃源沃土滋养大地，${fertCount}块耕地获得了自然肥力。`)
+      }
+    }
+
+    // 新手引导：记录换季标记
+    tutorialStore.setFlag('justChangedSeason')
   }
 
   // 闪电
@@ -777,6 +920,50 @@ export const handleEndDay = async () => {
     addLog(`今日行情：${crashes.map(c => MARKET_CATEGORY_NAMES[c.category]).join('、')}价格暴跌。`)
   }
 
+  // 新手引导：晨间提示（仅第1年）
+  // 注意：此时 nextDay() 已执行，gameStore.day 是新一天的日期
+  // 例如玩家结束第1天后，gameStore.day === 2（第2天早晨）
+  if (tutorialStore.enabled && gameStore.year === 1) {
+    const conditions: Record<string, () => boolean> = {
+      earlyFirstDay: () => gameStore.day === 2 && gameStore.season === 'spring',
+      allWasteland: () => farmStore.plots.every(p => p.state === 'wasteland') && gameStore.day > 2,
+      tilledNoPlanted: () =>
+        farmStore.plots.some(p => p.state === 'tilled') &&
+        !farmStore.plots.some(p => p.state === 'planted' || p.state === 'growing' || p.state === 'harvestable'),
+      plantedUnwatered: () =>
+        farmStore.plots.some(p => (p.state === 'planted' || p.state === 'growing') && !p.watered) && !gameStore.isRainy,
+      hasHarvestable: () => farmStore.plots.some(p => p.state === 'harvestable'),
+      harvestedNeverSold: () => achievementStore.stats.totalCropsHarvested > 0 && achievementStore.stats.totalMoneyEarned === 0,
+      earlyGame: () => gameStore.day <= 4 && gameStore.season === 'spring',
+      staminaWasLow: () => tutorialStore.getFlag('staminaWasLow'),
+      neverVisitedShop: () => !tutorialStore.hasPanelVisited('shop'),
+      neverFished: () => achievementStore.stats.totalFishCaught === 0 && gameStore.day >= 4,
+      neverMined: () => achievementStore.stats.highestMineFloor === 0 && gameStore.day >= 6,
+      neverTalkedNpc: () => npcStore.npcStates.every(n => n.friendship === 0) && gameStore.day >= 3,
+      neverCheckedQuests: () => !tutorialStore.hasPanelVisited('quest') && gameStore.day >= 5,
+      neverCooked: () => achievementStore.stats.totalRecipesCooked === 0 && gameStore.day >= 8,
+      firstRainyDay: () => gameStore.isRainy && !tutorialStore.getFlag('seenRain'),
+      justChangedSeason: () => tutorialStore.getFlag('justChangedSeason'),
+      hasCropNoSprinkler: () =>
+        farmStore.plots.some(p => p.state === 'growing') && farmStore.sprinklers.length === 0 && gameStore.day >= 11,
+      neverHadAnimal: () => animalStore.animals.length === 0 && gameStore.day >= 15
+    }
+    for (const tip of MORNING_TIPS) {
+      if (tutorialStore.isTipShown(tip.id)) continue
+      const check = conditions[tip.conditionKey]
+      if (check && check()) {
+        addLog(tip.message)
+        tutorialStore.markTipShown(tip.id)
+        if (tip.conditionKey === 'firstRainyDay') tutorialStore.setFlag('seenRain')
+        if (tip.conditionKey === 'justChangedSeason') tutorialStore.setFlag('seenSeasonChange')
+        break // 每天只显示一条
+      }
+    }
+    // 清除临时标记
+    tutorialStore.setFlag('justChangedSeason', false)
+    tutorialStore.setFlag('staminaWasLow', false)
+  }
+
   // 食谱解锁
   checkRecipeUnlocks()
 
@@ -806,17 +993,96 @@ export const handleEndDay = async () => {
   // 洞穴解锁检查
   if (!homeStore.caveUnlocked && achievementStore.stats.totalMoneyEarned >= CAVE_UNLOCK_EARNINGS) {
     homeStore.unlockCave()
-    addLog('你的累计收入引起了注意……村后的山洞已为你开放！去农舍面板选择山洞用途吧。')
+    addLog('你的累计收入引起了注意……村后的山洞已为你开放！去设施面板选择山洞用途吧。')
   }
 
-  // 荒野农场被动矿石
+  // ===== 田庄特殊效果 =====
+
+  // 荒野田庄：被动矿石（增强）+ 夜间野兽遭遇
   if (gameStore.farmMapType === 'wilderness') {
     const orePool = ['copper_ore', 'iron_ore', 'gold_ore']
     const randomOre = orePool[Math.floor(Math.random() * orePool.length)]!
-    const qty = 1 + Math.floor(Math.random() * 2)
+    const qty = 2 + Math.floor(Math.random() * 2) // 2-3
     inventoryStore.addItem(randomOre, qty)
     const oreDef = getItemById(randomOre)
     addLog(`荒野中发现了${qty}个${oreDef?.name ?? randomOre}。`)
+
+    // 夜间野兽遭遇（25%概率）
+    if (Math.random() < 0.25) {
+      const combatLevel = skillStore.getSkill('combat').level
+      const winRate = Math.min(0.95, 0.5 + combatLevel * 0.05)
+      if (Math.random() < winRate) {
+        const lootPool = ['copper_ore', 'iron_ore', 'quartz', 'jade', 'gold_ore']
+        const loot = lootPool[Math.floor(Math.random() * lootPool.length)]!
+        const lootQty = 1 + Math.floor(Math.random() * 2)
+        inventoryStore.addItem(loot, lootQty)
+        skillStore.addExp('combat', 15)
+        const lootName = getItemById(loot)?.name ?? loot
+        addLog(`夜间有野兽入侵！你奋力击退了它，缴获了${lootQty}个${lootName}。`)
+      } else {
+        const damage = 5 + Math.floor(Math.random() * 11) // 5-15
+        playerStore.takeDamage(damage)
+        const crops = farmStore.plots.filter(p => p.state === 'growing' || p.state === 'harvestable')
+        if (crops.length > 0) {
+          const target = crops[Math.floor(Math.random() * crops.length)]!
+          const cropName = getCropById(target.cropId ?? '')?.name ?? '作物'
+          farmStore.removeCrop(target.id)
+          addLog(`夜间有野兽入侵！你没能挡住它，受了${damage}点伤，一株${cropName}被破坏了。`)
+        } else {
+          addLog(`夜间有野兽入侵！你没能挡住它，受了${damage}点伤。`)
+        }
+      }
+    }
+  }
+
+  // 竹林田庄：每日林中拾遗
+  if (gameStore.farmMapType === 'forest') {
+    const foragePool = getForageItems(gameStore.season)
+    const commonForage = foragePool.filter(f => f.chance >= 0.1)
+    if (commonForage.length > 0) {
+      const count = 1 + (Math.random() < 0.4 ? 1 : 0) // 1-2个
+      const gathered: string[] = []
+      for (let i = 0; i < count; i++) {
+        const item = commonForage[Math.floor(Math.random() * commonForage.length)]!
+        const quality = skillStore.rollForageQuality()
+        inventoryStore.addItem(item.itemId, 1, quality)
+        skillStore.addExp('foraging', item.expReward)
+        gathered.push(getItemById(item.itemId)?.name ?? item.itemId)
+      }
+      addLog(`竹林间发现了${gathered.join('和')}。`)
+    }
+  }
+
+  // 山丘田庄：地表矿脉生成
+  if (gameStore.farmMapType === 'hilltop') {
+    if (!gameStore.surfaceOrePatch && Math.random() < 0.35) {
+      const year = gameStore.year
+      const orePool = year >= 2 ? ['copper_ore', 'iron_ore', 'gold_ore'] : ['copper_ore', 'iron_ore']
+      const oreId = orePool[Math.floor(Math.random() * orePool.length)]!
+      const qty = 3 + Math.floor(Math.random() * 3) // 3-5
+      gameStore.surfaceOrePatch = { oreId, quantity: qty }
+      const oreName = getItemById(oreId)?.name ?? '矿石'
+      addLog(`山丘上发现了一处${oreName}脉！`)
+    }
+  }
+
+  // 溪流田庄：溪流鱼获生成
+  if (gameStore.farmMapType === 'riverland') {
+    const seasonFish = FISH.filter(f => (f.location ?? 'creek') === 'creek' && f.season.includes(gameStore.season as any))
+    if (seasonFish.length > 0) {
+      const isRainy = gameStore.isRainy
+      const catchCount = isRainy ? 2 + Math.floor(Math.random() * 2) : 1 + Math.floor(Math.random() * 2)
+      const catches: { fishId: string; quality: 'normal' | 'fine' | 'excellent' | 'supreme' }[] = []
+      for (let i = 0; i < catchCount; i++) {
+        const fish = seasonFish[Math.floor(Math.random() * seasonFish.length)]!
+        const quality: 'normal' | 'fine' = Math.random() < 0.15 ? 'fine' : 'normal'
+        catches.push({ fishId: fish.id, quality })
+      }
+      const MAX_CREEK_CATCH = 10
+      const merged = [...gameStore.creekCatch, ...catches].slice(0, MAX_CREEK_CATCH)
+      gameStore.creekCatch = merged
+      addLog(`溪流中有鱼儿在跳跃，去农场面板收取鱼获吧。`)
+    }
   }
 
   // 宠物领养触发（春季第一年第7天起，每天检查直到领养）

@@ -15,6 +15,7 @@ import { usePlayerStore } from './usePlayerStore'
 import { useInventoryStore } from './useInventoryStore'
 import { useGameStore } from './useGameStore'
 import { useSkillStore } from './useSkillStore'
+import { getCombinedItemCount, removeCombinedItem } from '@/composables/useCombinedInventory'
 
 export const useAnimalStore = defineStore('animal', () => {
   const buildings = ref<{ type: AnimalBuildingType; built: boolean; level: number }[]>([
@@ -35,6 +36,9 @@ export const useAnimalStore = defineStore('animal', () => {
 
   /** 今天是否已放牧 */
   const grazedToday = ref(false)
+
+  /** 已安装自动抚摸机的建筑类型 */
+  const autoPetterBuildings = ref<AnimalBuildingType[]>([])
 
   const coopBuilt = computed(() => buildings.value.find(b => b.type === 'coop')?.built ?? false)
   const barnBuilt = computed(() => buildings.value.find(b => b.type === 'barn')?.built ?? false)
@@ -63,7 +67,6 @@ export const useAnimalStore = defineStore('animal', () => {
   /** 建造畜舍 */
   const buildBuilding = (type: AnimalBuildingType): boolean => {
     const playerStore = usePlayerStore()
-    const inventoryStore = useInventoryStore()
 
     const b = buildings.value.find(b => b.type === type)
     if (!b || b.built) return false
@@ -73,14 +76,14 @@ export const useAnimalStore = defineStore('animal', () => {
 
     // 检查材料
     for (const mat of def.materialCost) {
-      if (inventoryStore.getItemCount(mat.itemId) < mat.quantity) return false
+      if (getCombinedItemCount(mat.itemId) < mat.quantity) return false
     }
     // 检查金币
     if (!playerStore.spendMoney(def.cost)) return false
 
     // 扣除材料
     for (const mat of def.materialCost) {
-      inventoryStore.removeItem(mat.itemId, mat.quantity)
+      removeCombinedItem(mat.itemId, mat.quantity)
     }
 
     b.built = true
@@ -91,7 +94,6 @@ export const useAnimalStore = defineStore('animal', () => {
   /** 升级畜舍 */
   const upgradeBuilding = (type: AnimalBuildingType): boolean => {
     const playerStore = usePlayerStore()
-    const inventoryStore = useInventoryStore()
 
     const b = buildings.value.find(b => b.type === type)
     if (!b || !b.built || b.level >= 3) return false
@@ -100,12 +102,12 @@ export const useAnimalStore = defineStore('animal', () => {
     if (!upgrade) return false
 
     for (const mat of upgrade.materialCost) {
-      if (inventoryStore.getItemCount(mat.itemId) < mat.quantity) return false
+      if (getCombinedItemCount(mat.itemId) < mat.quantity) return false
     }
     if (!playerStore.spendMoney(upgrade.cost)) return false
 
     for (const mat of upgrade.materialCost) {
-      inventoryStore.removeItem(mat.itemId, mat.quantity)
+      removeCombinedItem(mat.itemId, mat.quantity)
     }
 
     b.level++
@@ -178,6 +180,24 @@ export const useAnimalStore = defineStore('animal', () => {
     const coopmasterBonus = useSkillStore().getSkill('farming').perk10 === 'coopmaster' ? 1.5 : 1.0
     animal.friendship = Math.min(1000, animal.friendship + Math.floor(5 * coopmasterBonus))
     return true
+  }
+
+  /** 一键抚摸所有动物+宠物 */
+  const petAllAnimals = (): number => {
+    const coopmasterBonus = useSkillStore().getSkill('farming').perk10 === 'coopmaster' ? 1.5 : 1.0
+    let count = 0
+    for (const animal of animals.value) {
+      if (animal.wasPetted) continue
+      animal.wasPetted = true
+      animal.friendship = Math.min(1000, animal.friendship + Math.floor(5 * coopmasterBonus))
+      count++
+    }
+    if (pet.value && !pet.value.wasPetted) {
+      pet.value.wasPetted = true
+      pet.value.friendship = Math.min(1000, pet.value.friendship + 5)
+      count++
+    }
+    return count
   }
 
   // ============================================================
@@ -475,9 +495,12 @@ export const useAnimalStore = defineStore('animal', () => {
 
       // 饥饿达到阈值时有概率生病
       if (animal.hunger >= HUNGER_SICK_THRESHOLD && !animal.sick && Math.random() < SICK_CHANCE) {
-        animal.sick = true
-        animal.sickDays = 0
-        gotSick.push(animal.name)
+        // 草甸田庄：动物不会因饥饿生病
+        if (gameStore.farmMapType !== 'meadowlands') {
+          animal.sick = true
+          animal.sickDays = 0
+          gotSick.push(animal.name)
+        }
       }
 
       // 生病天数累计
@@ -493,6 +516,15 @@ export const useAnimalStore = defineStore('animal', () => {
 
       // 友好度变化
       const friendshipMultiplier = gameStore.farmMapType === 'meadowlands' ? 1.5 : 1.0
+
+      // 自动抚摸机：若所在建筑已安装，自动标记已抚摸
+      if (!animal.wasPetted) {
+        const animalDef = ANIMAL_DEFS.find(d => d.type === animal.type)
+        if (animalDef && autoPetterBuildings.value.includes(animalDef.building)) {
+          animal.wasPetted = true
+        }
+      }
+
       if (!animal.wasFed) {
         animal.friendship = Math.max(0, animal.friendship - 10)
       }
@@ -541,6 +573,11 @@ export const useAnimalStore = defineStore('animal', () => {
           }
           products.push({ itemId: def.productId, quality })
           animal.daysSinceProduct = 0
+
+          // 草甸田庄：40%概率额外产出1件
+          if (gameStore.farmMapType === 'meadowlands' && Math.random() < 0.4) {
+            products.push({ itemId: def.productId, quality })
+          }
         }
       }
 
@@ -618,6 +655,38 @@ export const useAnimalStore = defineStore('animal', () => {
     return 'normal'
   }
 
+  /** 修改动物名称（id='pet' 表示宠物） */
+  const renameAnimal = (id: string, newName: string): boolean => {
+    const trimmed = newName.trim()
+    if (!trimmed || trimmed.length > 8) return false
+    if (id === 'pet' && pet.value) {
+      pet.value.name = trimmed
+      return true
+    }
+    const animal = animals.value.find(a => a.id === id)
+    if (animal) {
+      animal.name = trimmed
+      return true
+    }
+    return false
+  }
+
+  /** 检查指定建筑是否已安装自动抚摸机 */
+  const hasAutoPetter = (buildingType: AnimalBuildingType): boolean => {
+    return autoPetterBuildings.value.includes(buildingType)
+  }
+
+  /** 安装自动抚摸机到指定建筑 */
+  const installAutoPetter = (buildingType: AnimalBuildingType): { success: boolean; message: string } => {
+    if (buildingType === 'stable') return { success: false, message: '马厩不能安装自动抚摸机。' }
+    const building = buildings.value.find(b => b.type === buildingType)
+    if (!building || !building.built) return { success: false, message: '需要先建造畜舍。' }
+    if (building.level < 2) return { success: false, message: '需要大型畜舍（2级）才能安装。' }
+    if (autoPetterBuildings.value.includes(buildingType)) return { success: false, message: '该畜舍已安装自动抚摸机。' }
+    autoPetterBuildings.value.push(buildingType)
+    return { success: true, message: `自动抚摸机已安装到${buildingType === 'coop' ? '鸡舍' : '畜棚'}。` }
+  }
+
   const serialize = () => {
     return {
       buildings: buildings.value,
@@ -625,7 +694,8 @@ export const useAnimalStore = defineStore('animal', () => {
       incubating: incubating.value,
       barnIncubating: barnIncubating.value,
       pet: pet.value,
-      grazedToday: grazedToday.value
+      grazedToday: grazedToday.value,
+      autoPetterBuildings: autoPetterBuildings.value
     }
   }
 
@@ -652,6 +722,7 @@ export const useAnimalStore = defineStore('animal', () => {
     barnIncubating.value = data.barnIncubating ?? null
     pet.value = data.pet ?? null
     grazedToday.value = data.grazedToday ?? false
+    autoPetterBuildings.value = data.autoPetterBuildings ?? []
   }
 
   return {
@@ -676,6 +747,7 @@ export const useAnimalStore = defineStore('animal', () => {
     healAllSick,
     feedAll,
     petAnimal,
+    petAllAnimals,
     startIncubation,
     dailyIncubatorUpdate,
     startBarnIncubation,
@@ -686,6 +758,10 @@ export const useAnimalStore = defineStore('animal', () => {
     grazeAnimals,
     dailyUpdate,
     getAnimalProductQuality,
+    renameAnimal,
+    autoPetterBuildings,
+    hasAutoPetter,
+    installAutoPetter,
     serialize,
     deserialize
   }

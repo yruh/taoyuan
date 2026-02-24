@@ -1,8 +1,12 @@
 import { ref } from 'vue'
 import type { HeartEventDef, SkillType, SkillPerk5, SkillPerk10 } from '@/types'
 import type { SeasonEventDef } from '@/data/events'
+import type { MorningChoiceEvent } from '@/data/farmEvents'
 import { WEDDING_EVENT } from '@/data/heartEvents'
-import { useSkillStore, useNpcStore, usePlayerStore, useGameStore } from '@/stores'
+import { useGameStore } from '@/stores/useGameStore'
+import { useNpcStore } from '@/stores/useNpcStore'
+import { usePlayerStore } from '@/stores/usePlayerStore'
+import { useSkillStore } from '@/stores/useSkillStore'
 import { addLog, showFloat, _registerPerkChecker } from './useGameLog'
 import { useAudio } from './useAudio'
 
@@ -146,6 +150,19 @@ export const closeChildProposal = () => {
   childProposalVisible.value = false
 }
 
+/** 晨间选项事件弹窗 */
+const pendingFarmEvent = ref<MorningChoiceEvent | null>(null)
+
+/** 显示晨间选项事件 */
+export const showFarmEvent = (event: MorningChoiceEvent) => {
+  pendingFarmEvent.value = event
+}
+
+/** 关闭晨间选项事件 */
+export const closeFarmEvent = () => {
+  pendingFarmEvent.value = null
+}
+
 export const useDialogs = () => {
   return {
     currentEvent,
@@ -166,6 +183,9 @@ export const useDialogs = () => {
     triggerPetAdoption,
     closePetAdoption,
     showChildProposal,
-    closeChildProposal
+    closeChildProposal,
+    pendingFarmEvent,
+    showFarmEvent,
+    closeFarmEvent
   }
 }

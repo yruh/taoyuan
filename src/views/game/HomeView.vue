@@ -1,26 +1,9 @@
 <template>
   <div>
     <h3 class="text-accent text-sm mb-3">
-      <Home :size="14" class="inline" />
-      农舍
+      <Building :size="14" class="inline" />
+      设施
     </h3>
-
-    <!-- 农舍升级 -->
-    <div class="border border-accent/20 rounded-xs p-3 mb-4">
-      <div class="flex items-center justify-between mb-1">
-        <span class="text-sm text-accent">{{ homeStore.farmhouseName }}</span>
-        <span class="text-xs text-muted">等级 {{ homeStore.farmhouseLevel }}</span>
-      </div>
-      <p class="text-xs text-muted mb-2">{{ currentBenefit }}</p>
-      <div
-        v-if="homeStore.nextUpgrade"
-        class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-1.5 cursor-pointer hover:bg-accent/5"
-        @click="showUpgradeModal = true"
-      >
-        <span class="text-xs">升级为「{{ homeStore.nextUpgrade.name }}」</span>
-        <span class="text-xs text-accent whitespace-nowrap">{{ homeStore.nextUpgrade.cost }}文</span>
-      </div>
-    </div>
 
     <!-- 山洞 -->
     <div class="border border-accent/20 rounded-xs p-3 mb-4">
@@ -79,20 +62,20 @@
     </div>
 
     <!-- 仓库 -->
-    <div class="border border-accent/20 rounded-xs p-3 mb-4">
+    <div class="border border-accent/20 rounded-xs p-3">
       <div class="flex items-center justify-between mb-2">
         <p class="text-sm text-accent">
           <Warehouse :size="14" class="inline" />
           仓库
         </p>
         <span v-if="warehouseStore.unlocked" class="text-xs text-muted">
-          {{ warehouseStore.items.length }}/{{ warehouseStore.capacity }}
+          箱子 {{ warehouseStore.chests.length }}/{{ warehouseStore.maxChests }}
         </span>
       </div>
 
       <!-- 未解锁 -->
       <div v-if="!warehouseStore.unlocked">
-        <p class="text-xs text-muted mb-2">解锁仓库后可额外存放物品，容量独立于背包。</p>
+        <p class="text-xs text-muted mb-2">解锁仓库后可放置箱子分类存放物品。</p>
         <div
           class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-1.5 cursor-pointer hover:bg-accent/5"
           @click="showWarehouseUnlockModal = true"
@@ -104,20 +87,58 @@
 
       <!-- 已解锁 -->
       <template v-else>
-        <!-- 仓库物品列表 -->
-        <div v-if="warehouseStore.items.length > 0" class="flex flex-col space-y-1 mb-2 max-h-36 overflow-y-auto">
+        <!-- 箱子列表 -->
+        <div v-if="warehouseStore.chests.length > 0" class="flex flex-col space-y-1.5 mb-2">
           <div
-            v-for="(item, idx) in warehouseStore.items"
-            :key="idx"
-            class="flex items-center justify-between border border-accent/10 rounded-xs px-2 py-1"
+            v-for="chest in warehouseStore.chests"
+            :key="chest.id"
+            class="border border-accent/10 rounded-xs px-3 py-2 cursor-pointer hover:bg-accent/5"
+            @click="openChestId = chest.id"
           >
-            <span class="text-xs truncate mr-2" :class="qualityTextClass(item.quality)">
-              {{ getItemName(item.itemId) }}
-              <span v-if="item.quality !== 'normal'" class="text-[10px]">({{ QUALITY_LABEL[item.quality] }})</span>
-            </span>
-            <div class="flex items-center space-x-1.5">
-              <span class="text-xs text-muted">&times;{{ item.quantity }}</span>
-              <Button class="py-0 px-1" @click="handleWithdraw(item.itemId, item.quality)">取出</Button>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-1.5">
+                <span
+                  class="text-[10px] px-1 rounded-xs border border-accent/30"
+                  :class="chest.tier === 'void' ? 'text-quality-supreme' : 'text-accent'"
+                >
+                  {{ CHEST_DEFS[chest.tier].name }}
+                </span>
+                <span v-if="renamingChestId !== chest.id" class="text-xs">{{ chest.label }}</span>
+                <input
+                  v-else
+                  v-model="renameInput"
+                  class="text-xs bg-transparent border-b border-accent/40 outline-none w-20"
+                  maxlength="8"
+                  @keyup.enter="confirmRenameChest"
+                  @keyup.escape="renamingChestId = null"
+                  @click.stop
+                />
+                <button
+                  v-if="renamingChestId !== chest.id"
+                  class="text-muted hover:text-accent"
+                  @click.stop="startRenameChest(chest.id, chest.label)"
+                >
+                  <Pencil :size="10" />
+                </button>
+              </div>
+              <div class="flex items-center space-x-1.5">
+                <span class="text-[10px] text-muted">{{ chest.items.length }}/{{ CHEST_DEFS[chest.tier].capacity }}</span>
+                <button v-if="chest.items.length === 0" class="text-muted hover:text-danger" @click.stop="handleRemoveChest(chest.id)">
+                  <Trash2 :size="10" />
+                </button>
+              </div>
+            </div>
+            <!-- 虚空箱角色 -->
+            <div v-if="chest.tier === 'void'" class="flex items-center space-x-1 mt-1" @click.stop>
+              <button
+                v-for="role in VOID_ROLES"
+                :key="role.value"
+                class="text-[10px] px-1 rounded-xs border"
+                :class="chest.voidRole === role.value ? 'border-accent text-accent' : 'border-accent/20 text-muted'"
+                @click="handleSetVoidRole(chest.id, role.value)"
+              >
+                {{ role.label }}
+              </button>
             </div>
           </div>
         </div>
@@ -126,240 +147,18 @@
           <p class="text-xs mt-1">仓库空空如也</p>
         </div>
 
-        <!-- 存入按钮 -->
-        <Button v-if="depositableItems.length > 0" class="w-full" :icon="ArrowDown" :icon-size="12" @click="showDepositModal = true">
-          存入物品
+        <!-- 添加箱子 -->
+        <Button
+          v-if="warehouseStore.chests.length < warehouseStore.maxChests"
+          class="w-full"
+          :icon="Plus"
+          :icon-size="12"
+          @click="showAddChestModal = true"
+        >
+          添加箱子
         </Button>
       </template>
     </div>
-
-    <!-- 子女 -->
-    <div v-if="npcStore.getSpouse()" class="border border-accent/20 rounded-xs p-3 mb-4">
-      <p class="text-sm text-accent mb-2">
-        <Users :size="14" class="inline" />
-        家人
-      </p>
-
-      <!-- 提议通知 -->
-      <div v-if="npcStore.childProposalPending" class="border border-accent/30 rounded-xs p-2 mb-2">
-        <p class="text-xs text-accent mb-1.5">配偶有话想和你说……</p>
-        <Button class="w-full justify-center" @click="showChildProposalDialog">回应</Button>
-      </div>
-
-      <!-- 孕期面板 -->
-      <div v-if="npcStore.pregnancy" class="border border-success/20 rounded-xs p-2 mb-2">
-        <p class="text-xs text-success mb-2">孕期 · {{ PREGNANCY_STAGE_LABELS[npcStore.pregnancy.stage] }}</p>
-        <!-- 阶段进度条 -->
-        <div class="flex items-center space-x-1 mb-1.5">
-          <span class="text-[10px] text-muted w-8 shrink-0">进度</span>
-          <div class="flex-1 h-1.5 bg-bg rounded-xs border border-accent/10">
-            <div
-              class="h-full rounded-xs bg-success transition-all"
-              :style="{ width: Math.floor((npcStore.pregnancy.daysInStage / npcStore.pregnancy.stageDays) * 100) + '%' }"
-            />
-          </div>
-          <span class="text-[10px] text-muted shrink-0">{{ npcStore.pregnancy.daysInStage }}/{{ npcStore.pregnancy.stageDays }}天</span>
-        </div>
-        <!-- 安产率条 -->
-        <div class="flex items-center space-x-1 mb-2">
-          <span class="text-[10px] text-muted w-8 shrink-0">安产</span>
-          <div class="flex-1 h-1.5 bg-bg rounded-xs border border-accent/10">
-            <div
-              class="h-full rounded-xs transition-all"
-              :class="npcStore.pregnancy.careScore >= 70 ? 'bg-success' : npcStore.pregnancy.careScore >= 40 ? 'bg-accent' : 'bg-danger'"
-              :style="{ width: npcStore.pregnancy.careScore + '%' }"
-            />
-          </div>
-          <span class="text-[10px] text-muted shrink-0">{{ npcStore.pregnancy.careScore }}%</span>
-        </div>
-        <!-- 阶段提示 -->
-        <p class="text-[10px] text-muted/60 mb-2">{{ STAGE_TIPS[npcStore.pregnancy.stage] }}</p>
-        <!-- 照料操作 -->
-        <div class="grid grid-cols-2 gap-1 mb-1">
-          <Button
-            class="py-0.5 px-1 text-[10px] justify-center"
-            :disabled="npcStore.pregnancy.giftedForPregnancy"
-            @click="handlePregnancyCare('gift')"
-          >
-            {{ npcStore.pregnancy.giftedForPregnancy ? '已送礼' : '送礼物' }}
-          </Button>
-          <Button
-            class="py-0.5 px-1 text-[10px] justify-center"
-            :disabled="npcStore.pregnancy.companionToday"
-            @click="handlePregnancyCare('companion')"
-          >
-            {{ npcStore.pregnancy.companionToday ? '已陪伴' : '陪伴聊天' }}
-          </Button>
-          <Button class="py-0.5 px-1 text-[10px] justify-center" @click="handlePregnancyCare('supplement')">服用补品</Button>
-          <Button
-            class="py-0.5 px-1 text-[10px] justify-center"
-            :disabled="npcStore.pregnancy.caredToday"
-            @click="handlePregnancyCare('rest')"
-          >
-            {{ npcStore.pregnancy.caredToday ? '已休息' : '安排休息' }}
-          </Button>
-        </div>
-        <!-- 医疗方案（待产期） -->
-        <div v-if="npcStore.pregnancy.stage === 'ready'" class="border border-accent/20 rounded-xs p-2 mt-2">
-          <p class="text-[10px] text-accent mb-1.5">选择接生方式</p>
-          <div v-if="!npcStore.pregnancy.medicalPlan" class="flex flex-col space-y-1">
-            <Button class="py-0.5 px-1 text-[10px] w-full justify-center" @click="handleChooseMedical('normal')">
-              普通接生（1000文 · 80%安全）
-            </Button>
-            <Button class="py-0.5 px-1 text-[10px] w-full justify-center" @click="handleChooseMedical('advanced')">
-              高级接生（5000文 · 95%安全）
-            </Button>
-            <Button class="py-0.5 px-1 text-[10px] w-full justify-center text-accent" @click="handleChooseMedical('luxury')">
-              豪华接生（15000文 · 100%安全）
-            </Button>
-          </div>
-          <p v-else class="text-[10px] text-success">已选择：{{ MEDICAL_LABELS[npcStore.pregnancy.medicalPlan] }}</p>
-        </div>
-      </div>
-
-      <!-- 无子女无孕期 -->
-      <div v-if="npcStore.children.length === 0 && !npcStore.pregnancy && !npcStore.childProposalPending">
-        <div class="flex flex-col items-center justify-center py-6 text-muted">
-          <Users :size="32" class="mb-2" />
-          <p class="text-xs">婚后生活安稳，也许将来会有小生命到来。</p>
-        </div>
-      </div>
-
-      <!-- 子女列表 -->
-      <div v-if="npcStore.children.length > 0" class="flex flex-col space-y-1">
-        <div v-for="child in npcStore.children" :key="child.id" class="border border-accent/10 rounded-xs p-2">
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-xs text-accent">
-              {{ child.name }}
-              <span v-if="child.birthQuality === 'healthy'" class="text-[10px] text-success ml-0.5">[健康]</span>
-              <span v-else-if="child.birthQuality === 'premature'" class="text-[10px] text-muted/60 ml-0.5">[早产]</span>
-            </span>
-            <div class="flex items-center space-x-1">
-              <Button
-                v-if="child.stage !== 'baby' && !child.interactedToday"
-                class="py-0 px-1"
-                :icon="Heart"
-                @click="handleInteractChild(child.id)"
-              >
-                互动
-              </Button>
-              <span v-else-if="child.stage !== 'baby'" class="text-xs text-muted">已互动</span>
-              <span v-else class="text-xs text-muted">还太小</span>
-              <Button class="py-0 px-1 text-danger" @click="releaseConfirmChildId = child.id">送走</Button>
-            </div>
-          </div>
-          <p class="text-[10px] text-muted mb-0.5">{{ CHILD_STAGE_NAMES[child.stage] }} · {{ child.daysOld }}天</p>
-          <div v-if="child.stage !== 'baby'" class="flex space-x-0.5">
-            <span v-for="h in 10" :key="h" class="text-xs" :class="child.friendship >= h * 30 ? 'text-danger' : 'text-muted/30'">
-              &#x2665;
-            </span>
-          </div>
-        </div>
-      </div>
-      <!-- 送走子女确认 -->
-      <div v-if="releaseConfirmChildId !== null" class="mt-2 game-panel border-danger/40">
-        <p class="text-xs text-danger mb-2">确定将{{ getChildName(releaseConfirmChildId) }}送往远方亲戚家吗？（花费10000文）</p>
-        <div class="flex space-x-2">
-          <Button class="text-danger" @click="handleReleaseChild">确认</Button>
-          <Button @click="releaseConfirmChildId = null">取消</Button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 酒窖 -->
-    <div v-if="homeStore.hasCellar" class="border border-accent/20 rounded-xs p-3">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-sm text-accent">酒窖</span>
-        <span class="text-xs text-muted">{{ homeStore.cellarSlots.length }}/6</span>
-      </div>
-      <p class="text-xs text-muted mb-2">放入酒类陈酿14天可提升一档品质。</p>
-
-      <!-- 陈酿中的酒 -->
-      <div v-if="homeStore.cellarSlots.length > 0" class="flex flex-col space-y-1 mb-3">
-        <div v-for="(slot, idx) in homeStore.cellarSlots" :key="idx" class="border border-accent/10 rounded-xs p-2">
-          <div class="flex items-center justify-between mb-1">
-            <span
-              class="text-xs"
-              :class="{
-                'text-quality-fine': slot.quality === 'fine',
-                'text-quality-excellent': slot.quality === 'excellent',
-                'text-quality-supreme': slot.quality === 'supreme',
-                'text-accent': slot.quality === 'normal'
-              }"
-            >
-              {{ getItemName(slot.itemId) }}
-            </span>
-            <Button class="py-0 px-1" @click="handleRemoveAging(idx)">取出</Button>
-          </div>
-          <div class="flex items-center space-x-1">
-            <span class="text-[10px] text-muted w-6">陈酿</span>
-            <div class="flex-1 h-1.5 bg-bg rounded-xs border border-accent/10">
-              <div
-                class="h-full rounded-xs bg-accent transition-all"
-                :style="{ width: Math.min(100, Math.floor((slot.daysAging / 14) * 100)) + '%' }"
-              />
-            </div>
-            <span class="text-[10px] text-muted">{{ slot.daysAging }}/14天</span>
-          </div>
-        </div>
-      </div>
-      <div v-else class="flex flex-col items-center justify-center py-6 text-muted mb-3">
-        <Gem :size="32" class="mb-2" />
-        <p class="text-xs">酒窖空空如也</p>
-      </div>
-
-      <!-- 放入新酒 -->
-      <Button v-if="homeStore.cellarSlots.length < 6 && ageableInInventory.length > 0" @click="showAgingModal = true">放入陈酿</Button>
-    </div>
-
-    <!-- 升级农舍弹窗 -->
-    <Transition name="panel-fade">
-      <div
-        v-if="showUpgradeModal && homeStore.nextUpgrade"
-        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-        @click.self="showUpgradeModal = false"
-      >
-        <div class="game-panel max-w-xs w-full relative">
-          <button class="absolute top-2 right-2 text-muted hover:text-text" @click="showUpgradeModal = false">
-            <X :size="14" />
-          </button>
-
-          <p class="text-sm text-accent mb-2">升级农舍</p>
-
-          <div class="border border-accent/10 rounded-xs p-2 mb-2">
-            <p class="text-xs">升级为「{{ homeStore.nextUpgrade.name }}」</p>
-            <p class="text-xs text-muted mt-0.5">{{ homeStore.nextUpgrade.description }}</p>
-          </div>
-
-          <div class="border border-accent/10 rounded-xs p-2 mb-2 space-y-1">
-            <p class="text-xs text-muted mb-1">所需材料</p>
-            <div v-for="mat in homeStore.nextUpgrade.materialCost" :key="mat.itemId" class="flex items-center justify-between">
-              <span class="text-xs text-muted">{{ getItemName(mat.itemId) }}</span>
-              <span class="text-xs" :class="inventoryStore.getItemCount(mat.itemId) >= mat.quantity ? '' : 'text-danger'">
-                {{ inventoryStore.getItemCount(mat.itemId) }}/{{ mat.quantity }}
-              </span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-xs text-muted">金币</span>
-              <span class="text-xs" :class="playerStore.money >= homeStore.nextUpgrade.cost ? '' : 'text-danger'">
-                {{ homeStore.nextUpgrade.cost }}文
-              </span>
-            </div>
-          </div>
-
-          <Button
-            class="w-full justify-center"
-            :class="{ '!bg-accent !text-bg': canUpgradeFarmhouse }"
-            :disabled="!canUpgradeFarmhouse"
-            :icon="ArrowUp"
-            :icon-size="12"
-            @click="handleUpgradeFromModal"
-          >
-            升级
-          </Button>
-        </div>
-      </div>
-    </Transition>
 
     <!-- 解锁温室弹窗 -->
     <Transition name="panel-fade">
@@ -383,8 +182,8 @@
             <p class="text-xs text-muted mb-1">所需材料</p>
             <div v-for="mat in GREENHOUSE_MATERIAL_COST" :key="mat.itemId" class="flex items-center justify-between">
               <span class="text-xs text-muted">{{ getItemName(mat.itemId) }}</span>
-              <span class="text-xs" :class="inventoryStore.getItemCount(mat.itemId) >= mat.quantity ? '' : 'text-danger'">
-                {{ inventoryStore.getItemCount(mat.itemId) }}/{{ mat.quantity }}
+              <span class="text-xs" :class="getCombinedItemCount(mat.itemId) >= mat.quantity ? '' : 'text-danger'">
+                {{ getCombinedItemCount(mat.itemId) }}/{{ mat.quantity }}
               </span>
             </div>
             <div class="flex items-center justify-between">
@@ -409,72 +208,6 @@
       </div>
     </Transition>
 
-    <!-- 放入陈酿列表弹窗 -->
-    <Transition name="panel-fade">
-      <div
-        v-if="showAgingModal"
-        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-        @click.self="showAgingModal = false"
-      >
-        <div class="game-panel max-w-xs w-full">
-          <div class="flex items-center justify-between mb-2">
-            <p class="text-sm text-accent">放入陈酿</p>
-            <Button class="py-0 px-1" :icon="X" :icon-size="12" @click="showAgingModal = false" />
-          </div>
-          <div class="flex flex-col space-y-1">
-            <div
-              v-for="item in ageableInInventory"
-              :key="item.itemId + item.quality"
-              class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-1.5 cursor-pointer hover:bg-accent/5"
-              @click="handleStartAgingFromModal(item.itemId, item.quality)"
-            >
-              <span
-                class="text-xs"
-                :class="{
-                  'text-quality-fine': item.quality === 'fine',
-                  'text-quality-excellent': item.quality === 'excellent',
-                  'text-quality-supreme': item.quality === 'supreme'
-                }"
-              >
-                {{ getItemName(item.itemId) }}
-              </span>
-              <span class="text-xs text-muted">&times;{{ item.quantity }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <!-- 仓库存入弹窗 -->
-    <Transition name="panel-fade">
-      <div
-        v-if="showDepositModal"
-        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-        @click.self="showDepositModal = false"
-      >
-        <div class="game-panel max-w-sm w-full">
-          <div class="flex items-center justify-between mb-2">
-            <p class="text-sm text-accent">存入仓库</p>
-            <Button class="py-0 px-1" :icon="X" :icon-size="12" @click="showDepositModal = false" />
-          </div>
-          <div class="flex flex-col space-y-1 max-h-60 overflow-y-auto">
-            <div
-              v-for="item in depositableItems"
-              :key="item.itemId + item.quality"
-              class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-1.5 cursor-pointer hover:bg-accent/5"
-              @click="handleDeposit(item.itemId, item.quality)"
-            >
-              <span class="text-xs truncate mr-2" :class="qualityTextClass(item.quality)">
-                {{ getItemName(item.itemId) }}
-                <span v-if="item.quality !== 'normal'" class="text-[10px]">({{ QUALITY_LABEL[item.quality] }})</span>
-              </span>
-              <span class="text-xs text-muted">&times;{{ item.quantity }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
     <!-- 仓库解锁弹窗 -->
     <Transition name="panel-fade">
       <div
@@ -490,14 +223,14 @@
           <p class="text-sm text-accent mb-2">解锁仓库</p>
 
           <div class="border border-accent/10 rounded-xs p-2 mb-2">
-            <p class="text-xs text-muted">独立于背包的额外存储空间，初始{{ warehouseStore.INITIAL_CAPACITY }}格，可在商店购买扩容。</p>
+            <p class="text-xs text-muted">解锁后可放置箱子分类存放物品，初始可放3个箱子，可在商店升级。</p>
           </div>
 
           <div class="border border-accent/10 rounded-xs p-2 mb-2 space-y-1">
             <div v-for="mat in WAREHOUSE_UNLOCK_MATERIALS" :key="mat.itemId" class="flex items-center justify-between">
               <span class="text-xs text-muted">{{ getItemName(mat.itemId) }}</span>
-              <span class="text-xs" :class="inventoryStore.getItemCount(mat.itemId) >= mat.quantity ? '' : 'text-danger'">
-                {{ inventoryStore.getItemCount(mat.itemId) }}/{{ mat.quantity }}
+              <span class="text-xs" :class="getCombinedItemCount(mat.itemId) >= mat.quantity ? '' : 'text-danger'">
+                {{ getCombinedItemCount(mat.itemId) }}/{{ mat.quantity }}
               </span>
             </div>
             <div class="flex items-center justify-between">
@@ -521,104 +254,171 @@
         </div>
       </div>
     </Transition>
+
+    <!-- 箱子详情弹窗 -->
+    <Transition name="panel-fade">
+      <div v-if="openChestId" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" @click.self="openChestId = null">
+        <div v-if="currentOpenChest" class="game-panel max-w-sm w-full">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-1.5">
+              <span
+                class="text-[10px] px-1 rounded-xs border border-accent/30"
+                :class="currentOpenChest.tier === 'void' ? 'text-quality-supreme' : 'text-accent'"
+              >
+                {{ CHEST_DEFS[currentOpenChest.tier].name }}
+              </span>
+              <p class="text-sm text-accent">{{ currentOpenChest.label }}</p>
+              <span class="text-[10px] text-muted">
+                {{ currentOpenChest.items.length }}/{{ CHEST_DEFS[currentOpenChest.tier].capacity }}
+              </span>
+            </div>
+            <Button class="py-0 px-1" :icon="X" :icon-size="12" @click="openChestId = null" />
+          </div>
+
+          <!-- 箱子物品列表 -->
+          <div v-if="currentOpenChest.items.length > 0" class="flex flex-col space-y-1 mb-2 max-h-48 overflow-y-auto">
+            <div
+              v-for="(item, idx) in currentOpenChest.items"
+              :key="idx"
+              class="flex items-center justify-between border border-accent/10 rounded-xs px-2 py-1"
+            >
+              <span class="text-xs truncate mr-2" :class="qualityTextClass(item.quality)">
+                {{ getItemName(item.itemId) }}
+                <span v-if="item.quality !== 'normal'" class="text-[10px]">({{ QUALITY_LABEL[item.quality] }})</span>
+              </span>
+              <div class="flex items-center space-x-1.5">
+                <span class="text-xs text-muted">&times;{{ item.quantity }}</span>
+                <Button class="py-0 px-1" @click="handleWithdrawFromChest(openChestId!, item.itemId, item.quality)">取出</Button>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-xs text-muted text-center py-4 mb-2">空箱子</div>
+
+          <!-- 存入按钮 -->
+          <Button v-if="depositableItems.length > 0" class="w-full" :icon="ArrowDown" :icon-size="12" @click="showChestDepositModal = true">
+            存入物品
+          </Button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 箱子存入弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="showChestDepositModal && openChestId"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+        @click.self="showChestDepositModal = false"
+      >
+        <div class="game-panel max-w-sm w-full">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm text-accent">存入物品</p>
+            <Button class="py-0 px-1" :icon="X" :icon-size="12" @click="showChestDepositModal = false" />
+          </div>
+          <div class="flex flex-col space-y-1 max-h-60 overflow-y-auto">
+            <div
+              v-for="item in depositableItems"
+              :key="item.itemId + item.quality"
+              class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-1.5 cursor-pointer hover:bg-accent/5"
+              @click="handleDepositToChest(openChestId!, item.itemId, item.quality)"
+            >
+              <span class="text-xs truncate mr-2" :class="qualityTextClass(item.quality)">
+                {{ getItemName(item.itemId) }}
+                <span v-if="item.quality !== 'normal'" class="text-[10px]">({{ QUALITY_LABEL[item.quality] }})</span>
+              </span>
+              <span class="text-xs text-muted">&times;{{ item.quantity }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 添加箱子弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="showAddChestModal"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+        @click.self="showAddChestModal = false"
+      >
+        <div class="game-panel max-w-sm w-full">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm text-accent">制作箱子</p>
+            <Button class="py-0 px-1" :icon="X" :icon-size="12" @click="showAddChestModal = false" />
+          </div>
+          <div class="flex flex-col space-y-1.5">
+            <div v-for="tier in CHEST_TIER_ORDER" :key="tier" class="border border-accent/20 rounded-xs p-2">
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center space-x-1.5">
+                  <span class="text-xs font-bold" :class="tier === 'void' ? 'text-quality-supreme' : 'text-accent'">
+                    {{ CHEST_DEFS[tier].name }}
+                  </span>
+                  <span class="text-[10px] text-muted">{{ CHEST_DEFS[tier].capacity }}格</span>
+                </div>
+                <Button
+                  class="py-0 px-1.5"
+                  :class="{ '!bg-accent !text-bg': canCraftChest(tier) }"
+                  :disabled="!canCraftChest(tier)"
+                  @click="handleCraftChest(tier)"
+                >
+                  制作
+                </Button>
+              </div>
+              <p class="text-[10px] text-muted mb-1">{{ CHEST_DEFS[tier].description }}</p>
+              <div class="flex flex-wrap gap-x-3 gap-y-0.5">
+                <span
+                  v-for="mat in CHEST_DEFS[tier].craftCost"
+                  :key="mat.itemId"
+                  class="text-[10px]"
+                  :class="getCombinedItemCount(mat.itemId) >= mat.quantity ? 'text-muted' : 'text-danger'"
+                >
+                  {{ getItemName(mat.itemId) }} {{ getCombinedItemCount(mat.itemId) }}/{{ mat.quantity }}
+                </span>
+                <span class="text-[10px]" :class="playerStore.money >= CHEST_DEFS[tier].craftMoney ? 'text-muted' : 'text-danger'">
+                  {{ CHEST_DEFS[tier].craftMoney }}文
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
   import { computed, ref } from 'vue'
-  import { ArrowUp, ArrowDown, Mountain, Gem, Unlock, Heart, Leaf, Users, Home, Warehouse, X } from 'lucide-vue-next'
-  import { useHomeStore, useInventoryStore, useNpcStore, useGameStore, usePlayerStore, useWarehouseStore } from '@/stores'
+  import { ArrowDown, Building, Mountain, Leaf, Pencil, Plus, Trash2, Unlock, Warehouse, X } from 'lucide-vue-next'
+  import { useHomeStore } from '@/stores/useHomeStore'
+  import { useInventoryStore } from '@/stores/useInventoryStore'
+  import { usePlayerStore } from '@/stores/usePlayerStore'
+  import { useProcessingStore } from '@/stores/useProcessingStore'
+  import { useWarehouseStore } from '@/stores/useWarehouseStore'
+  import { getCombinedItemCount, removeCombinedItem } from '@/composables/useCombinedInventory'
   import { getItemById } from '@/data'
   import { GREENHOUSE_UNLOCK_COST, GREENHOUSE_MATERIAL_COST, WAREHOUSE_UNLOCK_MATERIALS } from '@/data/buildings'
-  import { ACTION_TIME_COSTS } from '@/data/timeConstants'
-  import type { Quality, ChildStage, PregnancyStage } from '@/types'
+  import { CHEST_DEFS, CHEST_TIER_ORDER } from '@/data/items'
+  import type { Quality, ChestTier, VoidChestRole } from '@/types'
   import { addLog } from '@/composables/useGameLog'
-  import { showChildProposal } from '@/composables/useDialogs'
-  import { handleEndDay } from '@/composables/useEndDay'
   import Button from '@/components/game/Button.vue'
 
   const homeStore = useHomeStore()
   const inventoryStore = useInventoryStore()
-  const gameStore = useGameStore()
-  const npcStore = useNpcStore()
   const playerStore = usePlayerStore()
   const warehouseStore = useWarehouseStore()
+  const processingStore = useProcessingStore()
 
-  const releaseConfirmChildId = ref<number | null>(null)
-  const showUpgradeModal = ref(false)
   const showGreenhouseModal = ref(false)
-  const showAgingModal = ref(false)
-  const showDepositModal = ref(false)
   const showWarehouseUnlockModal = ref(false)
-
-  const CHILD_STAGE_NAMES: Record<ChildStage, string> = {
-    baby: '婴儿',
-    toddler: '幼儿',
-    child: '孩童',
-    teen: '少年'
-  }
-
-  const PREGNANCY_STAGE_LABELS: Record<PregnancyStage, string> = {
-    early: '初期（需要营养）',
-    mid: '中期（需要陪伴）',
-    late: '后期（需要休息）',
-    ready: '待产期（准备迎接）'
-  }
-
-  const STAGE_TIPS: Record<PregnancyStage, string> = {
-    early: '孕初期需要注意营养，送些食物或补品效果最好。',
-    mid: '孕中期需要更多陪伴，多聊天可以大幅提升安产率。',
-    late: '孕后期要注意休息，让配偶好好休养。',
-    ready: '即将临盆，请选择接生方式并做好最后的准备。'
-  }
-
-  const MEDICAL_LABELS: Record<string, string> = {
-    normal: '普通接生',
-    advanced: '高级接生',
-    luxury: '豪华接生'
-  }
-
-  const AGEABLE_ITEMS = ['watermelon_wine', 'osmanthus_wine', 'peach_wine', 'jujube_wine', 'corn_wine', 'rice_vinegar']
-
-  const currentBenefit = computed(() => {
-    switch (homeStore.farmhouseLevel) {
-      case 0:
-        return '简陋的茅屋。'
-      case 1:
-        return '厨房升级，烹饪恢复+20%。'
-      case 2:
-        return '宅院扩建，每晚额外恢复10%体力。'
-      case 3:
-        return '地下酒窖开放，可陈酿美酒提升品质。'
-      default:
-        return ''
-    }
-  })
-
-  const ageableInInventory = computed(() => {
-    return inventoryStore.items.filter(inv => AGEABLE_ITEMS.includes(inv.itemId) && inv.quality !== 'supreme')
-  })
+  const showAddChestModal = ref(false)
+  const showChestDepositModal = ref(false)
+  const openChestId = ref<string | null>(null)
+  const renamingChestId = ref<string | null>(null)
+  const renameInput = ref('')
 
   const getItemName = (itemId: string): string => {
     return getItemById(itemId)?.name ?? itemId
   }
 
-  const getChildName = (childId: number): string => {
-    return npcStore.children.find(c => c.id === childId)?.name ?? '孩子'
-  }
-
-  // === 操作处理 ===
-
-  const handleUpgradeFromModal = () => {
-    const upgrade = homeStore.nextUpgrade
-    if (!upgrade) return
-    if (homeStore.upgradeFarmhouse()) {
-      addLog(`农舍升级为「${upgrade.name}」！${upgrade.description}`)
-      showUpgradeModal.value = false
-    } else {
-      addLog('金币或材料不足，无法升级。')
-    }
-  }
+  // === 山洞 ===
 
   const handleChooseCave = (choice: 'mushroom' | 'fruit_bat') => {
     if (homeStore.chooseCave(choice)) {
@@ -626,6 +426,13 @@
       addLog(`选择了${name}，每天会有被动产出。`)
     }
   }
+
+  // === 温室 ===
+
+  const canUnlockGreenhouse = computed(() => {
+    if (playerStore.money < GREENHOUSE_UNLOCK_COST) return false
+    return GREENHOUSE_MATERIAL_COST.every(mat => getCombinedItemCount(mat.itemId) >= mat.quantity)
+  })
 
   const handleUnlockFromModal = () => {
     if (homeStore.unlockGreenhouse()) {
@@ -636,66 +443,12 @@
     }
   }
 
-  const handleInteractChild = (childId: number) => {
-    const result = npcStore.interactWithChild(childId)
-    if (result) {
-      addLog(result.message)
-      if (result.item) {
-        inventoryStore.addItem(result.item)
-        const itemDef = getItemById(result.item)
-        addLog(`获得了${itemDef?.name ?? result.item}！`)
-      }
-    }
-  }
-
-  const handleReleaseChild = () => {
-    if (releaseConfirmChildId.value === null) return
-    const result = npcStore.releaseChild(releaseConfirmChildId.value)
-    addLog(result.message)
-    releaseConfirmChildId.value = null
-  }
-
-  const showChildProposalDialog = () => {
-    showChildProposal()
-  }
-
-  const handlePregnancyCare = (action: 'gift' | 'companion' | 'supplement' | 'rest') => {
-    const result = npcStore.performPregnancyCare(action)
-    addLog(result.message)
-    if (result.careGain > 0) addLog(`安产率 +${result.careGain}%`)
-  }
-
-  const handleChooseMedical = (plan: 'normal' | 'advanced' | 'luxury') => {
-    const result = npcStore.chooseMedicalPlan(plan)
-    addLog(result.message)
-  }
-
-  const handleStartAgingFromModal = (itemId: string, quality: Quality) => {
-    if (homeStore.startAging(itemId, quality)) {
-      const name = getItemName(itemId)
-      addLog(`将${name}放入酒窖陈酿。`)
-      const tr = gameStore.advanceTime(ACTION_TIME_COSTS.aging)
-      if (tr.message) addLog(tr.message)
-      if (tr.passedOut) void handleEndDay()
-    } else {
-      addLog('无法放入酒窖（已满或物品不可陈酿）。')
-    }
-    // 酒窖满或无剩余可陈酿物品时关闭弹窗
-    if (homeStore.cellarSlots.length >= 6 || ageableInInventory.value.length === 0) {
-      showAgingModal.value = false
-    }
-  }
-
-  const handleRemoveAging = (index: number) => {
-    const result = homeStore.removeAging(index)
-    if (result) {
-      inventoryStore.addItem(result.itemId, 1, result.quality)
-      const name = getItemName(result.itemId)
-      addLog(`从酒窖取出了${name}。`)
-    }
-  }
-
   // === 仓库 ===
+
+  const canUnlockWarehouse = computed(() => {
+    if (playerStore.money < warehouseStore.UNLOCK_COST) return false
+    return WAREHOUSE_UNLOCK_MATERIALS.every(mat => getCombinedItemCount(mat.itemId) >= mat.quantity)
+  })
 
   const handleUnlockWarehouse = () => {
     if (warehouseStore.unlocked) return
@@ -704,7 +457,7 @@
       return
     }
     for (const mat of WAREHOUSE_UNLOCK_MATERIALS) {
-      inventoryStore.removeItem(mat.itemId, mat.quantity)
+      removeCombinedItem(mat.itemId, mat.quantity)
     }
     playerStore.spendMoney(warehouseStore.UNLOCK_COST)
     warehouseStore.unlocked = true
@@ -712,22 +465,7 @@
     addLog(`仓库已解锁！（-${warehouseStore.UNLOCK_COST}文）`)
   }
 
-  const canUnlockWarehouse = computed(() => {
-    if (playerStore.money < warehouseStore.UNLOCK_COST) return false
-    return WAREHOUSE_UNLOCK_MATERIALS.every(mat => inventoryStore.getItemCount(mat.itemId) >= mat.quantity)
-  })
-
-  const canUpgradeFarmhouse = computed(() => {
-    const upgrade = homeStore.nextUpgrade
-    if (!upgrade) return false
-    if (playerStore.money < upgrade.cost) return false
-    return upgrade.materialCost.every(mat => inventoryStore.getItemCount(mat.itemId) >= mat.quantity)
-  })
-
-  const canUnlockGreenhouse = computed(() => {
-    if (playerStore.money < GREENHOUSE_UNLOCK_COST) return false
-    return GREENHOUSE_MATERIAL_COST.every(mat => inventoryStore.getItemCount(mat.itemId) >= mat.quantity)
-  })
+  // === 箱子管理 ===
 
   const QUALITY_LABEL: Record<Quality, string> = {
     normal: '普通',
@@ -743,7 +481,18 @@
     return fallback
   }
 
-  /** 背包中可存入仓库的物品（排除种子） */
+  const VOID_ROLES: { value: VoidChestRole; label: string }[] = [
+    { value: 'none', label: '无' },
+    { value: 'input', label: '原料箱' },
+    { value: 'output', label: '成品箱' }
+  ]
+
+  const currentOpenChest = computed(() => {
+    if (!openChestId.value) return null
+    return warehouseStore.getChest(openChestId.value) ?? null
+  })
+
+  /** 背包中可存入箱子的物品（排除种子） */
   const depositableItems = computed(() =>
     inventoryStore.items.filter(i => {
       const def = getItemById(i.itemId)
@@ -751,65 +500,87 @@
     })
   )
 
-  /** 计算容器中某物品的可用空间 */
-  const calcAvailableSpace = (
-    storeItems: { itemId: string; quality: Quality; quantity: number }[],
-    storeCap: number,
-    itemId: string,
-    quality: Quality
-  ): number => {
-    const MAX_STACK = 99
-    let space = 0
-    for (const s of storeItems) {
-      if (s.itemId === itemId && s.quality === quality && s.quantity < MAX_STACK) {
-        space += MAX_STACK - s.quantity
-      }
-    }
-    const emptySlots = storeCap - storeItems.length
-    space += emptySlots * MAX_STACK
-    return space
+  /** 制作箱子 */
+  const canCraftChest = (tier: ChestTier): boolean => {
+    if (warehouseStore.chests.length >= warehouseStore.maxChests) return false
+    return processingStore.canCraft(CHEST_DEFS[tier].craftCost, CHEST_DEFS[tier].craftMoney)
   }
 
-  /** 存入仓库（每次存一组） */
-  const handleDeposit = (itemId: string, quality: Quality) => {
-    const slot = inventoryStore.items.find(i => i.itemId === itemId && i.quality === quality)
-    if (!slot) return
-    const qty = slot.quantity
-    const space = calcAvailableSpace(warehouseStore.items, warehouseStore.capacity, itemId, quality)
-    const toTransfer = Math.min(qty, space)
-    if (toTransfer <= 0) {
-      addLog('仓库已满，无法存入。')
+  const handleCraftChest = (tier: ChestTier) => {
+    if (!canCraftChest(tier)) {
+      addLog('材料或金币不足。')
       return
     }
-    inventoryStore.removeItem(itemId, toTransfer, quality)
-    warehouseStore.addItem(itemId, toTransfer, quality)
-    if (toTransfer < qty) {
-      addLog(`仓库空间不足，存入了${getItemName(itemId)}×${toTransfer}。`)
-    } else {
-      addLog(`存入了${getItemName(itemId)}×${toTransfer}。`)
-    }
-    if (depositableItems.value.length === 0 || warehouseStore.isFull) {
-      showDepositModal.value = false
+    if (!processingStore.consumeCraftMaterials(CHEST_DEFS[tier].craftCost, CHEST_DEFS[tier].craftMoney)) return
+    warehouseStore.addChest(tier)
+    addLog(`制作了${CHEST_DEFS[tier].name}！（-${CHEST_DEFS[tier].craftMoney}文）`)
+    if (warehouseStore.chests.length >= warehouseStore.maxChests) {
+      showAddChestModal.value = false
     }
   }
 
-  /** 从仓库取出（每次取一组） */
-  const handleWithdraw = (itemId: string, quality: Quality) => {
-    const slot = warehouseStore.items.find(i => i.itemId === itemId && i.quality === quality)
+  /** 删除箱子 */
+  const handleRemoveChest = (chestId: string) => {
+    const chest = warehouseStore.getChest(chestId)
+    if (!chest) return
+    if (chest.items.length > 0) {
+      addLog('箱子不为空，无法删除。')
+      return
+    }
+    const name = chest.label
+    warehouseStore.removeChest(chestId)
+    addLog(`拆除了${name}。`)
+  }
+
+  /** 重命名箱子 */
+  const startRenameChest = (chestId: string, currentLabel: string) => {
+    renamingChestId.value = chestId
+    renameInput.value = currentLabel
+  }
+
+  const confirmRenameChest = () => {
+    if (renamingChestId.value) {
+      warehouseStore.renameChest(renamingChestId.value, renameInput.value)
+    }
+    renamingChestId.value = null
+  }
+
+  /** 虚空箱角色 */
+  const handleSetVoidRole = (chestId: string, role: VoidChestRole) => {
+    warehouseStore.setVoidRole(chestId, role)
+    const chest = warehouseStore.getChest(chestId)
+    if (!chest) return
+    if (role === 'none') addLog(`${chest.label}已取消角色设置。`)
+    else if (role === 'input') addLog(`${chest.label}已设为原料箱，作坊加工将自动从此箱取材料。`)
+    else addLog(`${chest.label}已设为成品箱，作坊产品将自动放入此箱。`)
+  }
+
+  /** 存入箱子 */
+  const handleDepositToChest = (chestId: string, itemId: string, quality: Quality) => {
+    const slot = inventoryStore.items.find(i => i.itemId === itemId && i.quality === quality)
+    if (!slot) return
+    const actualQty = warehouseStore.depositToChest(chestId, itemId, slot.quantity, quality)
+    if (actualQty <= 0) {
+      addLog('箱子已满，无法存入。')
+      return
+    }
+    addLog(`存入了${getItemName(itemId)}×${actualQty}。`)
+    if (depositableItems.value.length === 0 || warehouseStore.isChestFull(chestId)) {
+      showChestDepositModal.value = false
+    }
+  }
+
+  /** 从箱子取出 */
+  const handleWithdrawFromChest = (chestId: string, itemId: string, quality: Quality) => {
+    const chest = warehouseStore.getChest(chestId)
+    if (!chest) return
+    const slot = chest.items.find(i => i.itemId === itemId && i.quality === quality)
     if (!slot) return
     const qty = slot.quantity
-    const space = calcAvailableSpace(inventoryStore.items, inventoryStore.capacity, itemId, quality)
-    const toTransfer = Math.min(qty, space)
-    if (toTransfer <= 0) {
+    if (!warehouseStore.withdrawFromChest(chestId, itemId, qty, quality)) {
       addLog('背包已满，无法取出。')
       return
     }
-    warehouseStore.removeItem(itemId, toTransfer, quality)
-    inventoryStore.addItem(itemId, toTransfer, quality)
-    if (toTransfer < qty) {
-      addLog(`背包空间不足，取出了${getItemName(itemId)}×${toTransfer}。`)
-    } else {
-      addLog(`取出了${getItemName(itemId)}×${toTransfer}。`)
-    }
+    addLog(`取出了${getItemName(itemId)}×${qty}。`)
   }
 </script>

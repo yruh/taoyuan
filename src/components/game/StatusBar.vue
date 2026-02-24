@@ -75,7 +75,8 @@
 <script setup lang="ts">
   import { computed, ref } from 'vue'
   import { useRoute } from 'vue-router'
-  import { useGameStore, usePlayerStore, SEASON_NAMES, WEATHER_NAMES } from '@/stores'
+  import { useGameStore, SEASON_NAMES, WEATHER_NAMES } from '@/stores/useGameStore'
+  import { usePlayerStore } from '@/stores/usePlayerStore'
   import MobileMapMenu from '@/components/game/MobileMapMenu.vue'
   import SettingsDialog from '@/components/game/SettingsDialog.vue'
   import { DAY_START_HOUR, DAY_END_HOUR } from '@/data/timeConstants'

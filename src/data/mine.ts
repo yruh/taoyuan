@@ -91,6 +91,11 @@ export const getTreasureRewards = (floor: number): { items: { itemId: string; qu
     }
   }
 
+  // 深渊层宝箱极小概率掉落仙桃
+  if (zone === 'abyss' && Math.random() < 0.02) {
+    items.push({ itemId: 'stamina_fruit', quantity: 1 })
+  }
+
   return {
     items,
     money: r.minMoney + Math.floor(Math.random() * (r.maxMoney - r.minMoney + 1))
