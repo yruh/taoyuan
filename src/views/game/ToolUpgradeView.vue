@@ -307,7 +307,7 @@
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.toolUpgrade)
     if (tr.message) addLog(tr.message)
     if (tr.passedOut) {
-      handleEndDay()
+      void handleEndDay()
       return
     }
   }

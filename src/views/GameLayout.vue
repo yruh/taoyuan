@@ -98,6 +98,13 @@
       </div>
     </Transition>
 
+    <!-- 日结算遮罩 -->
+    <Transition name="panel-fade">
+      <div v-if="settling" class="fixed inset-0 bg-black/80 flex items-center justify-center z-[60]">
+        <p class="text-accent text-lg animate-pulse">结算中...</p>
+      </div>
+    </Transition>
+
     <!-- 休息确认 -->
     <Transition name="panel-fade">
       <div v-if="showSleepConfirm" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
@@ -116,11 +123,12 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+  import { ref, computed, watch, onMounted, onUnmounted, defineAsyncComponent, defineComponent, h } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { useGameStore, usePlayerStore, useAnimalStore, useNpcStore } from '@/stores'
+  import { useSaveStore } from '@/stores/useSaveStore'
   import { useDialogs } from '@/composables/useDialogs'
-  import { handleEndDay } from '@/composables/useEndDay'
+  import { handleEndDay, isSettling } from '@/composables/useEndDay'
   import { addLog } from '@/composables/useGameLog'
   import { getNpcById } from '@/data'
   import { useGameClock } from '@/composables/useGameClock'
@@ -132,15 +140,55 @@
   import EventDialog from '@/components/game/EventDialog.vue'
   import HeartEventDialog from '@/components/game/HeartEventDialog.vue'
   import PerkSelectDialog from '@/components/game/PerkSelectDialog.vue'
-  import FishingContestView from '@/components/game/FishingContestView.vue'
-  import HarvestFairView from '@/components/game/HarvestFairView.vue'
-  import DragonBoatView from '@/components/game/DragonBoatView.vue'
-  import LanternRiddleView from '@/components/game/LanternRiddleView.vue'
-  import PotThrowingView from '@/components/game/PotThrowingView.vue'
-  import DumplingMakingView from '@/components/game/DumplingMakingView.vue'
-  import FireworkShowView from '@/components/game/FireworkShowView.vue'
-  import TeaContestView from '@/components/game/TeaContestView.vue'
-  import KiteFlyingView from '@/components/game/KiteFlyingView.vue'
+  const FestivalLoadingFallback = defineComponent({
+    name: 'FestivalLoadingFallback',
+    setup() {
+      return () =>
+        h('div', { class: 'game-panel max-w-xs w-full text-center' }, [
+          h('p', { class: 'text-accent text-sm mb-2 animate-pulse' }, '活动加载中...'),
+          h('p', { class: 'text-xs text-muted' }, '请稍候')
+        ])
+    }
+  })
+
+  const FestivalErrorFallback = defineComponent({
+    name: 'FestivalErrorFallback',
+    emits: ['complete'],
+    setup(_, { emit }) {
+      return () =>
+        h('div', { class: 'game-panel max-w-xs w-full text-center' }, [
+          h('p', { class: 'text-danger text-sm mb-2' }, '活动加载失败'),
+          h('p', { class: 'text-xs text-muted mb-3' }, '请检查网络后重试。'),
+          h(
+            'button',
+            {
+              class: 'px-3 py-1 border border-danger/40 text-danger text-xs rounded-xs hover:bg-danger/10',
+              onClick: () => emit('complete')
+            },
+            '关闭'
+          )
+        ])
+    }
+  })
+
+  const createFestivalAsyncComponent = (loader: () => Promise<any>) =>
+    defineAsyncComponent({
+      loader,
+      delay: 120,
+      timeout: 10000,
+      loadingComponent: FestivalLoadingFallback,
+      errorComponent: FestivalErrorFallback
+    })
+
+  const FishingContestView = createFestivalAsyncComponent(() => import('@/components/game/FishingContestView.vue'))
+  const HarvestFairView = createFestivalAsyncComponent(() => import('@/components/game/HarvestFairView.vue'))
+  const DragonBoatView = createFestivalAsyncComponent(() => import('@/components/game/DragonBoatView.vue'))
+  const LanternRiddleView = createFestivalAsyncComponent(() => import('@/components/game/LanternRiddleView.vue'))
+  const PotThrowingView = createFestivalAsyncComponent(() => import('@/components/game/PotThrowingView.vue'))
+  const DumplingMakingView = createFestivalAsyncComponent(() => import('@/components/game/DumplingMakingView.vue'))
+  const FireworkShowView = createFestivalAsyncComponent(() => import('@/components/game/FireworkShowView.vue'))
+  const TeaContestView = createFestivalAsyncComponent(() => import('@/components/game/TeaContestView.vue'))
+  const KiteFlyingView = createFestivalAsyncComponent(() => import('@/components/game/KiteFlyingView.vue'))
   import SettingsDialog from '@/components/game/SettingsDialog.vue'
 
   const router = useRouter()
@@ -148,6 +196,8 @@
   const gameStore = useGameStore()
   const playerStore = usePlayerStore()
   const { switchToSeasonalBgm } = useAudio()
+
+  const settling = computed(() => isSettling())
 
   // 游戏未开始时重定向到主菜单
   if (!gameStore.isGameStarted) {
@@ -183,11 +233,23 @@
   const showSettings = ref(false)
 
   // 实时时钟生命周期
-  onMounted(() => startClock())
-  onUnmounted(() => stopClock())
+  const saveStore = useSaveStore()
+  const handlePageLeave = () => {
+    saveStore.syncSave()
+  }
 
-  // 弹窗打开时自动暂停时钟，全部关闭后恢复
-  watch(
+  onMounted(() => {
+    startClock()
+    window.addEventListener('beforeunload', handlePageLeave)
+    window.addEventListener('pagehide', handlePageLeave)
+  })
+  onUnmounted(() => {
+    window.removeEventListener('beforeunload', handlePageLeave)
+    window.removeEventListener('pagehide', handlePageLeave)
+    stopClock()
+  })
+
+  const isClockBlocked = computed(
     () =>
       !!(
         currentEvent.value ||
@@ -196,13 +258,16 @@
         pendingPerk.value ||
         pendingPetAdoption.value ||
         childProposalVisible.value ||
-        showSleepConfirm.value
-      ),
-    hasModal => {
-      if (hasModal) pauseClock()
-      else resumeClock()
-    }
+        showSleepConfirm.value ||
+        settling.value
+      )
   )
+
+  // 弹窗或结算进行时暂停时钟，全部结束后恢复
+  watch(isClockBlocked, blocked => {
+    if (blocked) pauseClock()
+    else resumeClock()
+  })
 
   // 判断是否webview环境
   const isWebView = window.__WEBVIEW__
@@ -269,12 +334,12 @@
     closeChildProposal()
   }
 
-  const confirmSleep = () => {
+  const confirmSleep = async () => {
     showSleepConfirm.value = false
     pauseClock()
-    handleEndDay()
+    await handleEndDay()
     switchToSeasonalBgm()
-    resumeClock()
+    if (!isClockBlocked.value) resumeClock()
   }
 </script>
 

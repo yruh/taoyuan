@@ -676,7 +676,7 @@
       addLog(`将${name}放入酒窖陈酿。`)
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.aging)
       if (tr.message) addLog(tr.message)
-      if (tr.passedOut) handleEndDay()
+      if (tr.passedOut) void handleEndDay()
     } else {
       addLog('无法放入酒窖（已满或物品不可陈酿）。')
     }

@@ -600,7 +600,7 @@
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.breeding)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
       }
     } else {
       addLog('育种启动失败。')
@@ -646,7 +646,7 @@
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.breeding)
     if (tr.message) addLog(tr.message)
     if (tr.passedOut) {
-      handleEndDay()
+      void handleEndDay()
     }
   }
 

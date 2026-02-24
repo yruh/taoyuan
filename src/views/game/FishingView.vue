@@ -500,7 +500,7 @@
   const handleStartFishing = () => {
     if (gameStore.isPastBedtime) {
       addLog('太晚了，没法钓鱼了。')
-      handleEndDay()
+      void handleEndDay()
       return
     }
     if (!inventoryStore.isToolAvailable('fishingRod')) {
@@ -513,7 +513,7 @@
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.fishStart)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
         return
       }
       if (result.junk) {
@@ -595,7 +595,7 @@
   const handlePan = () => {
     if (gameStore.isPastBedtime) {
       addLog('太晚了，没法淘金了。')
-      handleEndDay()
+      void handleEndDay()
       return
     }
 
@@ -665,6 +665,6 @@
 
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.pan)
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   }
 </script>

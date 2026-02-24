@@ -59,7 +59,7 @@
   const handleCook = (recipeId: string) => {
     if (gameStore.isPastBedtime) {
       addLog('太晚了，没力气做饭了。')
-      handleEndDay()
+      void handleEndDay()
       return
     }
     const result = cookingStore.cook(recipeId)
@@ -67,6 +67,6 @@
     addLog(result.message)
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.cook)
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   }
 </script>

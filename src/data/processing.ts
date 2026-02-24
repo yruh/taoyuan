@@ -1680,32 +1680,44 @@ export const TACKLES: TackleDef[] = [
   }
 ]
 
+const _MACHINES_MAP = new Map<string, ProcessingMachineDef>(PROCESSING_MACHINES.map(m => [m.id, m]))
+
 export const getMachineById = (id: string): ProcessingMachineDef | undefined => {
-  return PROCESSING_MACHINES.find(m => m.id === id)
+  return _MACHINES_MAP.get(id)
 }
 
+const _RECIPES_MAP = new Map<string, ProcessingRecipeDef>(PROCESSING_RECIPES.map(r => [r.id, r]))
+
 export const getProcessingRecipeById = (id: string): ProcessingRecipeDef | undefined => {
-  return PROCESSING_RECIPES.find(r => r.id === id)
+  return _RECIPES_MAP.get(id)
 }
 
 export const getRecipesForMachine = (machineType: string): ProcessingRecipeDef[] => {
   return PROCESSING_RECIPES.filter(r => r.machineType === machineType)
 }
 
+const _SPRINKLERS_MAP = new Map<string, SprinklerDef>(SPRINKLERS.map(s => [s.id, s]))
+
 export const getSprinklerById = (id: string): SprinklerDef | undefined => {
-  return SPRINKLERS.find(s => s.id === id)
+  return _SPRINKLERS_MAP.get(id)
 }
+
+const _FERTILIZERS_MAP = new Map<string, FertilizerDef>(FERTILIZERS.map(f => [f.id, f]))
 
 export const getFertilizerById = (id: string): FertilizerDef | undefined => {
-  return FERTILIZERS.find(f => f.id === id)
+  return _FERTILIZERS_MAP.get(id)
 }
+
+const _BAITS_MAP = new Map<string, BaitDef>(BAITS.map(b => [b.id, b]))
 
 export const getBaitById = (id: string): BaitDef | undefined => {
-  return BAITS.find(b => b.id === id)
+  return _BAITS_MAP.get(id)
 }
 
+const _TACKLES_MAP = new Map<string, TackleDef>(TACKLES.map(t => [t.id, t]))
+
 export const getTackleById = (id: string): TackleDef | undefined => {
-  return TACKLES.find(t => t.id === id)
+  return _TACKLES_MAP.get(id)
 }
 
 /** 采脂器制造定义 */
@@ -1804,6 +1816,8 @@ export const BOMBS: BombDef[] = [
   }
 ]
 
+const _BOMBS_MAP = new Map<string, BombDef>(BOMBS.map(b => [b.id, b]))
+
 export const getBombById = (id: string): BombDef | undefined => {
-  return BOMBS.find(b => b.id === id)
+  return _BOMBS_MAP.get(id)
 }

@@ -4,7 +4,7 @@ import type { FarmPlot, FarmSize, Season, Quality } from '@/types'
 import type { SprinklerType, FertilizerType, PlantedFruitTree, FruitTreeType, WildTreeType, PlantedWildTree } from '@/types'
 import type { SeedGenetics } from '@/types/breeding'
 import { getCropById } from '@/data'
-import { SPRINKLERS, getFertilizerById } from '@/data/processing'
+import { getFertilizerById, getSprinklerById } from '@/data/processing'
 import { FRUIT_TREE_DEFS, MAX_FRUIT_TREES } from '@/data/fruitTrees'
 import { MAX_WILD_TREES, getWildTreeDef } from '@/data/wildTrees'
 import { GREENHOUSE_PLOT_COUNT } from '@/data/buildings'
@@ -284,18 +284,21 @@ export const useFarmStore = defineStore('farm', () => {
     return type
   }
 
-  /** 获取被所有洒水器覆盖的地块集合 */
-  const getAllWateredBySprinklers = (): Set<number> => {
+  /** 被所有洒水器覆盖的地块集合（computed 缓存） */
+  const sprinklerWateredSet = computed(() => {
     const watered = new Set<number>()
     for (const s of sprinklers.value) {
-      const def = SPRINKLERS.find(d => d.id === s.type)
+      const def = getSprinklerById(s.type)
       if (!def) continue
       for (const pid of getSprinklerCoverage(s.plotId, def.range)) {
         watered.add(pid)
       }
     }
     return watered
-  }
+  })
+
+  /** 获取被所有洒水器覆盖的地块集合 */
+  const getAllWateredBySprinklers = (): Set<number> => sprinklerWateredSet.value
 
   // === 肥料 ===
 

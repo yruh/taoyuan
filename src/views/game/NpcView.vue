@@ -554,7 +554,7 @@
     if (!selectedNpc.value) return
     if (gameStore.isPastBedtime) {
       addLog('太晚了，人家都睡了。')
-      handleEndDay()
+      void handleEndDay()
       return
     }
     const result = npcStore.talkTo(selectedNpc.value)
@@ -565,7 +565,7 @@
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.talk)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
         return
       }
 

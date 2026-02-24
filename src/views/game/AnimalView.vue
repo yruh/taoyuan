@@ -764,7 +764,7 @@
       addLog(`成功升级为${targetName}！容量增至${targetCapacity}。`)
       const tr = gameStore.advanceTime(2)
       if (tr.message) addLog(tr.message)
-      if (tr.passedOut) handleEndDay()
+      if (tr.passedOut) void handleEndDay()
     } else {
       addLog('升级失败，请检查金币和材料是否充足。')
     }
@@ -779,7 +779,7 @@
       addLog(`成功建造了${bDef?.name ?? '畜舍'}！`)
       const tr = gameStore.advanceTime(2)
       if (tr.message) addLog(tr.message)
-      if (tr.passedOut) handleEndDay()
+      if (tr.passedOut) void handleEndDay()
     } else {
       addLog(`建造${bDef?.name ?? '畜舍'}失败，请检查金币和材料是否充足。`)
     }
@@ -805,7 +805,7 @@
       addLog(`抚摸了${animal?.name ?? '动物'}，友好度提升了。`)
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.petAnimal)
       if (tr.message) addLog(tr.message)
-      if (tr.passedOut) handleEndDay()
+      if (tr.passedOut) void handleEndDay()
     } else {
       addLog('今天已经抚摸过了。')
     }
@@ -817,7 +817,7 @@
       addLog(`抚摸了${animalStore.pet?.name ?? '宠物'}，好感度+5。`)
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.petAnimal)
       if (tr.message) addLog(tr.message)
-      if (tr.passedOut) handleEndDay()
+      if (tr.passedOut) void handleEndDay()
     } else {
       addLog('今天已经抚摸过了。')
     }
@@ -848,7 +848,7 @@
     if (result.fedCount > 0) {
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.feedAnimals)
       if (tr.message) addLog(tr.message)
-      if (tr.passedOut) handleEndDay()
+      if (tr.passedOut) void handleEndDay()
     }
   }
 
@@ -869,7 +869,7 @@
     if (result.success) {
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.graze)
       if (tr.message) addLog(tr.message)
-      if (tr.passedOut) handleEndDay()
+      if (tr.passedOut) void handleEndDay()
     }
   }
 

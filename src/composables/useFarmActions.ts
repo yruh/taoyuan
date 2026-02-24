@@ -46,7 +46,7 @@ export const handlePlotClick = (plotId: number) => {
 
   if (gameStore.isPastBedtime) {
     addLog('已经凌晨2点了，你必须休息。')
-    handleEndDay()
+    void handleEndDay()
     return
   }
 
@@ -80,7 +80,7 @@ export const handlePlotClick = (plotId: number) => {
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.till)
     if (tr.message) addLog(tr.message)
     if (tr.passedOut) {
-      handleEndDay()
+      void handleEndDay()
       return
     }
   } else if (plot.state === 'tilled' && selectedSeed.value) {
@@ -116,7 +116,7 @@ export const handlePlotClick = (plotId: number) => {
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.plant)
     if (tr.message) addLog(tr.message)
     if (tr.passedOut) {
-      handleEndDay()
+      void handleEndDay()
       return
     }
   } else if (plot.state === 'planted' || plot.state === 'growing') {
@@ -156,7 +156,7 @@ export const handlePlotClick = (plotId: number) => {
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.water)
     if (tr.message) addLog(tr.message)
     if (tr.passedOut) {
-      handleEndDay()
+      void handleEndDay()
       return
     }
   } else if (plot.state === 'harvestable') {
@@ -214,7 +214,7 @@ export const handlePlotClick = (plotId: number) => {
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.harvest)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
         return
       }
     }
@@ -307,7 +307,7 @@ export const handleBatchWater = () => {
 
   if (gameStore.isPastBedtime) {
     addLog('已经凌晨2点了，你必须休息。')
-    handleEndDay()
+    void handleEndDay()
     return
   }
 
@@ -320,20 +320,17 @@ export const handleBatchWater = () => {
   let watered = 0
   const batchRingFarmReduction = inventoryStore.getRingEffectValue('farming_stamina')
   const batchRingGlobalReduction = inventoryStore.getRingEffectValue('stamina_reduction')
+  const farmingBuff = cookingStore.activeBuff?.type === 'farming' ? cookingStore.activeBuff.value / 100 : 0
+  const toolMult = inventoryStore.getToolStaminaMultiplier('wateringCan')
+  const fixedMult = toolMult * (1 - farmingBuff) * (1 - batchRingFarmReduction) * (1 - batchRingGlobalReduction)
   for (const plot of targets) {
     const crop = getCropById(plot.cropId!)
     const baseCost = crop?.deepWatering ? 3 : 2
-    const farmingBuff = cookingStore.activeBuff?.type === 'farming' ? cookingStore.activeBuff.value / 100 : 0
+    // addExp 可能在循环中触发升级，体力减免需逐次重新读取
+    const staminaReduction = skillStore.getStaminaReduction('farming')
     const cost = Math.max(
       1,
-      Math.floor(
-        baseCost *
-          inventoryStore.getToolStaminaMultiplier('wateringCan') *
-          (1 - skillStore.getStaminaReduction('farming')) *
-          (1 - farmingBuff) *
-          (1 - batchRingFarmReduction) *
-          (1 - batchRingGlobalReduction)
-      )
+      Math.floor(baseCost * fixedMult * (1 - staminaReduction))
     )
     if (!playerStore.consumeStamina(cost)) break
     farmStore.waterPlot(plot.id)
@@ -346,7 +343,7 @@ export const handleBatchWater = () => {
     addLog(`一键浇水了${watered}块地。`)
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.batchWater * inventoryStore.getToolStaminaMultiplier('wateringCan'))
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   } else {
     addLog('体力不足，无法浇水。')
   }
@@ -368,7 +365,7 @@ export const handleBatchTill = () => {
 
   if (gameStore.isPastBedtime) {
     addLog('已经凌晨2点了，你必须休息。')
-    handleEndDay()
+    void handleEndDay()
     return
   }
 
@@ -381,18 +378,14 @@ export const handleBatchTill = () => {
   let tilled = 0
   const tillRingFarmReduction = inventoryStore.getRingEffectValue('farming_stamina')
   const tillRingGlobalReduction = inventoryStore.getRingEffectValue('stamina_reduction')
+  const tillFarmingBuff = cookingStore.activeBuff?.type === 'farming' ? cookingStore.activeBuff.value / 100 : 0
+  const tillToolMult = inventoryStore.getToolStaminaMultiplier('hoe')
+  const tillStaminaReduction = skillStore.getStaminaReduction('farming')
+  const tillFixedMult = tillToolMult * (1 - tillStaminaReduction) * (1 - tillFarmingBuff) * (1 - tillRingFarmReduction) * (1 - tillRingGlobalReduction)
   for (const plot of targets) {
-    const farmingBuff = cookingStore.activeBuff?.type === 'farming' ? cookingStore.activeBuff.value / 100 : 0
     const cost = Math.max(
       1,
-      Math.floor(
-        3 *
-          inventoryStore.getToolStaminaMultiplier('hoe') *
-          (1 - skillStore.getStaminaReduction('farming')) *
-          (1 - farmingBuff) *
-          (1 - tillRingFarmReduction) *
-          (1 - tillRingGlobalReduction)
-      )
+      Math.floor(3 * tillFixedMult)
     )
     if (!playerStore.consumeStamina(cost)) break
     farmStore.tillPlot(plot.id)
@@ -404,7 +397,7 @@ export const handleBatchTill = () => {
     addLog(`一键开垦了${tilled}块荒地。`)
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.batchTill * inventoryStore.getToolStaminaMultiplier('hoe'))
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   } else {
     addLog('体力不足，无法开垦。')
   }
@@ -426,7 +419,7 @@ export const handleBatchHarvest = () => {
 
   if (gameStore.isPastBedtime) {
     addLog('已经凌晨2点了，你必须休息。')
-    handleEndDay()
+    void handleEndDay()
     return
   }
 
@@ -438,6 +431,9 @@ export const handleBatchHarvest = () => {
 
   let harvested = 0
   const harvestedCrops: string[] = []
+  const batchRingCropQuality = inventoryStore.getRingEffectValue('crop_quality_bonus')
+  const batchAllSkillsBuff = cookingStore.activeBuff?.type === 'all_skills' ? cookingStore.activeBuff.value : 0
+  const isIntensivePerk = skillStore.getSkill('farming').perk10 === 'intensive'
 
   for (const plot of targets) {
     const plotFertilizer = plot.fertilizer
@@ -447,10 +443,8 @@ export const handleBatchHarvest = () => {
     if (cropId) {
       const cropDef = getCropById(cropId)
       const fertDef = plotFertilizer ? getFertilizerById(plotFertilizer) : null
-      const batchRingCropQuality = inventoryStore.getRingEffectValue('crop_quality_bonus')
-      const batchAllSkillsBuff = cookingStore.activeBuff?.type === 'all_skills' ? cookingStore.activeBuff.value : 0
       const quality = skillStore.rollCropQualityWithBonus((fertDef?.qualityBonus ?? 0) + batchRingCropQuality, batchAllSkillsBuff)
-      const intensiveDouble = skillStore.getSkill('farming').perk10 === 'intensive' && Math.random() < 0.2
+      const intensiveDouble = isIntensivePerk && Math.random() < 0.2
       const yieldDouble = genetics && !intensiveDouble && Math.random() < (genetics.yield / 100) * 0.3
       const harvestQty = intensiveDouble || yieldDouble ? 2 : 1
       inventoryStore.addItem(cropId, harvestQty, quality)
@@ -485,7 +479,7 @@ export const handleBatchHarvest = () => {
     addLog(`一键收获了${harvested}株作物：${cropSummary}。`)
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.batchHarvest * inventoryStore.getToolStaminaMultiplier('scythe'))
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   }
 }
 
@@ -505,7 +499,7 @@ export const handleBatchPlant = (cropId: string) => {
 
   if (gameStore.isPastBedtime) {
     addLog('已经凌晨2点了，你必须休息。')
-    handleEndDay()
+    void handleEndDay()
     return
   }
 
@@ -521,19 +515,15 @@ export const handleBatchPlant = (cropId: string) => {
   let planted = 0
   const plantRingFarmReduction = inventoryStore.getRingEffectValue('farming_stamina')
   const plantRingGlobalReduction = inventoryStore.getRingEffectValue('stamina_reduction')
+  const plantFarmingBuff = cookingStore.activeBuff?.type === 'farming' ? cookingStore.activeBuff.value / 100 : 0
+  const plantToolMult = inventoryStore.getToolStaminaMultiplier('hoe')
+  const plantStaminaReduction = skillStore.getStaminaReduction('farming')
+  const plantFixedMult = plantToolMult * (1 - plantStaminaReduction) * (1 - plantFarmingBuff) * (1 - plantRingFarmReduction) * (1 - plantRingGlobalReduction)
   for (const plot of targets) {
     if (!inventoryStore.hasItem(cropDef.seedId)) break
-    const farmingBuff = cookingStore.activeBuff?.type === 'farming' ? cookingStore.activeBuff.value / 100 : 0
     const cost = Math.max(
       1,
-      Math.floor(
-        3 *
-          inventoryStore.getToolStaminaMultiplier('hoe') *
-          (1 - skillStore.getStaminaReduction('farming')) *
-          (1 - farmingBuff) *
-          (1 - plantRingFarmReduction) *
-          (1 - plantRingGlobalReduction)
-      )
+      Math.floor(3 * plantFixedMult)
     )
     if (!playerStore.consumeStamina(cost)) break
     inventoryStore.removeItem(cropDef.seedId)
@@ -546,7 +536,7 @@ export const handleBatchPlant = (cropId: string) => {
     addLog(`一键种植了${planted}株${cropDef.name}。`)
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.plant * Math.min(planted, 3))
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   } else {
     addLog('体力不足或种子不够，无法种植。')
   }
@@ -560,7 +550,7 @@ export const handleBatchFertilize = (fertilizerType: FertilizerType) => {
 
   if (gameStore.isPastBedtime) {
     addLog('已经凌晨2点了，你必须休息。')
-    handleEndDay()
+    void handleEndDay()
     return
   }
 
@@ -590,7 +580,7 @@ export const handleBatchFertilize = (fertilizerType: FertilizerType) => {
     addLog(`一键施了${applied}块地的${fertDef.name}。`)
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.plant * Math.min(applied, 3))
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   } else {
     addLog('肥料不足，无法施肥。')
   }
@@ -607,7 +597,7 @@ export const handleRemoveCrop = (plotId: number) => {
 
   if (gameStore.isPastBedtime) {
     addLog('已经凌晨2点了，你必须休息。')
-    handleEndDay()
+    void handleEndDay()
     return
   }
 
@@ -639,7 +629,7 @@ export const handleRemoveCrop = (plotId: number) => {
     addLog(`铲除了${cropDef?.name ?? result.cropId}。`)
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.till)
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   }
 }
 
@@ -654,7 +644,7 @@ export const handleCurePest = (plotId: number) => {
 
   if (gameStore.isPastBedtime) {
     addLog('已经凌晨2点了，你必须休息。')
-    handleEndDay()
+    void handleEndDay()
     return
   }
 
@@ -683,7 +673,7 @@ export const handleCurePest = (plotId: number) => {
     addLog('清除了虫害。')
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.till)
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   }
 }
 
@@ -698,7 +688,7 @@ export const handleBatchCurePest = () => {
 
   if (gameStore.isPastBedtime) {
     addLog('已经凌晨2点了，你必须休息。')
-    handleEndDay()
+    void handleEndDay()
     return
   }
 
@@ -733,7 +723,7 @@ export const handleBatchCurePest = () => {
     addLog(`一键除虫了${cured}块地。`)
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.batchTill)
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   } else {
     addLog('体力不足，无法除虫。')
   }
@@ -750,7 +740,7 @@ export const handleClearWeed = (plotId: number) => {
 
   if (gameStore.isPastBedtime) {
     addLog('已经凌晨2点了，你必须休息。')
-    handleEndDay()
+    void handleEndDay()
     return
   }
 
@@ -779,7 +769,7 @@ export const handleClearWeed = (plotId: number) => {
     addLog('清除了杂草。')
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.till)
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   }
 }
 
@@ -794,7 +784,7 @@ export const handleBatchClearWeed = () => {
 
   if (gameStore.isPastBedtime) {
     addLog('已经凌晨2点了，你必须休息。')
-    handleEndDay()
+    void handleEndDay()
     return
   }
 
@@ -829,7 +819,7 @@ export const handleBatchClearWeed = () => {
     addLog(`一键除草了${cleared}块地。`)
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.batchTill)
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   } else {
     addLog('体力不足，无法除草。')
   }

@@ -2,6 +2,8 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import CryptoJS from 'crypto-js'
 import { saveAs } from 'file-saver'
+import { createAdapter } from '@/services/SaveService'
+import { migrateSaveData, CURRENT_SAVE_VERSION } from '@/services/SaveMigration'
 import { useGameStore, SEASON_NAMES } from './useGameStore'
 import { usePlayerStore } from './usePlayerStore'
 import { useInventoryStore } from './useInventoryStore'
@@ -71,15 +73,17 @@ export interface SaveSlotInfo {
 }
 
 export const useSaveStore = defineStore('save', () => {
+  const adapter = createAdapter()
+
   /** 当前活跃存档槽位（-1 表示未分配） */
   const activeSlot = ref(-1)
 
   /** 获取所有存档槽位信息 */
-  const getSlots = (): SaveSlotInfo[] => {
+  const getSlots = async (): Promise<SaveSlotInfo[]> => {
     const slots: SaveSlotInfo[] = []
     for (let i = 0; i < MAX_SLOTS; i++) {
       try {
-        const raw = localStorage.getItem(`${SAVE_KEY_PREFIX}${i}`)
+        const raw = await adapter.getItem(`${SAVE_KEY_PREFIX}${i}`)
         if (raw) {
           const data = parseSaveData(raw)
           if (data) {
@@ -107,8 +111,8 @@ export const useSaveStore = defineStore('save', () => {
   }
 
   /** 为新游戏分配一个空闲槽位，无空闲则返回 -1 */
-  const assignNewSlot = (): number => {
-    const slots = getSlots()
+  const assignNewSlot = async (): Promise<number> => {
+    const slots = await getSlots()
     const empty = slots.find(s => !s.exists)
     const slot = empty ? empty.slot : -1
     activeSlot.value = slot
@@ -116,7 +120,7 @@ export const useSaveStore = defineStore('save', () => {
   }
 
   /** 保存到指定槽位 */
-  const saveToSlot = (slot: number): boolean => {
+  const saveToSlot = async (slot: number): Promise<boolean> => {
     if (slot < 0 || slot >= MAX_SLOTS) return false
     try {
       const gameStore = useGameStore()
@@ -145,6 +149,7 @@ export const useSaveStore = defineStore('save', () => {
       const fishPondStore = useFishPondStore()
 
       const data = {
+        version: CURRENT_SAVE_VERSION,
         game: gameStore.serialize(),
         player: playerStore.serialize(),
         inventory: inventoryStore.serialize(),
@@ -171,7 +176,7 @@ export const useSaveStore = defineStore('save', () => {
         fishPond: fishPondStore.serialize(),
         savedAt: new Date().toISOString()
       }
-      localStorage.setItem(`${SAVE_KEY_PREFIX}${slot}`, encrypt(JSON.stringify(data)))
+      await adapter.setItem(`${SAVE_KEY_PREFIX}${slot}`, encrypt(JSON.stringify(data)))
       activeSlot.value = slot
       return true
     } catch {
@@ -180,19 +185,30 @@ export const useSaveStore = defineStore('save', () => {
   }
 
   /** 自动存档到当前活跃槽位 */
-  const autoSave = (): boolean => {
+  const autoSave = async (): Promise<boolean> => {
     if (activeSlot.value < 0) return false
     return saveToSlot(activeSlot.value)
   }
 
   /** 从指定槽位加载 */
-  const loadFromSlot = (slot: number): boolean => {
+  const loadFromSlot = async (slot: number): Promise<boolean> => {
     try {
-      const raw = localStorage.getItem(`${SAVE_KEY_PREFIX}${slot}`)
+      const raw = await adapter.getItem(`${SAVE_KEY_PREFIX}${slot}`)
       if (!raw) return false
 
-      const data = parseSaveData(raw)
-      if (!data) return false
+      const parsed = parseSaveData(raw)
+      if (!parsed) return false
+
+      const { data, migrated, error } = migrateSaveData(parsed)
+      if (error) {
+        console.warn(`存档加载警告：${error}`)
+        return false
+      }
+      if (migrated) {
+        // 立即回写迁移后的数据
+        await adapter.setItem(`${SAVE_KEY_PREFIX}${slot}`, encrypt(JSON.stringify(data)))
+      }
+
       const gameStore = useGameStore()
       const playerStore = usePlayerStore()
       const inventoryStore = useInventoryStore()
@@ -250,20 +266,20 @@ export const useSaveStore = defineStore('save', () => {
   }
 
   /** 删除指定槽位 */
-  const deleteSlot = (slot: number): boolean => {
+  const deleteSlot = async (slot: number): Promise<boolean> => {
     if (slot < 0 || slot >= MAX_SLOTS) return false
-    localStorage.removeItem(`${SAVE_KEY_PREFIX}${slot}`)
+    await adapter.removeItem(`${SAVE_KEY_PREFIX}${slot}`)
     if (activeSlot.value === slot) activeSlot.value = -1
     return true
   }
 
   /** 导出存档为加密文件 */
-  const exportSave = (slot: number): boolean => {
+  const exportSave = async (slot: number): Promise<boolean> => {
     try {
-      const raw = localStorage.getItem(`${SAVE_KEY_PREFIX}${slot}`)
+      const raw = await adapter.getItem(`${SAVE_KEY_PREFIX}${slot}`)
       if (!raw) return false
       const blob = new Blob([raw], { type: 'application/octet-stream' })
-      const info = getSlots().find(s => s.slot === slot)
+      const info = (await getSlots()).find(s => s.slot === slot)
       const name = info?.exists
         ? `桃源乡_存档${slot + 1}_第${info.year}年${SEASON_NAMES[info.season as keyof typeof SEASON_NAMES] ?? info.season}第${info.day}天`
         : `桃源乡_存档${slot + 1}`
@@ -275,18 +291,82 @@ export const useSaveStore = defineStore('save', () => {
   }
 
   /** 从文件导入存档到指定槽位 */
-  const importSave = (slot: number, fileContent: string): boolean => {
+  const importSave = async (slot: number, fileContent: string): Promise<boolean> => {
     if (slot < 0 || slot >= MAX_SLOTS) return false
     try {
       // 验证文件内容可解密
       const data = parseSaveData(fileContent)
       if (!data) return false
-      localStorage.setItem(`${SAVE_KEY_PREFIX}${slot}`, fileContent)
+      await adapter.setItem(`${SAVE_KEY_PREFIX}${slot}`, fileContent)
       return true
     } catch {
       return false
     }
   }
 
-  return { activeSlot, getSlots, assignNewSlot, saveToSlot, autoSave, loadFromSlot, deleteSlot, exportSave, importSave }
+  /** 同步保底存档（仅用于 beforeunload） */
+  const syncSave = (): boolean => {
+    if (activeSlot.value < 0) return false
+    try {
+      const gameStore = useGameStore()
+      const playerStore = usePlayerStore()
+      const inventoryStore = useInventoryStore()
+      const farmStore = useFarmStore()
+      const skillStore = useSkillStore()
+      const npcStore = useNpcStore()
+      const miningStore = useMiningStore()
+      const cookingStore = useCookingStore()
+      const processingStore = useProcessingStore()
+      const achievementStore = useAchievementStore()
+      const animalStore = useAnimalStore()
+      const homeStore = useHomeStore()
+      const fishingStore = useFishingStore()
+      const walletStore = useWalletStore()
+      const questStore = useQuestStore()
+      const shopStore = useShopStore()
+      const settingsStore = useSettingsStore()
+      const warehouseStore = useWarehouseStore()
+      const breedingStore = useBreedingStore()
+      const museumStore = useMuseumStore()
+      const guildStore = useGuildStore()
+      const secretNoteStore = useSecretNoteStore()
+      const hanhaiStore = useHanhaiStore()
+      const fishPondStore = useFishPondStore()
+
+      const data = {
+        version: CURRENT_SAVE_VERSION,
+        game: gameStore.serialize(),
+        player: playerStore.serialize(),
+        inventory: inventoryStore.serialize(),
+        farm: farmStore.serialize(),
+        skill: skillStore.serialize(),
+        npc: npcStore.serialize(),
+        mining: miningStore.serialize(),
+        cooking: cookingStore.serialize(),
+        processing: processingStore.serialize(),
+        achievement: achievementStore.serialize(),
+        animal: animalStore.serialize(),
+        home: homeStore.serialize(),
+        fishing: fishingStore.serialize(),
+        wallet: walletStore.serialize(),
+        quest: questStore.serialize(),
+        shop: shopStore.serialize(),
+        settings: settingsStore.serialize(),
+        warehouse: warehouseStore.serialize(),
+        breeding: breedingStore.serialize(),
+        museum: museumStore.serialize(),
+        guild: guildStore.serialize(),
+        secretNote: secretNoteStore.serialize(),
+        hanhai: hanhaiStore.serialize(),
+        fishPond: fishPondStore.serialize(),
+        savedAt: new Date().toISOString()
+      }
+      localStorage.setItem(`${SAVE_KEY_PREFIX}${activeSlot.value}`, encrypt(JSON.stringify(data)))
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  return { activeSlot, getSlots, assignNewSlot, saveToSlot, autoSave, loadFromSlot, deleteSlot, exportSave, importSave, syncSave }
 })

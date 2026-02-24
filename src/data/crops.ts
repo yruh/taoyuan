@@ -4938,9 +4938,11 @@ export const CROPS: CropDef[] = [
   }
 ]
 
+const _CROPS_MAP = new Map<string, CropDef>(CROPS.map(c => [c.id, c]))
+
 /** 根据ID查找作物 */
 export const getCropById = (id: string): CropDef | undefined => {
-  return CROPS.find(c => c.id === id)
+  return _CROPS_MAP.get(id)
 }
 
 /** 根据季节获取可种作物 */

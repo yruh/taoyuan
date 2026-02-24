@@ -98,7 +98,7 @@
   import { X, FolderOpen, Settings, Download, Trash2, Upload } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
   import { SEASON_NAMES } from '@/stores/useGameStore'
-  import { useSaveStore } from '@/stores/useSaveStore'
+  import { useSaveStore, type SaveSlotInfo } from '@/stores/useSaveStore'
   import { showFloat } from '@/composables/useGameLog'
 
   defineProps<{ allowLoad?: boolean }>()
@@ -108,15 +108,16 @@
 
   const isWebView = window.__WEBVIEW__
 
-  const slots = ref(saveStore.getSlots())
+  const slots = ref<SaveSlotInfo[]>([])
   const menuOpen = ref<number | null>(null)
 
-  const refreshSlots = () => {
-    slots.value = saveStore.getSlots()
+  const refreshSlots = async () => {
+    slots.value = await saveStore.getSlots()
   }
+  void refreshSlots()
 
-  const handleExport = (slot: number) => {
-    if (!saveStore.exportSave(slot)) {
+  const handleExport = async (slot: number) => {
+    if (!(await saveStore.exportSave(slot))) {
       showFloat('导出失败。', 'danger')
     }
   }
@@ -127,10 +128,10 @@
     deleteTargetSlot.value = slot
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteTargetSlot.value !== null) {
-      saveStore.deleteSlot(deleteTargetSlot.value)
-      refreshSlots()
+      await saveStore.deleteSlot(deleteTargetSlot.value)
+      await refreshSlots()
       emit('change')
       deleteTargetSlot.value = null
       menuOpen.value = null
@@ -148,13 +149,13 @@
     const file = input.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
       const content = reader.result as string
       const emptySlot = slots.value.find(s => !s.exists)
       if (!emptySlot) {
         showFloat('存档槽位已满，请先删除一个旧存档。')
-      } else if (saveStore.importSave(emptySlot.slot, content)) {
-        refreshSlots()
+      } else if (await saveStore.importSave(emptySlot.slot, content)) {
+        await refreshSlots()
         emit('change')
         showFloat(`已导入到存档 ${emptySlot.slot + 1}。`, 'success')
       } else {

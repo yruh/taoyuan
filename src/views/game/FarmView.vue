@@ -1139,7 +1139,7 @@
 
   /** 洒水器覆盖范围（含放置洒水器的地块自身） */
   const sprinklerCoverage = computed(() => {
-    const set = farmStore.getAllWateredBySprinklers()
+    const set = new Set(farmStore.getAllWateredBySprinklers())
     for (const s of farmStore.sprinklers) set.add(s.plotId)
     return set
   })

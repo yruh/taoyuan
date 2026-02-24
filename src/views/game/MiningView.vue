@@ -964,7 +964,7 @@
   const handleTileClick = (tile: MineTile) => {
     if (gameStore.isPastBedtime) {
       addLog('太晚了，没法继续探索了。')
-      handleEndDay()
+      void handleEndDay()
       return
     }
 
@@ -976,7 +976,7 @@
         addLog(result.message)
         const tr = gameStore.advanceTime(ACTION_TIME_COSTS.mineOre)
         if (tr.message) addLog(tr.message)
-        if (tr.passedOut) handleEndDay()
+        if (tr.passedOut) void handleEndDay()
       } else {
         exploreLog.value.push(result.message)
       }
@@ -1011,12 +1011,12 @@
         sfxEncounter()
         const tr = gameStore.advanceTime(ACTION_TIME_COSTS.combat)
         if (tr.message) addLog(tr.message)
-        if (tr.passedOut) handleEndDay()
+        if (tr.passedOut) void handleEndDay()
       } else {
         sfxClick()
         const tr = gameStore.advanceTime(ACTION_TIME_COSTS.revealTile)
         if (tr.message) addLog(tr.message)
-        if (tr.passedOut) handleEndDay()
+        if (tr.passedOut) void handleEndDay()
       }
     } else {
       exploreLog.value.push(result.message)
@@ -1115,7 +1115,7 @@
   const handleNextFloor = () => {
     if (gameStore.isPastBedtime) {
       addLog('太晚了，该回去了。')
-      handleEndDay()
+      void handleEndDay()
       return
     }
     showCombatItems.value = false
@@ -1129,7 +1129,7 @@
     addLog(result.message)
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.nextFloor)
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   }
 
   const handleLeave = () => {

@@ -741,7 +741,9 @@ export const NPCS: NpcDef[] = [
   }
 ]
 
+const _NPCS_MAP = new Map<string, NpcDef>(NPCS.map(n => [n.id, n]))
+
 /** 根据ID获取NPC定义 */
 export const getNpcById = (id: string): NpcDef | undefined => {
-  return NPCS.find(n => n.id === id)
+  return _NPCS_MAP.get(id)
 }

@@ -1,3 +1,4 @@
+import { ref } from 'vue'
 import { useGameStore, SEASON_NAMES, WEATHER_NAMES } from '@/stores/useGameStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useFarmStore } from '@/stores/useFarmStore'
@@ -283,8 +284,16 @@ const applyEventEffects = (event: { id: string; name: string; description: strin
   }
 }
 
+const _isSettling = ref(false)
+
+/** 是否正在日结算中 */
+export const isSettling = () => _isSettling.value
+
 /** 日结算处理 */
-export const handleEndDay = () => {
+export const handleEndDay = async () => {
+  if (_isSettling.value) return // 重入保护
+  _isSettling.value = true
+  try {
   sfxSleep()
 
   const gameStore = useGameStore()
@@ -819,7 +828,15 @@ export const handleEndDay = () => {
   void router.push({ name: 'farm' })
 
   // 自动存档
-  saveStore.autoSave()
+  if (!(await saveStore.autoSave())) {
+    addLog('⚠ 自动存档失败，请手动保存。')
+  }
+  } catch (error) {
+    console.error('日结算失败：', error)
+    addLog('⚠ 日结算异常，请手动保存并刷新页面。')
+  } finally {
+    _isSettling.value = false
+  }
 }
 
 export const useEndDay = () => {

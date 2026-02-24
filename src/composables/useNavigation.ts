@@ -87,7 +87,7 @@ export const navigateToPanel = (panelKey: PanelKey) => {
 
   if (gameStore.isPastBedtime) {
     addLog('已经凌晨2点了，你必须休息。')
-    handleEndDay()
+    void handleEndDay()
     return
   }
 
@@ -104,7 +104,7 @@ export const navigateToPanel = (panelKey: PanelKey) => {
     addLog(travelResult.message)
   }
   if (travelResult.passedOut) {
-    handleEndDay()
+    void handleEndDay()
     return
   }
 

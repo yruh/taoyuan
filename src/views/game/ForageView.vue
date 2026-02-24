@@ -133,7 +133,7 @@
   const handleForage = () => {
     if (gameStore.isPastBedtime) {
       addLog('太晚了，没法采集了。')
-      handleEndDay()
+      void handleEndDay()
       return
     }
 
@@ -215,6 +215,6 @@
 
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.forage)
     if (tr.message) addLog(tr.message)
-    if (tr.passedOut) handleEndDay()
+    if (tr.passedOut) void handleEndDay()
   }
 </script>

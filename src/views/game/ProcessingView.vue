@@ -356,7 +356,7 @@
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
         return
       }
     } else {
@@ -372,7 +372,7 @@
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
         return
       }
     } else {
@@ -388,7 +388,7 @@
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
         return
       }
     } else {
@@ -404,7 +404,7 @@
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
         return
       }
     } else {
@@ -420,7 +420,7 @@
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
         return
       }
     } else {
@@ -435,7 +435,7 @@
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
         return
       }
     } else {
@@ -450,7 +450,7 @@
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
         return
       }
     } else {
@@ -466,7 +466,7 @@
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
         return
       }
     } else {
@@ -482,7 +482,7 @@
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
         return
       }
     } else {
@@ -498,7 +498,7 @@
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
-        handleEndDay()
+        void handleEndDay()
         return
       }
     } else {
@@ -521,7 +521,7 @@
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
     if (tr.message) addLog(tr.message)
     if (tr.passedOut) {
-      handleEndDay()
+      void handleEndDay()
       return
     }
   }

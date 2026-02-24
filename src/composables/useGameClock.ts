@@ -35,7 +35,7 @@ const tick = () => {
     gameStore.hour = PASSOUT_HOUR
     isPaused.value = true
     addLog('已经凌晨2点了，你撑不住倒下了……')
-    handleEndDay()
+    void handleEndDay()
     return
   }
 

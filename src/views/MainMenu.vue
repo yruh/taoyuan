@@ -313,7 +313,7 @@
   import { ref, computed } from 'vue'
   import { useRouter } from 'vue-router'
   import { useGameStore, SEASON_NAMES } from '@/stores/useGameStore'
-  import { useSaveStore } from '@/stores/useSaveStore'
+  import { useSaveStore, type SaveSlotInfo } from '@/stores/useSaveStore'
   import { useFarmStore } from '@/stores/useFarmStore'
   import { useAnimalStore } from '@/stores/useAnimalStore'
   import { usePlayerStore } from '@/stores/usePlayerStore'
@@ -337,7 +337,12 @@
   const questStore = useQuestStore()
   const inventoryStore = useInventoryStore()
 
-  const slots = ref(saveStore.getSlots())
+  const slots = ref<SaveSlotInfo[]>([])
+
+  const refreshSlots = async () => {
+    slots.value = await saveStore.getSlots()
+  }
+  void refreshSlots()
   const showCharCreate = ref(false)
   const showFarmSelect = ref(false)
   const showIdentitySetup = ref(false)
@@ -371,10 +376,6 @@
     showPrivacy.value = false
   }
 
-  const refreshSlots = () => {
-    slots.value = saveStore.getSlots()
-  }
-
   const handleBackToMenu = () => {
     showCharCreate.value = false
     showFarmSelect.value = false
@@ -392,9 +393,9 @@
     showFarmConfirm.value = false
   }
 
-  const handleNewGame = () => {
+  const handleNewGame = async () => {
     // 分配空闲存档槽位
-    const slot = saveStore.assignNewSlot()
+    const slot = await saveStore.assignNewSlot()
     if (slot < 0) {
       showFloat('存档槽位已满，请先删除一个旧存档。')
       return
@@ -446,8 +447,8 @@
     void router.push('/game')
   }
 
-  const handleLoadGame = (slot: number) => {
-    if (saveStore.loadFromSlot(slot)) {
+  const handleLoadGame = async (slot: number) => {
+    if (await saveStore.loadFromSlot(slot)) {
       if (playerStore.needsIdentitySetup) {
         // 旧存档没有性别/名字数据，先让玩家设置
         showIdentitySetup.value = true
@@ -468,17 +469,17 @@
     deleteTargetSlot.value = slot
   }
 
-  const confirmDeleteSlot = () => {
+  const confirmDeleteSlot = async () => {
     if (deleteTargetSlot.value !== null) {
-      saveStore.deleteSlot(deleteTargetSlot.value)
-      refreshSlots()
+      await saveStore.deleteSlot(deleteTargetSlot.value)
+      await refreshSlots()
       deleteTargetSlot.value = null
       slotMenuOpen.value = null
     }
   }
 
-  const handleExportSlot = (slot: number) => {
-    if (!saveStore.exportSave(slot)) {
+  const handleExportSlot = async (slot: number) => {
+    if (!(await saveStore.exportSave(slot))) {
       showFloat('导出失败。', 'danger')
     }
   }
@@ -494,14 +495,14 @@
     const file = input.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
       const content = reader.result as string
       // 找到第一个空槽位导入，没有则提示
       const emptySlot = slots.value.find(s => !s.exists)
       if (!emptySlot) {
         showFloat('存档槽位已满，请先删除一个旧存档。')
-      } else if (saveStore.importSave(emptySlot.slot, content)) {
-        refreshSlots()
+      } else if (await saveStore.importSave(emptySlot.slot, content)) {
+        await refreshSlots()
         showFloat(`已导入到存档 ${emptySlot.slot + 1}。`, 'success')
       } else {
         showFloat('存档文件无效或已损坏。', 'danger')

@@ -1310,9 +1310,11 @@ export const ITEMS: ItemDef[] = [
   }
 ]
 
+const _ITEMS_MAP = new Map<string, ItemDef>(ITEMS.map(i => [i.id, i]))
+
 /** 根据ID查找物品 */
 export const getItemById = (id: string): ItemDef | undefined => {
-  return ITEMS.find(i => i.id === id)
+  return _ITEMS_MAP.get(id)
 }
 
 /** 物品分类默认来源 */

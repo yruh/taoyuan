@@ -556,7 +556,7 @@
       addLog('喂食了鱼塘中的鱼。')
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.feedFish)
       if (tr.message) addLog(tr.message)
-      if (tr.passedOut) handleEndDay()
+      if (tr.passedOut) void handleEndDay()
     } else if (fishPondStore.pond.fedToday) {
       addLog('今天已经喂过了。')
     } else {
@@ -570,7 +570,7 @@
       showFloat('+水质', 'success')
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.cleanPond)
       if (tr.message) addLog(tr.message)
-      if (tr.passedOut) handleEndDay()
+      if (tr.passedOut) void handleEndDay()
     } else {
       addLog('没有水质改良剂。')
     }
@@ -597,7 +597,7 @@
       showFloat(`+${products.length}件水产`, 'success')
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.collectFishProducts)
       if (tr.message) addLog(tr.message)
-      if (tr.passedOut) handleEndDay()
+      if (tr.passedOut) void handleEndDay()
     } else {
       addLog('没有可收获的产出。')
     }
