@@ -22,7 +22,7 @@
       <!-- 育种台区 -->
       <div class="mb-3">
         <div class="flex items-center justify-between mb-1.5">
-          <p class="text-xs text-muted">— 育种台 {{ breedingStore.stationCount }}/{{ MAX_BREEDING_STATIONS }} —</p>
+          <span class="text-xs text-muted">育种台 {{ breedingStore.stationCount }}/{{ MAX_BREEDING_STATIONS }}</span>
           <Button v-if="breedingStore.stationCount < MAX_BREEDING_STATIONS" :icon="Plus" :icon-size="12" @click="showCraftModal = true">
             建造
           </Button>
@@ -81,7 +81,7 @@
       <!-- 种子箱 -->
       <div>
         <div class="flex items-center justify-between mb-1.5">
-          <p class="text-xs text-muted">— 种子箱 {{ breedingStore.boxCount }}/{{ breedingStore.maxSeedBox }} —</p>
+          <span class="text-xs text-muted">种子箱 {{ breedingStore.boxCount }}/{{ breedingStore.maxSeedBox }}</span>
           <button
             v-if="nextSeedBoxUpgrade || breedingStore.seedBoxLevel > 0"
             class="text-[10px] px-2 py-0.5 border rounded-xs"
@@ -102,7 +102,7 @@
           <button
             v-for="seed in breedingStore.breedingBox"
             :key="seed.genetics.id"
-            class="border rounded-xs px-1 py-1.5 text-center cursor-pointer hover:bg-accent/5 transition-colors"
+            class="border rounded-xs px-1 py-1.5 text-center cursor-pointer hover:bg-accent/5 transition-colors mr-1"
             :class="selectedSeedIds.includes(seed.genetics.id) ? 'border-accent bg-accent/10' : 'border-accent/20'"
             @click="openSeedDetail(seed)"
           >
@@ -154,7 +154,7 @@
         <div
           v-for="hybrid in filteredHybrids"
           :key="hybrid.id"
-          class="border rounded-xs p-1.5 text-xs text-center transition-colors truncate"
+          class="border rounded-xs p-1.5 text-xs text-center transition-colors truncate mr-1"
           :class="
             isDiscovered(hybrid.id)
               ? 'border-accent/20 cursor-pointer hover:bg-accent/5 ' + tierColor(hybrid.id)
@@ -244,7 +244,9 @@
 
           <p class="text-sm text-accent mb-2">{{ getCropName(detailSeed.genetics.cropId) }} · G{{ detailSeed.genetics.generation }}</p>
           <p class="text-xs mb-2 flex items-center space-x-1" :class="seedStarColor(detailSeed.genetics)">
-            <span class="flex items-center space-x-px"><Star v-for="n in getStarRating(detailSeed.genetics)" :key="n" :size="10" /></span>
+            <span class="flex items-center space-x-px">
+              <Star v-for="n in getStarRating(detailSeed.genetics)" :key="n" :size="10" />
+            </span>
             <span>（总{{ getTotalStats(detailSeed.genetics) }}）</span>
           </p>
 
@@ -382,7 +384,7 @@
                 </span>
               </div>
               <div class="flex items-center justify-between mt-0.5">
-                <span class="text-xs text-muted">金币</span>
+                <span class="text-xs text-muted">铜钱</span>
                 <span class="text-xs" :class="playerStore.money >= nextSeedBoxUpgrade.cost ? '' : 'text-danger'">
                   {{ nextSeedBoxUpgrade.cost }}文
                 </span>

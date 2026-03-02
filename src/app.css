@@ -202,10 +202,18 @@ input[type='number'] {
   white-space: nowrap !important;
 }
 
+/* 移动端安全区域：顶部通知避开状态栏 */
+.qmsg.qmsg-data-position-top,
+.qmsg.qmsg-data-position-topleft,
+.qmsg.qmsg-data-position-topright {
+  padding-top: calc(calc(0.25rem * 10) + constant(safe-area-inset-top, 0px)) !important;
+  padding-top: calc(calc(0.25rem * 10) + env(safe-area-inset-top, 0px)) !important;
+}
+
 /* 移动端安全区域：底部通知避开三键导航栏 */
-.qmsg-bottom,
-.qmsg-bottomleft,
-.qmsg-bottomright {
-  padding-bottom: constant(safe-area-inset-bottom, 0px) !important;
-  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+.qmsg.qmsg-data-position-bottom,
+.qmsg.qmsg-data-position-bottomleft,
+.qmsg.qmsg-data-position-bottomright {
+  padding-bottom: calc(calc(0.35rem * 10) + constant(safe-area-inset-bottom, 0px)) !important;
+  padding-bottom: calc(calc(0.35rem * 10) + env(safe-area-inset-bottom, 0px)) !important;
 }

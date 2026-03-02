@@ -176,6 +176,9 @@ const createWindow = () => {
     headers['access-control-allow-origin'] = ['*']
     headers['access-control-allow-methods'] = ['GET, PUT, DELETE, PROPFIND, HEAD, OPTIONS']
     headers['access-control-allow-headers'] = ['Authorization, Content-Type, Depth']
+    // 剥离 WWW-Authenticate 防止浏览器弹出原生认证对话框（由应用自行处理认证错误）
+    delete headers['www-authenticate']
+    delete headers['WWW-Authenticate']
     callback({ responseHeaders: headers })
   })
 

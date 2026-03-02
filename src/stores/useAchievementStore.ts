@@ -254,15 +254,6 @@ export const useAchievementStore = defineStore('achievement', () => {
     return newlyCompleted
   }
 
-  /** 重新验证已完成成就，移除不再满足条件的（修复旧存档中错误授予的成就） */
-  const revalidateAchievements = () => {
-    completedAchievements.value = completedAchievements.value.filter(id => {
-      const achievement = ACHIEVEMENTS.find(a => a.id === id)
-      if (!achievement) return false
-      return isConditionMet(achievement.condition)
-    })
-  }
-
   // === 祠堂任务 ===
 
   const submitToBundle = (bundleId: string, itemId: string, quantity: number): boolean => {
@@ -396,9 +387,6 @@ export const useAchievementStore = defineStore('achievement', () => {
         discoverItem(slot.itemId)
       }
     }
-
-    // 重新验证已完成成就，清理旧存档中错误授予的成就
-    revalidateAchievements()
   }
 
   return {

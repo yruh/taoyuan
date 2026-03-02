@@ -1,6 +1,6 @@
 <template>
   <div class="border-b border-accent/30 pb-2 md:pb-3 flex flex-col space-y-1">
-    <!-- 第一行：日期时间天气 + 金币 -->
+    <!-- 第一行：日期时间天气 + 铜钱 -->
     <div class="flex items-center justify-between text-xs md:text-sm">
       <div class="flex items-center space-x-2 md:space-x-3">
         <span class="text-accent font-bold">桃源乡</span>
@@ -56,49 +56,19 @@
           </div>
         </div>
       </div>
-      <!-- 操作按钮 -->
-      <div class="flex items-center space-x-1 shrink-0">
-        <Button class="!hidden py-0 px-2 min-h-0 md:!flex" :icon="Map" :icon-size="12" @click="showMobileMap = true">地图</Button>
-        <Button class="!hidden btn-danger py-0 px-2 min-h-0 md:!flex" :icon="Moon" :icon-size="12" @click.stop="handleSleep">
-          {{ sleepLabel }}
-        </Button>
-        <Button class="!hidden btn-danger py-0 px-2 min-h-0 md:!flex" :icon="SettingsIcon" @click="showSettings = true">
-          <span class="hidden md:inline">设置</span>
-        </Button>
-      </div>
     </div>
-    <MobileMapMenu :open="showMobileMap" :current="currentPanel" @close="showMobileMap = false" />
-    <SettingsDialog :open="showSettings" @close="showSettings = false" />
   </div>
 </template>
 
 <script setup lang="ts">
-  import { computed, ref } from 'vue'
-  import { useRoute } from 'vue-router'
+  import { computed } from 'vue'
   import { useGameStore, SEASON_NAMES, WEATHER_NAMES } from '@/stores/useGameStore'
   import { usePlayerStore } from '@/stores/usePlayerStore'
-  import MobileMapMenu from '@/components/game/MobileMapMenu.vue'
-  import SettingsDialog from '@/components/game/SettingsDialog.vue'
   import { DAY_START_HOUR, DAY_END_HOUR } from '@/data/timeConstants'
-  import { Zap, Heart, Clock, Coins, Moon, Map, Settings as SettingsIcon } from 'lucide-vue-next'
-  import Button from '@/components/game/Button.vue'
+  import { Zap, Heart, Clock, Coins } from 'lucide-vue-next'
 
-  const emit = defineEmits<{ 'request-sleep': [] }>()
-
-  const route = useRoute()
   const gameStore = useGameStore()
   const playerStore = usePlayerStore()
-
-  /** 地图菜单 */
-  const showMobileMap = ref(false)
-
-  /** 设置弹窗 */
-  const showSettings = ref(false)
-
-  /** 从路由名称获取当前面板标识 */
-  const currentPanel = computed(() => {
-    return (route.name as string) ?? 'farm'
-  })
 
   const staminaBarColor = computed(() => {
     const pct = playerStore.staminaPercent
@@ -133,16 +103,6 @@
     if (timePercent.value <= 50) return 'bg-accent'
     return 'bg-success'
   })
-
-  const sleepLabel = computed(() => {
-    if (gameStore.hour >= 24) return '倒头就睡'
-    if (gameStore.hour >= 20) return '回家休息'
-    return '休息'
-  })
-
-  const handleSleep = () => {
-    emit('request-sleep')
-  }
 </script>
 
 <style scoped>

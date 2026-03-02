@@ -959,7 +959,7 @@ export const useMiningStore = defineStore('mining', () => {
     // BOSS 击败处理
     if (combatIsBoss.value) {
       if (isInSkullCavern.value) {
-        // 骷髅矿穴BOSS：奖励金币和矿石（按深度缩放）
+        // 骷髅矿穴BOSS：奖励铜钱和矿石（按深度缩放）
         const scFloor = skullCavernFloor.value
         const moneyReward = 200 + scFloor * 20
         playerStore.earnMoney(moneyReward)
@@ -1009,7 +1009,7 @@ export const useMiningStore = defineStore('mining', () => {
           msg += ` 获得了鞋子：${bossShoeDef?.name ?? bossShoeId}！`
         }
 
-        // BOSS 额外掉落金币和矿石
+        // BOSS 额外掉落铜钱和矿石
         const moneyReward = BOSS_MONEY_REWARDS[currentFloor.value] ?? 0
         if (moneyReward > 0) {
           playerStore.earnMoney(moneyReward)
@@ -1096,7 +1096,7 @@ export const useMiningStore = defineStore('mining', () => {
       inventoryStore.removeItem(pick.itemId, 1, pick.quality)
     }
 
-    // 扣除金币
+    // 扣除铜钱
     const moneyLost = Math.min(Math.floor(playerStore.money * DEFEAT_MONEY_PENALTY_RATE), DEFEAT_MONEY_PENALTY_CAP)
     if (moneyLost > 0) playerStore.spendMoney(moneyLost)
 

@@ -1,14 +1,19 @@
 <div align="center">
-  <img src="images/logo.png" alt="桃源乡" width="128" style="image-rendering: pixelated;" />
+  <img src="images/logo.png" alt="桃源乡" width="400" />
+
+  # 桃源乡
+
+  > 传说在群山深处，有一处与世隔绝的村落——桃源乡。
+  > 这里四季分明，民风淳朴，但近年来年轻人纷纷离去，村庄日渐冷清。
+  > 你收到一封来自已故祖父的信，信中附有一把铜钥匙和一张泛黄的地契……
+
+  一款文字版田园模拟经营游戏，灵感来自星露谷物语，采用像素 + 中国风视觉设计。纯客户端运行，无需后端服务器。
+
+  [![GitHub Release](https://img.shields.io/github/v/release/setube/taoyuan?style=flat&logo=github&label=Release)](https://github.com/setube/taoyuan/releases/latest)
+  [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0)
+  [![Tap Tap](https://img.shields.io/badge/TapTap-%E6%A1%83%E6%BA%90%E4%B9%A1-18d6e0)](https://www.taptap.cn/app/816558)
+  [![Featured｜HelloGitHub](https://abroad.hellogithub.com/v1/widgets/recommend.svg?rid=e73a691ffcfa4d0e92a05912fe8c0b46&claim_uid=OCYdts5lPczHag4&theme=small)](https://hellogithub.com/repository/e73a691ffcfa4d0e92a05912fe8c0b46)
 </div>
-
-# 桃源乡
-
-> 传说在群山深处，有一处与世隔绝的村落——桃源乡。
-> 这里四季分明，民风淳朴，但近年来年轻人纷纷离去，村庄日渐冷清。
-> 你收到一封来自已故祖父的信，信中附有一把铜钥匙和一张泛黄的地契……
-
-一款文字版田园模拟经营游戏，灵感来自星露谷物语，采用像素 + 中国风视觉设计。纯客户端运行，无需后端服务器。
 
 ## 游戏特色
 
@@ -74,6 +79,22 @@ pnpm preview
 # 构建 Electron 桌面客户端
 pnpm build:electron
 ```
+
+### Docker 部署
+
+```bash
+# 方式一：使用预构建镜像（推荐）
+docker run -d -p 8080:80 ghcr.io/setube/taoyuan:latest
+
+# 方式二：指定版本
+docker run -d -p 8080:80 ghcr.io/setube/taoyuan:<version>
+
+# 方式三：本地构建镜像
+docker build -t taoyuan .
+docker run -d -p 8080:80 taoyuan
+```
+
+访问 `http://localhost:8080` 即可开始游戏。
 
 ## 技术栈
 
@@ -160,7 +181,7 @@ src/
 
 ## 交流
 
-- QQ 群：920930589
+- QQ 群：[920930589](https://qm.qq.com/q/2BVaTTwDkI)
 - GitHub：[https://github.com/setube/taoyuan](https://github.com/setube/taoyuan)
 
 ## 许可证

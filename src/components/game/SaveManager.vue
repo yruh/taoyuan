@@ -4,8 +4,7 @@
       <button class="absolute top-2 right-2 text-muted hover:text-text" @click="$emit('close')">
         <X :size="14" />
       </button>
-      <p class="text-accent text-sm mb-4">—— 存档管理 ——</p>
-
+      <Divider title class="my-4" label="存档管理" />
       <div class="flex-1 flex flex-col space-y-2 mb-3" @click="menuOpen = null">
         <div v-for="info in slots" :key="info.slot">
           <div v-if="info.exists" class="flex space-x-1 w-full">
@@ -129,6 +128,7 @@
   import { ref } from 'vue'
   import { X, FolderOpen, Settings, Download, Trash2, Upload, CloudUpload, CloudDownload } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
+  import Divider from '@/components/game/Divider.vue'
   import { SEASON_NAMES } from '@/stores/useGameStore'
   import { useSaveStore } from '@/stores/useSaveStore'
   import { showFloat } from '@/composables/useGameLog'

@@ -214,7 +214,7 @@ export const handlePlotClick = (plotId: number) => {
       let msg = `收获了${cropDef?.name ?? cropId}${qtyLabel}${qualityLabel}！`
       if (intensiveDouble) msg += ' 精耕细作，双倍丰收！'
       if (yieldDouble) msg += ' 育种产量加成，双倍丰收！'
-      // 育种甜度加成：额外金币
+      // 育种甜度加成：额外铜钱
       if (genetics && genetics.sweetness > 0 && cropDef) {
         const bonusMoney = Math.floor((cropDef.sellPrice * harvestQty * genetics.sweetness) / 200)
         if (bonusMoney > 0) {
@@ -255,7 +255,7 @@ export const handleBuySeed = (seedId: string) => {
     showFloat(`-${actualPrice}文`, 'danger')
     addLog(`购买了${seed.cropName}种子。(-${actualPrice}文)`)
   } else {
-    addLog('金币不足或背包已满。')
+    addLog('铜钱不足或背包已满。')
   }
 }
 

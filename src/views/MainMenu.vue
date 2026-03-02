@@ -79,26 +79,73 @@
             <X :size="14" />
           </button>
           <h2 class="text-accent text-lg mb-3">关于{{ pkg.title }}</h2>
-          <p class="text-xs text-muted mb-2">游戏灵感来自 Stardew Valley</p>
-          <div class="flex flex-col space-y-3 text-sm">
+          <!-- 分区标签 -->
+          <div class="flex space-x-1.5 mb-3">
+            <Button
+              class="flex-1 justify-center"
+              :class="{ '!bg-accent !text-bg': aboutTab === 'about' }"
+              :icon="Info"
+              @click="aboutTab = 'about'"
+            >
+              关于游戏
+            </Button>
+            <Button
+              class="flex-1 justify-center"
+              :class="{ '!bg-accent !text-bg': aboutTab === 'author' }"
+              :icon="UserRound"
+              @click="aboutTab = 'author'"
+            >
+              赞助作者
+            </Button>
+          </div>
+          <!-- 关于 -->
+          <div v-if="aboutTab === 'about'" class="flex flex-col space-y-3 text-sm">
+            <p class="text-xs text-muted">游戏灵感来自 Stardew Valley</p>
             <div class="border border-accent/20 rounded-xs p-3">
               <p class="text-muted text-xs mb-1">当前版本</p>
               <p class="text-accent">v{{ pkg.version }}</p>
             </div>
             <div class="border border-accent/20 rounded-xs p-3">
               <p class="text-muted text-xs mb-1">QQ 交流群</p>
-              <p class="text-accent">{{ pkg.qq }}</p>
+              <a href="https://qm.qq.com/q/2BVaTTwDkI" target="_blank" class="text-accent underline break-all">
+                {{ pkg.qq }}
+              </a>
             </div>
             <div class="border border-accent/20 rounded-xs p-3">
               <p class="text-muted text-xs mb-1">GitHub 仓库</p>
-              <a :href="`https://github.com/setube/${pkg.name}`" target="_blank" class="text-accent underline break-all">
-                https://github.com/setube/{{ pkg.name }}
+              <a :href="`https://github.com/${pkg.author}/${pkg.name}`" target="_blank" class="text-accent underline break-all">
+                https://github.com/{{ pkg.author }}/{{ pkg.name }}
               </a>
             </div>
             <div class="border border-accent/20 rounded-xs p-3">
               <p class="text-muted text-xs mb-1">TapTap</p>
               <a :href="`https://www.taptap.cn/app/${pkg.tapid}`" target="_blank" class="text-accent underline break-all">
                 https://www.taptap.cn/app/{{ pkg.tapid }}
+              </a>
+            </div>
+          </div>
+          <!-- 赞助作者 -->
+          <div v-if="aboutTab === 'author'" class="flex flex-col space-y-3 text-sm">
+            <p class="text-xs text-muted">如果你喜欢这款游戏，可以请作者喝杯奶茶、吃顿 KFC，你的支持是作者继续更新的最大动力！</p>
+            <div class="flex space-x-3">
+              <div class="flex-1 border border-accent/20 rounded-xs p-3">
+                <p class="text-muted text-xs mb-2">支付宝</p>
+                <img
+                  src="@/assets/alipay.png"
+                  alt="支付宝"
+                  class="mx-auto"
+                  style="width: 120px; height: 120px; image-rendering: pixelated"
+                />
+              </div>
+              <div class="flex-1 border border-accent/20 rounded-xs p-3">
+                <p class="text-muted text-xs mb-2">微信</p>
+                <img src="@/assets/wechat.png" alt="微信" class="mx-auto" style="width: 120px; height: 120px; image-rendering: pixelated" />
+              </div>
+            </div>
+            <div class="border border-accent/20 rounded-xs p-3">
+              <p class="text-muted text-xs mb-1">爱发电</p>
+              <a :href="`https://afdian.com/a/${pkg.author}`" target="_blank" class="text-accent underline break-all">
+                https://afdian.com/a/{{ pkg.author }}
               </a>
             </div>
           </div>
@@ -193,7 +240,7 @@
               <button class="absolute top-2 right-2 text-muted hover:text-text" @click="showFarmConfirm = false">
                 <X :size="14" />
               </button>
-              <p class="text-accent text-sm mb-3">—— {{ selectedFarmDef?.name }} ——</p>
+              <Divider title>{{ selectedFarmDef?.name }}</Divider>
               <p class="text-xs text-muted mb-2">{{ selectedFarmDef?.description }}</p>
               <p class="text-xs text-accent mb-4">{{ selectedFarmDef?.bonus }}</p>
               <div class="flex space-x-3 justify-center">
@@ -308,8 +355,9 @@
 </template>
 
 <script setup lang="ts">
-  import { Play, FolderOpen, ArrowLeft, Trash2, Download, Upload, Info, Settings, ShieldCheck, X } from 'lucide-vue-next'
+  import { Play, FolderOpen, ArrowLeft, Trash2, Download, Upload, Info, Settings, ShieldCheck, X, UserRound } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
+  import Divider from '@/components/game/Divider.vue'
   import { ref, computed } from 'vue'
   import { useRouter } from 'vue-router'
   import { useGameStore, SEASON_NAMES } from '@/stores/useGameStore'
@@ -330,7 +378,7 @@
 
   const router = useRouter()
   const { startBgm } = useAudio()
-  const pkg = _pkg as typeof _pkg & { title: string; qq: string; version: string; name: string }
+  const pkg = _pkg as typeof _pkg & { title: string; qq: string; version: string; name: string; author: string }
 
   const gameStore = useGameStore()
   const saveStore = useSaveStore()
@@ -345,6 +393,7 @@
   const showFarmSelect = ref(false)
   const showIdentitySetup = ref(false)
   const showAbout = ref(false)
+  const aboutTab = ref<'about' | 'author'>('about')
   const slotMenuOpen = ref<number | null>(null)
   const selectedMap = ref<FarmMapType>('standard')
   const charName = ref('')

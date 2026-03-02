@@ -104,7 +104,7 @@ export const usePlayerStore = defineStore('player', () => {
    * 每日重置
    * - 正常：满体力 + 满HP
    * - 晚睡：渐进恢复 (24时90%→25时60%) + 满HP
-   * - 昏倒：50% 体力 + 满HP + 扣10%金币
+   * - 昏倒：50% 体力 + 满HP + 扣10%铜钱
    */
   const dailyReset = (mode: 'normal' | 'late' | 'passout', bedHour?: number): { moneyLost: number; recoveryPct: number } => {
     let moneyLost = 0
@@ -151,14 +151,14 @@ export const usePlayerStore = defineStore('player', () => {
     maxStamina.value = STAMINA_CAPS[staminaCapLevel.value]! + bonusMaxStamina.value
   }
 
-  /** 花费金币，返回是否成功 */
+  /** 花费铜钱，返回是否成功 */
   const spendMoney = (amount: number): boolean => {
     if (money.value < amount) return false
     money.value -= amount
     return true
   }
 
-  /** 获得金币 */
+  /** 获得铜钱 */
   const earnMoney = (amount: number) => {
     money.value += amount
     useAchievementStore().recordMoneyEarned(amount)
@@ -200,6 +200,11 @@ export const usePlayerStore = defineStore('player', () => {
       const expectedBase = STAMINA_CAPS[staminaCapLevel.value] ?? 120
       const diff = maxStamina.value - expectedBase
       if (diff > 0) bonusMaxStamina.value = diff
+    }
+    // 确保 maxStamina 与 staminaCapLevel + bonusMaxStamina 一致（修复旧存档）
+    const expectedMax = (STAMINA_CAPS[staminaCapLevel.value] ?? 120) + bonusMaxStamina.value
+    if (maxStamina.value !== expectedMax) {
+      maxStamina.value = expectedMax
     }
     hp.value = (data as any).hp ?? BASE_MAX_HP
     baseMaxHp.value = (data as any).baseMaxHp ?? BASE_MAX_HP

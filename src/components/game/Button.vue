@@ -13,6 +13,8 @@
 <template>
   <button class="btn text-xs">
     <component v-if="icon" :is="icon" :size="iconSize" />
-    <span v-if="$slots.default"><slot /></span>
+    <span v-if="$slots.default">
+      <slot />
+    </span>
   </button>
 </template>

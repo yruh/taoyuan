@@ -19,10 +19,15 @@
       <!-- 缘分菱形条 -->
       <div class="border border-accent/10 rounded-xs p-2 mb-2">
         <div class="flex items-center justify-between mb-1">
-          <div class="flex space-x-px">
-            <span v-for="d in 12" :key="d" class="text-[10px]" :class="state.affinity >= d * 250 ? 'text-accent' : 'text-muted/20'">
-              &#x25C6;
-            </span>
+          <div class="flex items-center space-x-px">
+            <Diamond
+              v-for="d in 12"
+              :key="d"
+              :size="10"
+              class="flex-shrink-0"
+              :class="state.affinity >= d * 250 ? 'text-accent' : 'text-muted/20'"
+              :fill="state.affinity >= d * 250 ? 'currentColor' : 'none'"
+            />
           </div>
           <span class="text-xs" :class="affinityLevelColor">
             {{ state.affinity }}

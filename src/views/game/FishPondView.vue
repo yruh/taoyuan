@@ -38,7 +38,7 @@
         <!-- 状态总览 -->
         <div class="mb-3">
           <div class="flex items-center justify-between mb-1.5">
-            <p class="text-xs text-muted">— 鱼塘 Lv.{{ fishPondStore.pond.level }} —</p>
+            <Divider>鱼塘 Lv.{{ fishPondStore.pond.level }}</Divider>
             <div class="flex items-center space-x-2">
               <span class="text-xs text-muted">{{ fishPondStore.fishCount }}/{{ fishPondStore.capacity }}</span>
               <Button v-if="fishPondStore.pond.level < 3" :icon="ArrowUp" :icon-size="12" @click="pondModal = 'upgrade'">升级</Button>
@@ -87,7 +87,7 @@
 
         <!-- 塘中鱼类 -->
         <div class="mb-3">
-          <p class="text-xs text-muted mb-1.5">— 塘中鱼类 —</p>
+          <Divider label="塘中鱼类" />
 
           <!-- 空状态 -->
           <div
@@ -100,11 +100,11 @@
           </div>
 
           <!-- 鱼列表 -->
-          <div v-else class="flex flex-col space-y-1.5">
+          <div v-else class="flex flex-col space-y-1.5 max-h-80 overflow-auto">
             <div
               v-for="fish in fishPondStore.pond.fish"
               :key="fish.id"
-              class="border rounded-xs px-3 py-2 cursor-pointer hover:bg-accent/5 transition-colors"
+              class="border rounded-xs px-3 py-2 cursor-pointer hover:bg-accent/5 transition-colors mr-1"
               :class="
                 fish.sick ? 'border-danger/30' : selectedBreedingFish?.id === fish.id ? 'border-accent bg-accent/10' : 'border-accent/20'
               "
@@ -122,7 +122,9 @@
                   <span v-if="!fish.mature" class="text-[10px] text-muted">[幼]</span>
                 </div>
                 <div class="flex items-center space-x-2">
-                  <span class="text-[10px] text-accent">{{ '★'.repeat(fishPondStore.getGeneticStarRating(fish.genetics)) }}</span>
+                  <span class="text-[10px] text-accent flex items-center space-x-px">
+                    <Star v-for="n in fishPondStore.getGeneticStarRating(fish.genetics)" :key="n" :size="10" />
+                  </span>
                   <span class="text-[10px] text-muted">{{ fish.daysInPond }}天</span>
                 </div>
               </div>
@@ -132,12 +134,12 @@
 
         <!-- 放入鱼苗 -->
         <div class="mb-3">
-          <p class="text-xs text-muted mb-1.5">— 放入鱼苗 —</p>
-          <div v-if="pondableFishInBag.length > 0" class="flex flex-col space-y-1.5">
+          <Divider label="放入鱼苗" />
+          <div v-if="pondableFishInBag.length > 0" class="flex flex-col space-y-1.5 max-h-80 overflow-auto">
             <div
               v-for="item in pondableFishInBag"
               :key="item.itemId"
-              class="border border-accent/20 rounded-xs px-3 py-2 flex items-center justify-between"
+              class="border border-accent/20 rounded-xs px-3 py-2 flex items-center justify-between mr-1"
             >
               <span class="text-xs">
                 {{ item.name }}
@@ -155,7 +157,7 @@
 
         <!-- 繁殖 -->
         <div class="mb-3">
-          <p class="text-xs text-muted mb-1.5">— 繁殖 —</p>
+          <Divider label="繁殖" />
           <!-- 繁殖中 -->
           <div v-if="fishPondStore.pond.breeding" class="border border-accent/20 rounded-xs px-3 py-2">
             <div class="flex items-center justify-between mb-1">
@@ -177,7 +179,9 @@
                 <Heart :size="12" class="text-muted/40" />
                 <span class="text-xs">
                   已选：{{ selectedBreedingFish.name }}
-                  <span class="text-accent">{{ '★'.repeat(fishPondStore.getGeneticStarRating(selectedBreedingFish.genetics)) }}</span>
+                  <span class="text-accent inline-flex items-center space-x-px">
+                    <Star v-for="n in fishPondStore.getGeneticStarRating(selectedBreedingFish.genetics)" :key="n" :size="10" />
+                  </span>
                 </span>
               </div>
               <Button @click="selectedBreedingFish = null">取消</Button>
@@ -263,7 +267,9 @@
 
           <p class="text-sm text-accent mb-2">{{ detailFish.name }}</p>
           <p class="text-xs mb-2 flex items-center space-x-1">
-            <span class="text-accent">{{ '★'.repeat(fishPondStore.getGeneticStarRating(detailFish.genetics)) }}</span>
+            <span class="text-accent flex items-center space-x-px">
+              <Star v-for="n in fishPondStore.getGeneticStarRating(detailFish.genetics)" :key="n" :size="10" />
+            </span>
             <span class="text-muted">·</span>
             <span class="text-muted">第{{ detailFish.daysInPond }}天</span>
             <span v-if="detailFish.sick" class="text-danger">· 生病中</span>
@@ -373,8 +379,9 @@
 
 <script setup lang="ts">
   import { ref, computed } from 'vue'
-  import { Waves, Droplets, Sparkles, HeartPulse, Package, ArrowUp, Hammer, Lock, Fish, Heart, X } from 'lucide-vue-next'
+  import { Waves, Droplets, Sparkles, HeartPulse, Package, ArrowUp, Hammer, Lock, Fish, Heart, X, Star } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
+  import Divider from '@/components/game/Divider.vue'
   import { useFishPondStore } from '@/stores/useFishPondStore'
   import { useInventoryStore } from '@/stores/useInventoryStore'
   import { useGameStore } from '@/stores/useGameStore'
@@ -491,7 +498,7 @@
         showFloat('鱼塘建造完成！', 'success')
         pondModal.value = null
       } else {
-        addLog('材料或金币不足，无法建造鱼塘。')
+        addLog('材料或铜钱不足，无法建造鱼塘。')
       }
     } else {
       const nextLevel = (fishPondStore.pond.level + 1) as 2 | 3
@@ -500,7 +507,7 @@
         showFloat(`鱼塘升级 Lv.${nextLevel}`, 'success')
         pondModal.value = null
       } else {
-        addLog('材料或金币不足，无法升级。')
+        addLog('材料或铜钱不足，无法升级。')
       }
     }
   }

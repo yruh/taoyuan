@@ -127,7 +127,10 @@
                   {{ zone.name }}
                   <span class="text-muted ml-1">{{ zone.start }}-{{ zone.end }}层</span>
                 </span>
-                <span v-if="zone.bossDefeated" class="text-success">&#x2713; {{ zone.bossName }}</span>
+                <span v-if="zone.bossDefeated" class="text-success flex items-center">
+                  <Check :size="12" class="mr-0.5" />
+                  {{ zone.bossName }}
+                </span>
                 <span v-else-if="zone.reached" class="text-danger/70">{{ zone.bossName }}</span>
                 <span v-else class="text-muted/30">
                   <Lock :size="12" class="inline" />
@@ -715,7 +718,8 @@
     Map,
     Backpack,
     Lock,
-    BookMarked
+    BookMarked,
+    Check
   } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
   import { useAchievementStore } from '@/stores/useAchievementStore'

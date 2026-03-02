@@ -79,7 +79,7 @@ export const useAnimalStore = defineStore('animal', () => {
     for (const mat of def.materialCost) {
       if (getCombinedItemCount(mat.itemId) < mat.quantity) return false
     }
-    // 检查金币
+    // 检查铜钱
     if (!playerStore.spendMoney(def.cost)) return false
 
     // 扣除材料
@@ -132,7 +132,7 @@ export const useAnimalStore = defineStore('animal', () => {
     }).length
     if (currentCount >= maxCapacity) return false
 
-    // 检查金币
+    // 检查铜钱
     if (!playerStore.spendMoney(def.cost)) return false
 
     animals.value.push({

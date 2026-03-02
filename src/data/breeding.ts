@@ -170,24 +170,11 @@ export const getStarRating = (g: SeedGenetics): SeedStarRating => {
   return 1
 }
 
-/** 获取星级文字 */
-export const getStarText = (rating: SeedStarRating): string => {
-  const stars: Record<SeedStarRating, string> = {
-    1: '★',
-    2: '★★',
-    3: '★★★',
-    4: '★★★★',
-    5: '★★★★★'
-  }
-  return stars[rating]
-}
-
 /** 生成种子显示标签 */
 export const makeSeedLabel = (g: SeedGenetics): string => {
   const crop = getCropById(g.cropId)
   const name = crop?.name ?? g.cropId
-  const stars = getStarText(getStarRating(g))
-  return `${name} G${g.generation} ${stars}`
+  return `${name} G${g.generation}`
 }
 
 // === 杂交配方 ===

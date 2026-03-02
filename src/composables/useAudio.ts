@@ -95,7 +95,7 @@ export const sfxBuy = () => {
   setTimeout(() => playSfx(880, 0.03, 'square', 0.1), 90)
 }
 
-/** 出售/获得金币（经典金币弹跳音） */
+/** 出售/获得铜钱（经典铜钱弹跳音） */
 export const sfxCoin = () => {
   playSfx(988, 0.04, 'square', 0.22)
   setTimeout(() => playSfx(1319, 0.08, 'square', 0.2), 35)
@@ -217,7 +217,7 @@ export const sfxGameAction = () => {
   setTimeout(() => playSfx(700, 0.025, 'triangle', 0.14), 30)
 }
 
-/** 领取奖励（金币 + 短庆祝） */
+/** 领取奖励（铜钱 + 短庆祝） */
 export const sfxRewardClaim = () => {
   playSfx(880, 0.06, 'square', 0.22)
   setTimeout(() => playSfx(1047, 0.06, 'square', 0.2), 60)
@@ -533,7 +533,7 @@ export const sfxGunEmpty = () => {
   setTimeout(() => playSfx(300, 0.02, 'triangle', 0.1), 25)
 }
 
-/** 赌博赢钱（金币雨，比 sfxCoin 更华丽） */
+/** 赌博赢钱（铜钱雨，比 sfxCoin 更华丽） */
 export const sfxCasinoWin = () => {
   ;[880, 1047, 1319, 1047, 1319].forEach((f, i) => setTimeout(() => playSfx(f, 0.05, 'square', 0.2), i * 50))
 }

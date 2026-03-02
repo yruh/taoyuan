@@ -122,7 +122,7 @@
 
         <!-- 动物列表 -->
         <div v-if="getAnimalsInBuilding(bDef.type).length > 0" class="flex flex-col space-y-1 max-h-60 overflow-y-auto">
-          <div v-for="animal in getAnimalsInBuilding(bDef.type)" :key="animal.id" class="border border-accent/10 rounded-xs p-2">
+          <div v-for="animal in getAnimalsInBuilding(bDef.type)" :key="animal.id" class="border border-accent/10 rounded-xs p-2 mr-1">
             <div class="flex items-center justify-between mb-1">
               <div class="flex items-center space-x-1">
                 <template v-if="renamingId === animal.id">
@@ -186,9 +186,10 @@
             </div>
           </div>
         </div>
-        <div v-else class="flex flex-col items-center justify-center py-6 text-muted">
-          <Home :size="32" class="mb-2" />
-          <p class="text-xs">暂无动物</p>
+        <div v-else class="flex flex-col items-center justify-center py-6">
+          <Home :size="36" class="text-accent/20 mb-2" />
+          <p class="text-xs text-muted">暂无动物</p>
+          <p class="text-[10px] text-muted/50 mt-0.5">在商店购买幼崽来饲养吧</p>
         </div>
       </template>
       <template v-else>
@@ -841,7 +842,7 @@
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) handleEndDay()
     } else {
-      addLog('升级失败，请检查金币和材料是否充足。')
+      addLog('升级失败，请检查铜钱和材料是否充足。')
     }
   }
 
@@ -856,7 +857,7 @@
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) handleEndDay()
     } else {
-      addLog(`建造${bDef?.name ?? '畜舍'}失败，请检查金币和材料是否充足。`)
+      addLog(`建造${bDef?.name ?? '畜舍'}失败，请检查铜钱和材料是否充足。`)
     }
   }
 
@@ -869,7 +870,7 @@
     if (success) {
       addLog(`买了一只${aDef.name}，取名「${defaultName}」。`)
     } else {
-      addLog(`购买${aDef.name}失败，请检查金币和畜舍容量。`)
+      addLog(`购买${aDef.name}失败，请检查铜钱和畜舍容量。`)
     }
   }
 
@@ -960,7 +961,7 @@
       return
     }
     if (!playerStore.spendMoney(feed.price)) {
-      addLog(`金币不足，无法购买${feed.name}。`)
+      addLog(`铜钱不足，无法购买${feed.name}。`)
       return
     }
     if (!inventoryStore.addItem(feed.id)) {

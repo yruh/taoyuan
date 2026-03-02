@@ -109,14 +109,14 @@ export const useGameStore = defineStore('game', () => {
     const rainBoost = useHiddenNpcStore().getAbilityValue('long_ling_2') / 100
     switch (targetSeason) {
       case 'spring':
-        return roll < (0.5 - rainBoost) ? 'sunny' : roll < 0.75 ? 'rainy' : roll < 0.85 ? 'stormy' : 'windy'
+        return roll < 0.5 - rainBoost ? 'sunny' : roll < 0.75 ? 'rainy' : roll < 0.85 ? 'stormy' : 'windy'
       case 'summer':
         // 绿雨: 8% 概率 (仅夏季)
-        return roll < 0.08 ? 'green_rain' : roll < (0.42 - rainBoost) ? 'sunny' : roll < 0.68 ? 'rainy' : roll < 0.83 ? 'stormy' : 'windy'
+        return roll < 0.08 ? 'green_rain' : roll < 0.42 - rainBoost ? 'sunny' : roll < 0.68 ? 'rainy' : roll < 0.83 ? 'stormy' : 'windy'
       case 'autumn':
-        return roll < (0.45 - rainBoost) ? 'sunny' : roll < 0.7 ? 'rainy' : roll < 0.8 ? 'stormy' : 'windy'
+        return roll < 0.45 - rainBoost ? 'sunny' : roll < 0.7 ? 'rainy' : roll < 0.8 ? 'stormy' : 'windy'
       case 'winter':
-        return roll < (0.5 - rainBoost) ? 'sunny' : roll < 0.8 ? 'snowy' : 'windy'
+        return roll < 0.5 - rainBoost ? 'sunny' : roll < 0.8 ? 'snowy' : 'windy'
     }
   }
 
@@ -179,7 +179,7 @@ export const useGameStore = defineStore('game', () => {
     const key = `${currentLocationGroup.value}->${targetGroup}`
     const baseStamina = TRAVEL_STAMINA[key] ?? 1
     const animalStore = useAnimalStore()
-    const staminaCost = animalStore.hasHorse ? Math.floor(baseStamina / 2) : baseStamina
+    const staminaCost = animalStore.hasHorse ? Math.max(1, Math.floor(baseStamina / 2)) : baseStamina
     const playerStore = usePlayerStore()
     playerStore.consumeStamina(staminaCost)
 

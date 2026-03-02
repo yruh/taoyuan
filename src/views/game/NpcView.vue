@@ -1,124 +1,166 @@
 <template>
   <div>
+    <!-- Tab 切换按钮 -->
     <h3 class="text-accent text-sm mb-3">桃源村</h3>
-    <p v-if="tutorialHint" class="text-[10px] text-muted/50 mb-2">{{ tutorialHint }}</p>
 
-    <!-- NPC 网格：移动端紧凑，桌面端详细 -->
-    <div class="grid grid-cols-4 md:grid-cols-3 gap-1.5 md:gap-2">
-      <div
-        v-for="npc in NPCS"
-        :key="npc.id"
-        class="border border-accent/20 rounded-xs p-1.5 md:p-2 transition-colors"
-        :class="[npcAvailable(npc.id) ? 'cursor-pointer hover:bg-accent/5' : 'opacity-50', 'text-center md:text-left']"
-        @click="handleSelectNpc(npc.id)"
+    <div class="flex space-x-1.5 mb-3">
+      <Button
+        class="flex-1 justify-center"
+        :class="{ '!bg-accent !text-bg': activeTab === 'villager' }"
+        :icon="Users"
+        @click="activeTab = 'villager'"
       >
-        <!-- 移动端：紧凑布局 -->
-        <div class="md:hidden">
-          <p class="text-xs truncate" :class="levelColor(npcStore.getFriendshipLevel(npc.id))">
-            {{ npc.name }}
-          </p>
-          <p class="text-[10px]" :class="heartCount(npc.id) > 0 ? 'text-danger' : 'text-muted/30'">
-            {{ heartCount(npc.id) }}&#x2665;
-            <span class="text-muted/50">{{ npcStore.getNpcState(npc.id)?.friendship ?? 0 }}</span>
-          </p>
-          <div class="flex items-center justify-center space-x-1 mt-0.5 min-h-3.5">
-            <MessageCircle :size="10" :class="npcStore.getNpcState(npc.id)?.talkedToday ? 'text-muted/20' : 'text-success'" />
-            <Gift :size="10" :class="npcGiftClass(npc.id)" />
-            <Heart v-if="npcStore.getNpcState(npc.id)?.married" :size="10" class="text-danger" />
-            <Heart v-else-if="npcStore.getNpcState(npc.id)?.dating" :size="10" class="text-danger/50" />
-            <Heart v-else-if="npcStore.getNpcState(npc.id)?.zhiji" :size="10" class="text-accent" />
-            <Heart v-else-if="npc.marriageable" :size="10" class="text-muted/30" />
-            <Cake v-if="npcStore.isBirthday(npc.id)" :size="10" class="text-danger" />
-          </div>
-        </div>
-        <!-- 桌面端：显示更多信息 -->
-        <div class="hidden md:block">
-          <div class="flex items-center justify-between">
-            <span class="text-xs" :class="levelColor(npcStore.getFriendshipLevel(npc.id))">
-              {{ npc.name }}
-              <span v-if="npcStore.getNpcState(npc.id)?.married" class="text-danger text-[10px] ml-0.5">[伴侣]</span>
-              <span v-else-if="npcStore.getNpcState(npc.id)?.dating" class="text-danger/70 text-[10px] ml-0.5">[约会中]</span>
-              <span v-else-if="npcStore.getNpcState(npc.id)?.zhiji" class="text-accent text-[10px] ml-0.5">[知己]</span>
-            </span>
-            <div class="flex items-center space-x-1">
-              <MessageCircle :size="10" :class="npcStore.getNpcState(npc.id)?.talkedToday ? 'text-muted/20' : 'text-success'" />
-              <Gift :size="10" :class="npcGiftClass(npc.id)" />
-              <span v-if="npc.marriageable" class="text-danger/50"><Heart :size="10" /></span>
-              <Cake v-if="npcStore.isBirthday(npc.id)" :size="10" class="text-danger" />
-            </div>
-          </div>
-          <p class="text-[10px] text-muted truncate">{{ npc.role }}</p>
-          <div class="flex items-center justify-between mt-0.5">
-            <div class="flex space-x-px">
-              <span
-                v-for="h in 10"
-                :key="h"
-                class="text-[10px]"
-                :class="(npcStore.getNpcState(npc.id)?.friendship ?? 0) >= h * 250 ? 'text-danger' : 'text-muted/30'"
-              >
-                &#x2665;
-              </span>
-            </div>
-            <span class="text-[10px] text-muted/50">{{ npcStore.getNpcState(npc.id)?.friendship ?? 0 }}</span>
-          </div>
-        </div>
-      </div>
+        村民
+      </Button>
+      <Button
+        class="flex-1 justify-center"
+        :class="{ '!bg-accent !text-bg': activeTab === 'spirit' }"
+        :icon="Sparkles"
+        @click="activeTab = 'spirit'"
+      >
+        仙灵
+      </Button>
     </div>
 
-    <!-- 仙灵分区（仅显示已显现的隐藏NPC） -->
-    <div v-if="revealedHiddenNpcs.length > 0" class="mt-4">
-      <h3 class="text-accent text-sm mb-3">仙灵</h3>
+    <!-- 村民 Tab -->
+    <div v-if="activeTab === 'villager'">
+      <p v-if="tutorialHint" class="text-[10px] text-muted/50 mb-2">{{ tutorialHint }}</p>
+
+      <!-- NPC 网格：移动端紧凑，桌面端详细 -->
       <div class="grid grid-cols-4 md:grid-cols-3 gap-1.5 md:gap-2">
         <div
-          v-for="npc in revealedHiddenNpcs"
+          v-for="npc in NPCS"
           :key="npc.id"
-          class="border border-accent/20 rounded-xs p-1.5 md:p-2 cursor-pointer hover:bg-accent/5 text-center md:text-left"
-          @click="selectedHiddenNpc = npc.id"
+          class="border border-accent/20 rounded-xs p-1.5 md:p-2 transition-colors"
+          :class="[npcAvailable(npc.id) ? 'cursor-pointer hover:bg-accent/5' : 'opacity-50', 'text-center md:text-left']"
+          @click="handleSelectNpc(npc.id)"
         >
           <!-- 移动端：紧凑布局 -->
           <div class="md:hidden">
-            <p class="text-xs text-accent truncate">{{ npc.name }}</p>
-            <p class="text-[10px]" :class="hiddenHeartCount(npc.id) > 0 ? 'text-accent' : 'text-muted/30'">
-              {{ hiddenHeartCount(npc.id) }}&#x25C6;
-              <span class="text-muted/50">{{ hiddenNpcStore.getHiddenNpcState(npc.id)?.affinity ?? 0 }}</span>
+            <p class="text-xs truncate" :class="levelColor(npcStore.getFriendshipLevel(npc.id))">
+              {{ npc.name }}
             </p>
+            <p class="text-[10px] flex items-center justify-center" :class="heartCount(npc.id) > 0 ? 'text-danger' : 'text-muted/30'">
+              {{ heartCount(npc.id) }}
+              <Heart :size="10" :fill="heartCount(npc.id) > 0 ? 'currentColor' : 'none'" />
+              <span class="text-muted/50 ml-0.5">{{ npcStore.getNpcState(npc.id)?.friendship ?? 0 }}</span>
+            </p>
+            <div class="flex items-center justify-center space-x-1 mt-0.5 min-h-3.5">
+              <MessageCircle :size="10" :class="npcStore.getNpcState(npc.id)?.talkedToday ? 'text-muted/20' : 'text-success'" />
+              <Gift :size="10" :class="npcGiftClass(npc.id)" />
+              <Heart v-if="npcStore.getNpcState(npc.id)?.married" :size="10" class="text-danger" />
+              <Heart v-else-if="npcStore.getNpcState(npc.id)?.dating" :size="10" class="text-danger/50" />
+              <Heart v-else-if="npcStore.getNpcState(npc.id)?.zhiji" :size="10" class="text-accent" />
+              <Heart v-else-if="npc.marriageable" :size="10" class="text-muted/30" />
+              <Cake v-if="npcStore.isBirthday(npc.id)" :size="10" class="text-danger" />
+            </div>
           </div>
           <!-- 桌面端：显示更多信息 -->
           <div class="hidden md:block">
             <div class="flex items-center justify-between">
-              <span class="text-xs text-accent">{{ npc.name }}</span>
-            </div>
-            <p class="text-[10px] text-muted truncate">{{ npc.title }}</p>
-            <div class="flex items-center justify-between mt-0.5">
-              <div class="flex space-x-px">
-                <span
-                  v-for="d in 12"
-                  :key="d"
-                  class="text-[8px]"
-                  :class="(hiddenNpcStore.getHiddenNpcState(npc.id)?.affinity ?? 0) >= d * 250 ? 'text-accent' : 'text-muted/20'"
-                >
-                  &#x25C6;
+              <span class="text-xs" :class="levelColor(npcStore.getFriendshipLevel(npc.id))">
+                {{ npc.name }}
+                <span v-if="npcStore.getNpcState(npc.id)?.married" class="text-danger text-[10px] ml-0.5">[伴侣]</span>
+                <span v-else-if="npcStore.getNpcState(npc.id)?.dating" class="text-danger/70 text-[10px] ml-0.5">[约会中]</span>
+                <span v-else-if="npcStore.getNpcState(npc.id)?.zhiji" class="text-accent text-[10px] ml-0.5">[知己]</span>
+              </span>
+              <div class="flex items-center space-x-1">
+                <MessageCircle :size="10" :class="npcStore.getNpcState(npc.id)?.talkedToday ? 'text-muted/20' : 'text-success'" />
+                <Gift :size="10" :class="npcGiftClass(npc.id)" />
+                <span v-if="npc.marriageable" class="text-danger/50">
+                  <Heart :size="10" />
                 </span>
+                <Cake v-if="npcStore.isBirthday(npc.id)" :size="10" class="text-danger" />
               </div>
-              <span class="text-[10px] text-muted/50">{{ hiddenNpcStore.getHiddenNpcState(npc.id)?.affinity ?? 0 }}</span>
+            </div>
+            <p class="text-[10px] text-muted truncate">{{ npc.role }}</p>
+            <div class="flex items-center justify-between mt-0.5">
+              <div class="flex items-center space-x-px">
+                <Heart
+                  v-for="h in 10"
+                  :key="h"
+                  :size="10"
+                  class="flex-shrink-0"
+                  :class="(npcStore.getNpcState(npc.id)?.friendship ?? 0) >= h * 250 ? 'text-danger' : 'text-muted/30'"
+                  :fill="(npcStore.getNpcState(npc.id)?.friendship ?? 0) >= h * 250 ? 'currentColor' : 'none'"
+                />
+              </div>
+              <span class="text-[10px] text-muted/50">{{ npcStore.getNpcState(npc.id)?.friendship ?? 0 }}</span>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 传闻区（显示rumor/glimpse阶段的线索） -->
-    <div v-if="rumorHiddenNpcs.length > 0" class="mt-4">
-      <h3 class="text-muted/60 text-sm mb-2">传闻</h3>
-      <div class="flex flex-col space-y-1">
-        <div v-for="npc in rumorHiddenNpcs" :key="npc.id" class="border border-muted/10 rounded-xs px-2 py-1 text-[10px] text-muted/50">
-          <span v-if="hiddenNpcStore.getHiddenNpcState(npc.id)?.discoveryPhase === 'rumor'">
-            {{ getLastDiscoveryLog(npc.id) ?? '似乎有什么隐约的传说……' }}
-          </span>
-          <span v-else>
-            {{ getLastDiscoveryLog(npc.id) ?? '你曾看到某种异象……' }}
-          </span>
+    <!-- 仙灵 Tab -->
+    <div v-if="activeTab === 'spirit'">
+      <!-- 已显现的仙灵 -->
+      <template v-if="revealedHiddenNpcs.length > 0">
+        <div class="grid grid-cols-4 md:grid-cols-3 gap-1.5 md:gap-2">
+          <div
+            v-for="npc in revealedHiddenNpcs"
+            :key="npc.id"
+            class="border border-accent/20 rounded-xs p-1.5 md:p-2 cursor-pointer hover:bg-accent/5 text-center md:text-left"
+            @click="selectedHiddenNpc = npc.id"
+          >
+            <!-- 移动端：紧凑布局 -->
+            <div class="md:hidden">
+              <p class="text-xs text-accent truncate">{{ npc.name }}</p>
+              <p
+                class="text-[10px] flex items-center justify-center"
+                :class="hiddenHeartCount(npc.id) > 0 ? 'text-accent' : 'text-muted/30'"
+              >
+                {{ hiddenHeartCount(npc.id) }}
+                <Diamond :size="10" :fill="hiddenHeartCount(npc.id) > 0 ? 'currentColor' : 'none'" />
+                <span class="text-muted/50 ml-0.5">{{ hiddenNpcStore.getHiddenNpcState(npc.id)?.affinity ?? 0 }}</span>
+              </p>
+            </div>
+            <!-- 桌面端：显示更多信息 -->
+            <div class="hidden md:block">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-accent">{{ npc.name }}</span>
+              </div>
+              <p class="text-[10px] text-muted truncate">{{ npc.title }}</p>
+              <div class="flex items-center justify-between mt-0.5">
+                <div class="flex items-center space-x-px">
+                  <Diamond
+                    v-for="d in 12"
+                    :key="d"
+                    :size="8"
+                    class="flex-shrink-0"
+                    :class="(hiddenNpcStore.getHiddenNpcState(npc.id)?.affinity ?? 0) >= d * 250 ? 'text-accent' : 'text-muted/20'"
+                    :fill="(hiddenNpcStore.getHiddenNpcState(npc.id)?.affinity ?? 0) >= d * 250 ? 'currentColor' : 'none'"
+                  />
+                </div>
+                <span class="text-[10px] text-muted/50">{{ hiddenNpcStore.getHiddenNpcState(npc.id)?.affinity ?? 0 }}</span>
+              </div>
+            </div>
+          </div>
         </div>
+      </template>
+
+      <!-- 传闻区（显示rumor/glimpse阶段的线索） -->
+      <div v-if="rumorHiddenNpcs.length > 0" :class="{ 'mt-4': revealedHiddenNpcs.length > 0 }">
+        <h3 class="text-muted/60 text-sm mb-2">传闻</h3>
+        <div class="flex flex-col space-y-1">
+          <div v-for="npc in rumorHiddenNpcs" :key="npc.id" class="border border-muted/10 rounded-xs px-2 py-1 text-[10px] text-muted/50">
+            <span v-if="hiddenNpcStore.getHiddenNpcState(npc.id)?.discoveryPhase === 'rumor'">
+              {{ getLastDiscoveryLog(npc.id) ?? '似乎有什么隐约的传说……' }}
+            </span>
+            <span v-else>
+              {{ getLastDiscoveryLog(npc.id) ?? '你曾看到某种异象……' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 仙灵空状态 -->
+      <div
+        v-if="revealedHiddenNpcs.length === 0 && rumorHiddenNpcs.length === 0"
+        class="flex flex-col items-center justify-center py-12 text-muted"
+      >
+        <Sparkles :size="32" class="mb-2" />
+        <p class="text-xs">尚未发现任何仙灵的踪迹。</p>
       </div>
     </div>
 
@@ -155,15 +197,15 @@
           <!-- 好感度条 -->
           <div class="border border-accent/10 rounded-xs p-2 mb-2">
             <div class="flex items-center justify-between mb-1">
-              <div class="flex space-x-px">
-                <span
+              <div class="flex items-center space-x-px">
+                <Heart
                   v-for="h in 10"
                   :key="h"
-                  class="text-xs"
+                  :size="12"
+                  class="flex-shrink-0"
                   :class="(selectedNpcState?.friendship ?? 0) >= h * 250 ? 'text-danger' : 'text-muted/20'"
-                >
-                  &#x2665;
-                </span>
+                  :fill="(selectedNpcState?.friendship ?? 0) >= h * 250 ? 'currentColor' : 'none'"
+                />
               </div>
               <span class="text-xs" :class="levelColor(npcStore.getFriendshipLevel(selectedNpc!))">
                 {{ selectedNpcState?.friendship ?? 0 }}
@@ -191,7 +233,7 @@
                 <span>{{ SEASON_NAMES_MAP[selectedNpcDef.birthday.season] }}{{ selectedNpcDef.birthday.day }}日</span>
               </span>
               <span v-if="npcStore.isBirthday(selectedNpc!)" class="text-[10px] text-danger border border-danger/30 rounded-xs px-1">
-                生日! 送礼×8
+                生日! 送礼×4
               </span>
             </div>
           </div>
@@ -393,7 +435,7 @@
                 <div
                   v-for="item in giftableItems"
                   :key="`${item.itemId}_${item.quality ?? 'normal'}`"
-                  class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-1.5 cursor-pointer hover:bg-accent/5"
+                  class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-1.5 cursor-pointer hover:bg-accent/5 mr-1"
                   @click="activeGiftKey = item.itemId + ':' + item.quality"
                 >
                   <span class="flex items-center space-x-1">
@@ -471,7 +513,7 @@
 
 <script setup lang="ts">
   import { ref, computed } from 'vue'
-  import { MessageCircle, Heart, Gift, Cake, X, Package, Lightbulb, Circle, CircleCheck } from 'lucide-vue-next'
+  import { MessageCircle, Heart, Gift, Cake, X, Package, Lightbulb, Circle, CircleCheck, Users, Sparkles, Diamond } from 'lucide-vue-next'
   import { useCookingStore } from '@/stores/useCookingStore'
   import { useGameStore } from '@/stores/useGameStore'
   import { useInventoryStore } from '@/stores/useInventoryStore'
@@ -499,6 +541,7 @@
   const tutorialStore = useTutorialStore()
   const hiddenNpcStore = useHiddenNpcStore()
 
+  const activeTab = ref<'villager' | 'spirit'>('villager')
   const selectedHiddenNpc = ref<string | null>(null)
 
   const revealedHiddenNpcs = computed(() => hiddenNpcStore.getRevealedNpcs)

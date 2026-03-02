@@ -154,7 +154,7 @@ export const MONSTER_GOALS: MonsterGoalDef[] = [
 
 /** 公会商店物品 (与镖局互补，不重复) */
 export const GUILD_SHOP_ITEMS: GuildShopItemDef[] = [
-  // --- 消耗品（金币购买，不限购）---
+  // --- 消耗品（铜钱购买，不限购）---
   { itemId: 'combat_tonic', name: '战斗补剂', price: 200, description: '恢复30点HP。' },
   { itemId: 'adventurer_ration', name: '冒险口粮', price: 350, description: '恢复25体力和25HP。', unlockGuildLevel: 2 },
   { itemId: 'fortify_brew', name: '强化药水', price: 500, description: '恢复60点HP。' },

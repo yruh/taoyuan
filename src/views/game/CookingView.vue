@@ -43,9 +43,12 @@
         <p v-if="info.recipe.effect.buff" class="text-[10px] text-water mt-0.5">{{ info.recipe.effect.buff.description }}</p>
       </div>
     </div>
-    <div v-else class="mb-4">
-      <p v-if="showOnlyMakeable" class="text-xs text-muted">没有可制作的食谱。</p>
-      <p v-else-if="cookingStore.recipes.length === 0" class="text-xs text-muted">还没有食谱。</p>
+    <div v-else class="flex flex-col items-center justify-center py-8 mb-4">
+      <UtensilsCrossed :size="36" class="text-accent/20 mb-2" />
+      <p v-if="showOnlyMakeable" class="text-xs text-muted">没有可制作的食谱</p>
+      <p v-else-if="cookingStore.recipes.length === 0" class="text-xs text-muted">还没有食谱</p>
+      <p v-if="showOnlyMakeable" class="text-[10px] text-muted/50 mt-0.5">取消筛选或收集更多食材</p>
+      <p v-else-if="cookingStore.recipes.length === 0" class="text-[10px] text-muted/50 mt-0.5">与村民交好或观看电视可学习食谱</p>
     </div>
 
     <!-- 烹饪弹窗 -->

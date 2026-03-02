@@ -2,7 +2,7 @@ import type { Component } from 'vue'
 import router from '@/router'
 import { useGameStore } from '@/stores/useGameStore'
 import { isShopOpen, TAB_TO_LOCATION_GROUP } from '@/data/timeConstants'
-import { addLog } from './useGameLog'
+import { addLog, showFloat } from './useGameLog'
 import { handleEndDay } from './useEndDay'
 import { sfxClick, useAudio } from './useAudio'
 import { useGameClock } from './useGameClock'
@@ -103,7 +103,7 @@ export const navigateToPanel = (panelKey: PanelKey) => {
   // 商店营业检查
   const shopCheck = isShopOpen(panelKey, gameStore.day, gameStore.hour)
   if (!shopCheck.open) {
-    addLog(shopCheck.reason!)
+    showFloat(shopCheck.reason!, 'danger')
     return
   }
 

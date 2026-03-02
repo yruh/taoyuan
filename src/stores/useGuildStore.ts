@@ -229,7 +229,7 @@ export const useGuildStore = defineStore('guild', () => {
       }
     }
 
-    // 永久品用贡献点，消耗品用金币
+    // 永久品用贡献点，消耗品用铜钱
     if (item.contributionCost) {
       if (contributionPoints.value < item.contributionCost) return false
       contributionPoints.value -= item.contributionCost
@@ -260,7 +260,7 @@ export const useGuildStore = defineStore('guild', () => {
     }
 
     if (!addSuccess) {
-      // 退还贡献点/金币
+      // 退还贡献点/铜钱
       if (item.contributionCost) contributionPoints.value += item.contributionCost
       else playerStore.earnMoney(item.price)
       // 退还材料

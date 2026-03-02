@@ -1340,7 +1340,7 @@
       showFloat(`-${actualPrice}文`, 'danger')
       addLog(`从旅行商人处购买了${name}。(-${actualPrice}文)`)
     } else {
-      addLog('金币不足或背包已满。')
+      addLog('铜钱不足或背包已满。')
     }
   }
 
@@ -1362,7 +1362,7 @@
   const handleBuyBag = () => {
     const actualPrice = discounted(bagPrice.value)
     if (!playerStore.spendMoney(actualPrice)) {
-      addLog('金币不足。')
+      addLog('铜钱不足。')
       return
     }
     if (inventoryStore.expandCapacity()) {
@@ -1381,7 +1381,7 @@
   const handleBuyWarehouseExpand = () => {
     const actualPrice = discounted(warehouseExpandPrice.value)
     if (!playerStore.spendMoney(actualPrice)) {
-      addLog('金币不足。')
+      addLog('铜钱不足。')
       return
     }
     if (warehouseStore.expandMaxChests()) {
@@ -1397,7 +1397,7 @@
     if (!info) return
     const actualPrice = discounted(info.price)
     if (!playerStore.spendMoney(actualPrice)) {
-      addLog('金币不足。')
+      addLog('铜钱不足。')
       return
     }
     const newSize = farmStore.expandFarm()
@@ -1424,7 +1424,7 @@
   const handleBuySapling = (saplingId: string, price: number, treeName: string) => {
     const actualPrice = discounted(price)
     if (!playerStore.spendMoney(actualPrice)) {
-      addLog('金币不足。')
+      addLog('铜钱不足。')
       return
     }
     if (!inventoryStore.addItem(saplingId)) {
@@ -1438,7 +1438,7 @@
   const handleBuyHay = () => {
     const actualPrice = discounted(HAY_PRICE)
     if (!playerStore.spendMoney(actualPrice)) {
-      addLog('金币不足。')
+      addLog('铜钱不足。')
       return
     }
     if (!inventoryStore.addItem('hay')) {
@@ -1460,7 +1460,7 @@
       showFloat(`-${unitPrice * count}文`, 'danger')
       addLog(`购买了${count}个${seed.cropName}种子。(-${unitPrice * count}文)`)
     } else {
-      addLog('金币不足或背包已满。')
+      addLog('铜钱不足或背包已满。')
     }
   }
 
@@ -1471,7 +1471,7 @@
       showFloat(`-${unitPrice * count}文`, 'danger')
       addLog(`购买了${count}个${name}。(-${unitPrice * count}文)`)
     } else {
-      addLog('金币不足或背包已满。')
+      addLog('铜钱不足或背包已满。')
     }
   }
 
@@ -1491,7 +1491,7 @@
       showFloat(`-${unitPrice * bought}文`, 'danger')
       addLog(`购买了${bought}个${treeName}苗。(-${unitPrice * bought}文)`)
     } else {
-      addLog('金币不足或背包已满。')
+      addLog('铜钱不足或背包已满。')
     }
   }
 
@@ -1507,7 +1507,7 @@
       showFloat(`-${unitPrice * bought}文`, 'danger')
       addLog(`从旅行商人处购买了${bought}个${name}。(-${unitPrice * bought}文)`)
     } else {
-      addLog('金币不足或背包已满。')
+      addLog('铜钱不足或背包已满。')
     }
   }
 
@@ -1528,7 +1528,7 @@
     if (w.shopPrice === null) return
     const actualPrice = discounted(w.shopPrice)
     if (!playerStore.spendMoney(actualPrice)) {
-      addLog('金币不足。')
+      addLog('铜钱不足。')
       return
     }
     for (const mat of w.shopMaterials) {
@@ -1668,7 +1668,7 @@
     if (hat.shopPrice === null) return
     const actualPrice = discounted(hat.shopPrice)
     if (!playerStore.spendMoney(actualPrice)) {
-      addLog('金币不足。')
+      addLog('铜钱不足。')
       return
     }
     inventoryStore.addHat(hat.id)
@@ -1685,7 +1685,7 @@
     if (shoe.shopPrice === null) return
     const actualPrice = discounted(shoe.shopPrice)
     if (!playerStore.spendMoney(actualPrice)) {
-      addLog('金币不足。')
+      addLog('铜钱不足。')
       return
     }
     inventoryStore.addShoe(shoe.id)
@@ -1741,7 +1741,7 @@
     if (shopStore.buyItem(itemId, price)) {
       addLog(`购买了${name}。(-${actualPrice}文)`)
     } else {
-      addLog('金币不足或背包已满。')
+      addLog('铜钱不足或背包已满。')
     }
   }
 

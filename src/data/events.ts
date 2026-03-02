@@ -10,7 +10,7 @@ export interface SeasonEventDef {
   /** 事件效果 */
   effects: {
     friendshipBonus?: number // 所有NPC好感加成
-    moneyReward?: number // 金币奖励
+    moneyReward?: number // 铜钱奖励
     itemReward?: { itemId: string; quantity: number }[]
     staminaBonus?: number // 额外体力恢复
   }

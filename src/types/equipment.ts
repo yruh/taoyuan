@@ -10,7 +10,7 @@ export interface HatDef {
   shopPrice: number | null
   /** 合成配方（null = 不可合成） */
   recipe: { itemId: string; quantity: number }[] | null
-  /** 合成所需金币 */
+  /** 合成所需铜钱 */
   recipeMoney: number
   /** 获取途径描述 */
   obtainSource: string
@@ -33,7 +33,7 @@ export interface ShoeDef {
   shopPrice: number | null
   /** 合成配方（null = 不可合成） */
   recipe: { itemId: string; quantity: number }[] | null
-  /** 合成所需金币 */
+  /** 合成所需铜钱 */
   recipeMoney: number
   /** 获取途径描述 */
   obtainSource: string

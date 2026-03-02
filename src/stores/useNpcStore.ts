@@ -144,7 +144,7 @@ export const useNpcStore = defineStore('npc', () => {
   }
 
   /** 每日雇工结算（useEndDay调用） */
-  const processDailyHelpers = (): { messages: string[]; dismissedNpcs: string[] } => {
+  const processDailyHelpers = (taskFilter?: FarmHelperTask[]): { messages: string[]; dismissedNpcs: string[] } => {
     const playerStore = usePlayerStore()
     const farmStore = useFarmStore()
     const animalStore = useAnimalStore()
@@ -153,6 +153,9 @@ export const useNpcStore = defineStore('npc', () => {
     const dismissed: string[] = []
 
     for (const helper of [...hiredHelpers.value]) {
+      // 按任务类型过滤
+      if (taskFilter && !taskFilter.includes(helper.task)) continue
+
       const npcDef = getNpcById(helper.npcId)
       const name = npcDef?.name ?? '雇工'
       const state = getNpcState(helper.npcId)

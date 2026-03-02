@@ -52,7 +52,7 @@
             <p class="text-xs">{{ selectedItem.unlockCondition }}</p>
           </div>
           <div class="border rounded-xs p-2" :class="walletStore.has(selectedItem.id) ? 'border-success/30' : 'border-accent/10'">
-            <div class="flex items-center space-x-1">
+            <div class="flex items-center justify-center space-x-1">
               <CircleCheck v-if="walletStore.has(selectedItem.id)" :size="12" class="text-success" />
               <Lock v-else :size="12" class="text-muted" />
               <span class="text-xs" :class="walletStore.has(selectedItem.id) ? 'text-success' : 'text-muted'">

@@ -401,7 +401,7 @@ export const useProcessingStore = defineStore('processing', () => {
     const next = workshopLevel.value + 1
     const upgrade = WORKSHOP_UPGRADES.find(u => u.level === next)
     if (!upgrade) return { success: false, message: '工坊已达到最高等级。' }
-    if (!consumeCraftMaterials(upgrade.materials, upgrade.cost)) return { success: false, message: '材料或金币不足。' }
+    if (!consumeCraftMaterials(upgrade.materials, upgrade.cost)) return { success: false, message: '材料或铜钱不足。' }
     workshopLevel.value = next
     return { success: true, message: `工坊扩建完成！机器上限提升至${maxMachines.value}台。` }
   }

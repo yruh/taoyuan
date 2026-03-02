@@ -7,7 +7,7 @@
     <!-- 状态栏 -->
     <StatusBar @request-sleep="showSleepConfirm = true" />
 
-    <Button class="text-center justify-center !text-sm md:!hidden" :icon="Moon" :icon-size="12" @click.stop="showSleepConfirm = true">
+    <Button class="text-center justify-center !text-sm" :icon="Moon" :icon-size="12" @click.stop="showSleepConfirm = true">
       {{ sleepLabel }}
     </Button>
 
@@ -21,15 +21,19 @@
     </div>
 
     <!-- 移动端地图按钮 -->
-    <button class="mobile-map-btn md:!hidden" @click="showMobileMap = true">
+    <button class="mobile-map-btn" @click="showMobileMap = true">
       <Map :size="20" />
     </button>
-    <button class="mobile-setting-btn md:!hidden" @click="showSettings = true">
+    <button class="mobile-setting-btn" @click="showSettings = true">
       <SettingsIcon :size="20" />
     </button>
     <!-- 虚空箱远程访问按钮 -->
     <button v-if="warehouseStore.hasVoidChest" class="mobile-void-btn" @click="showVoidModal = true">
       <Archive :size="20" />
+    </button>
+    <!-- 日志按钮 -->
+    <button class="mobile-log-btn" :class="{ 'with-void': warehouseStore.hasVoidChest }" @click="showLogModal = true">
+      <History :size="20" />
     </button>
 
     <SettingsDialog :open="showSettings" @close="showSettings = false" />
@@ -81,7 +85,7 @@
     <Transition name="panel-fade">
       <div v-if="pendingPetAdoption" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
         <div class="game-panel max-w-xs w-full text-center">
-          <p class="text-accent text-sm mb-3">—— 小动物来访 ——</p>
+          <Divider title label="小动物来访" />
           <p class="text-xs leading-relaxed mb-3">一只小动物在你家门口徘徊，看起来很想有个家。你要收养它吗？</p>
           <div class="flex space-x-3 justify-center mb-3">
             <Button :class="petChoice === 'cat' ? '!bg-accent !text-bg' : ''" @click="petChoice = 'cat'">猫</Button>
@@ -105,7 +109,7 @@
     <Transition name="panel-fade">
       <div v-if="childProposalVisible" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
         <div class="game-panel max-w-xs w-full text-center">
-          <p class="text-accent text-sm mb-3">—— 家庭提议 ——</p>
+          <Divider title label="家庭提议" />
           <p class="text-xs leading-relaxed mb-4">{{ proposalSpouseName }}轻声说道：「最近我在想，我们是不是该要个孩子了？」</p>
           <div class="flex flex-col space-y-1.5">
             <Button class="w-full justify-center" @click="handleChildProposalResponse('accept')">「我也这么想。」</Button>
@@ -148,8 +152,13 @@
 
           <!-- 虚空箱列表 -->
           <div class="flex flex-col space-y-1.5">
-            <div v-for="vc in voidChests" :key="vc.id" class="border border-accent/10 rounded-xs p-2">
-              <div class="flex items-center justify-between mb-1 cursor-pointer" @click="toggleVoidChest(vc.id)">
+            <div
+              v-for="vc in voidChests"
+              :key="vc.id"
+              @click="toggleVoidChest(vc.id)"
+              class="border border-accent/10 rounded-xs p-2 cursor-pointer"
+            >
+              <div class="flex items-center justify-between mb-1">
                 <div class="flex items-center space-x-1.5">
                   <span class="text-xs text-quality-supreme">{{ vc.label }}</span>
                   <span v-if="vc.voidRole === 'input'" class="text-[10px] px-1 border border-accent/30 rounded-xs text-accent">原料箱</span>
@@ -161,37 +170,59 @@
               </div>
 
               <!-- 展开的物品列表 -->
-              <div v-if="expandedVoidChestId === vc.id">
+              <template v-if="expandedVoidChestId === vc.id">
                 <div v-if="vc.items.length > 0" class="flex flex-col space-y-0.5 mb-1.5 max-h-36 overflow-y-auto">
                   <div
                     v-for="(item, idx) in vc.items"
                     :key="idx"
-                    class="flex items-center justify-between px-2 py-0.5 border border-accent/5 rounded-xs"
+                    class="flex items-center justify-between px-2 py-0.5 border border-accent/5 rounded-xs mr-1"
+                    @click.stop="voidItemDetail = { itemId: item.itemId, quality: item.quality, quantity: item.quantity }"
                   >
-                    <span class="text-[10px] truncate mr-2" :class="voidQualityClass(item.quality)">
+                    <span class="text-[10px] truncate mr-2 cursor-pointer hover:underline" :class="voidQualityClass(item.quality)">
                       {{ getItemName(item.itemId) }}
-                      <span v-if="item.quality !== 'normal'" class="text-[10px]">({{ VOID_QUALITY_LABEL[item.quality] }})</span>
+                      <span class="text-[10px] text-muted">&times;{{ item.quantity }}</span>
                     </span>
                     <div class="flex items-center space-x-1">
-                      <span class="text-[10px] text-muted">&times;{{ item.quantity }}</span>
-                      <Button class="py-0 px-1 text-[10px]" @click="handleVoidWithdraw(vc.id, item.itemId, item.quality)">取出</Button>
+                      <Button
+                        class="py-0 px-1 text-[10px]"
+                        @click.stop="openVoidQtyModal('withdraw', vc.id, item.itemId, item.quality, item.quantity)"
+                      >
+                        取出
+                      </Button>
                     </div>
                   </div>
                 </div>
-                <p v-else class="text-[10px] text-muted text-center py-2">空箱子</p>
+                <div v-else class="flex flex-col items-center justify-center py-4">
+                  <Archive :size="28" class="text-accent/20 mb-1.5" />
+                  <p class="text-[10px] text-muted">箱子是空的</p>
+                  <p class="text-[10px] text-muted/50 mt-0.5">点击下方「存入」添加</p>
+                </div>
+                <Button
+                  v-if="voidDuplicateDepositItems.length > 0"
+                  class="w-full text-[10px] mb-1"
+                  :icon="ArrowDownToLine"
+                  :icon-size="10"
+                  @click.stop="handleVoidDepositDuplicates"
+                >
+                  一键存入重复物品
+                </Button>
                 <Button
                   v-if="voidDepositableItems.length > 0"
                   class="w-full text-[10px]"
                   :icon="ArrowDown"
                   :icon-size="10"
-                  @click="openVoidDeposit(vc.id)"
+                  @click.stop="openVoidDeposit(vc.id)"
                 >
                   存入
                 </Button>
-              </div>
+              </template>
             </div>
           </div>
-          <p v-if="voidChests.length === 0" class="text-xs text-muted text-center py-3">没有虚空箱子</p>
+          <div v-if="voidChests.length === 0" class="flex flex-col items-center justify-center py-8">
+            <Archive :size="40" class="text-accent/20 mb-2" />
+            <p class="text-xs text-muted">还没有虚空箱</p>
+            <p class="text-[10px] text-muted/50 mt-0.5">在仓库中制作虚空箱后即可远程存取</p>
+          </div>
         </div>
       </div>
     </Transition>
@@ -213,7 +244,7 @@
               v-for="item in voidDepositableItems"
               :key="item.itemId + item.quality"
               class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-1.5 cursor-pointer hover:bg-accent/5"
-              @click="handleVoidDeposit(voidDepositChestId!, item.itemId, item.quality)"
+              @click="openVoidQtyModal('deposit', voidDepositChestId!, item.itemId, item.quality, item.quantity)"
             >
               <span class="text-xs truncate mr-2" :class="voidQualityClass(item.quality)">
                 {{ getItemName(item.itemId) }}
@@ -226,11 +257,169 @@
       </div>
     </Transition>
 
+    <!-- 虚空箱数量选择弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="voidQtyModal"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4"
+        @click.self="voidQtyModal = null"
+      >
+        <div class="game-panel max-w-xs w-full">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm text-accent">{{ voidQtyModal.mode === 'withdraw' ? '取出' : '存入' }}</p>
+            <Button class="py-0 px-1" :icon="X" :icon-size="12" @click="voidQtyModal = null" />
+          </div>
+          <p class="text-xs mb-2" :class="voidQualityClass(voidQtyModal.quality)">
+            {{ getItemName(voidQtyModal.itemId) }}
+            <span v-if="voidQtyModal.quality !== 'normal'" class="text-[10px]">({{ VOID_QUALITY_LABEL[voidQtyModal.quality] }})</span>
+          </p>
+          <div class="border border-accent/10 rounded-xs p-2 mb-2">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs text-muted">数量</span>
+              <div class="flex items-center space-x-1">
+                <Button class="h-6 px-1.5 py-0.5 text-xs justify-center" :disabled="voidQty <= 1" @click="addVoidQty(-1)">-</Button>
+                <input
+                  type="number"
+                  :value="voidQty"
+                  min="1"
+                  :max="voidQtyModal.max"
+                  class="w-24 h-6 px-2 py-0.5 bg-bg border border-accent/30 rounded-xs text-xs text-center text-accent outline-none"
+                  @input="onVoidQtyInput"
+                />
+                <Button class="h-6 px-1.5 py-0.5 text-xs justify-center" :disabled="voidQty >= voidQtyModal.max" @click="addVoidQty(1)">
+                  +
+                </Button>
+              </div>
+            </div>
+            <div class="flex space-x-1">
+              <Button class="flex-1 justify-center" :disabled="voidQty <= 1" @click="setVoidQty(1)">最少</Button>
+              <Button class="flex-1 justify-center" :disabled="voidQty >= voidQtyModal.max" @click="setVoidQty(voidQtyModal!.max)">
+                最多
+              </Button>
+            </div>
+          </div>
+          <Button class="w-full justify-center !bg-accent !text-bg" @click="confirmVoidQty">
+            {{ voidQtyModal.mode === 'withdraw' ? '取出' : '存入' }} &times;{{ voidQty }}
+          </Button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 虚空箱道具信息弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="voidItemDetail && voidItemDef"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+        @click.self="voidItemDetail = null"
+      >
+        <div class="game-panel max-w-xs w-full relative">
+          <button class="absolute top-2 right-2 text-muted hover:text-text" @click="voidItemDetail = null">
+            <X :size="14" />
+          </button>
+          <p class="text-sm mb-2" :class="voidQualityClass(voidItemDetail.quality) || 'text-accent'">
+            {{ voidItemDef.name }}
+          </p>
+          <div class="border border-accent/10 rounded-xs p-2 mb-2">
+            <p class="text-xs text-muted">{{ voidItemDef.description }}</p>
+          </div>
+          <div class="border border-accent/10 rounded-xs p-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-muted">数量</span>
+              <span class="text-xs">×{{ voidItemDetail.quantity }}</span>
+            </div>
+            <div v-if="voidItemDetail.quality !== 'normal'" class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">品质</span>
+              <span class="text-xs" :class="voidQualityClass(voidItemDetail.quality)">
+                {{ VOID_QUALITY_LABEL[voidItemDetail.quality] }}
+              </span>
+            </div>
+            <div v-if="voidItemDef.sellPrice" class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">售价</span>
+              <span class="text-xs text-accent">{{ voidItemDef.sellPrice }}文</span>
+            </div>
+            <div v-if="voidItemDef.staminaRestore" class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">恢复</span>
+              <span class="text-xs text-success">
+                +{{ voidItemDef.staminaRestore }}体力
+                <template v-if="voidItemDef.healthRestore">/ +{{ voidItemDef.healthRestore }}HP</template>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 日志弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="showLogModal"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+        @click.self="showLogModal = false"
+      >
+        <div class="game-panel max-w-md w-full max-h-[80vh] flex flex-col relative">
+          <button class="absolute top-2 right-2 text-muted hover:text-text" @click="showLogModal = false">
+            <X :size="14" />
+          </button>
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-sm text-accent">
+              <History :size="14" class="inline" />
+              日志
+            </p>
+            <Button
+              v-if="groupedLogs.length > 0"
+              class="py-0 px-1.5 text-[10px] mr-5"
+              :icon="Trash2"
+              :icon-size="10"
+              @click="requestClearLogs(null)"
+            >
+              清空全部
+            </Button>
+          </div>
+          <div class="flex-1 overflow-y-auto min-h-0">
+            <div v-if="groupedLogs.length === 0" class="flex flex-col items-center justify-center py-8 text-muted">
+              <History :size="32" class="mb-2" />
+              <p class="text-xs">暂无日志记录</p>
+            </div>
+            <div v-for="(group, gi) in groupedLogs" :key="gi" class="mb-3">
+              <div class="flex items-center justify-between">
+                <Divider :label="group.label" class="flex-1" />
+                <button
+                  class="text-muted hover:text-danger ml-1.5 flex-shrink-0"
+                  title="清空该日日志"
+                  @click="requestClearLogs(group.label)"
+                >
+                  <X :size="12" />
+                </button>
+              </div>
+              <div class="flex flex-col space-y-0.5">
+                <p v-for="(msg, mi) in group.messages" :key="mi" class="text-xs text-muted px-1">{{ msg }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 日志清空确认 -->
+    <Transition name="panel-fade">
+      <div v-if="clearLogTarget !== undefined" class="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
+        <div class="game-panel max-w-xs w-full text-center">
+          <p class="text-xs leading-relaxed mb-4">
+            {{ clearLogTarget === null ? '确认清空全部日志？' : `确认清空「${clearLogTarget}」的日志？` }}
+          </p>
+          <div class="flex space-x-3 justify-center">
+            <Button @click="clearLogTarget = undefined">取消</Button>
+            <Button class="btn-danger" :icon="Trash2" :icon-size="12" @click="executeClearLogs">确认</Button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <!-- 休息确认 -->
     <Transition name="panel-fade">
       <div v-if="showSleepConfirm" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
         <div class="game-panel max-w-xs w-full text-center">
-          <p class="text-accent text-sm mb-3">—— {{ sleepLabel }} ——</p>
+          <Divider title>{{ sleepLabel }}</Divider>
           <p class="text-xs leading-relaxed mb-1">{{ sleepSummary }}</p>
           <p v-for="(warn, wi) in sleepWarning.split('\n').filter(Boolean)" :key="wi" class="text-danger text-xs mb-1">{{ warn }}</p>
           <div class="flex space-x-3 justify-center mt-4">
@@ -257,7 +446,7 @@
   import { useDialogs } from '@/composables/useDialogs'
   import type { MorningChoiceEvent } from '@/data/farmEvents'
   import { handleEndDay } from '@/composables/useEndDay'
-  import { addLog } from '@/composables/useGameLog'
+  import { addLog, logHistory, clearAllLogs, clearDayLogs, _registerDayLabelGetter } from '@/composables/useGameLog'
   import {
     LATE_NIGHT_RECOVERY_MAX,
     LATE_NIGHT_RECOVERY_MIN,
@@ -270,8 +459,9 @@
   import { useGameClock } from '@/composables/useGameClock'
   import { useAudio } from '@/composables/useAudio'
   import type { Quality } from '@/types'
-  import { Moon, X, Map, Settings as SettingsIcon, Archive, ArrowDown } from 'lucide-vue-next'
+  import { Moon, X, Map, Settings as SettingsIcon, Archive, ArrowDown, ArrowDownToLine, History, Trash2 } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
+  import Divider from '@/components/game/Divider.vue'
   import MobileMapMenu from '@/components/game/MobileMapMenu.vue'
   import StatusBar from '@/components/game/StatusBar.vue'
   import EventDialog from '@/components/game/EventDialog.vue'
@@ -334,6 +524,39 @@
   /** 设置弹窗 */
   const showSettings = ref(false)
 
+  /** 日志弹窗 */
+  const showLogModal = ref(false)
+  /** 日志清空确认：undefined=不显示, null=清空全部, string=清空指定天 */
+  const clearLogTarget = ref<string | null | undefined>(undefined)
+  const requestClearLogs = (dayLabel: string | null) => {
+    clearLogTarget.value = dayLabel
+  }
+  const executeClearLogs = () => {
+    if (clearLogTarget.value === null) clearAllLogs()
+    else if (clearLogTarget.value) clearDayLogs(clearLogTarget.value)
+    clearLogTarget.value = undefined
+  }
+  watch(showLogModal, v => {
+    if (!v) clearLogTarget.value = undefined
+  })
+
+  // 注册天数标签获取器
+  _registerDayLabelGetter(() => `第${gameStore.year}年 ${SEASON_NAMES[gameStore.season]} 第${gameStore.day}天`)
+
+  /** 按天分组的日志（最新天在前） */
+  const groupedLogs = computed(() => {
+    const groups: { label: string; messages: string[] }[] = []
+    let currentLabel: string | null = null
+    for (const entry of logHistory.value) {
+      if (entry.dayLabel !== currentLabel) {
+        currentLabel = entry.dayLabel
+        groups.push({ label: currentLabel, messages: [] })
+      }
+      groups[groups.length - 1]!.messages.push(entry.msg)
+    }
+    return groups.reverse()
+  })
+
   // 实时时钟生命周期
   onMounted(() => startClock())
   onUnmounted(() => stopClock())
@@ -387,9 +610,9 @@
       const pct = Math.round(Math.min(PASSOUT_STAMINA_RECOVERY + staminaBonus, 1) * 100)
       const penaltyPct = Math.round(PASSOUT_MONEY_PENALTY_RATE * 100)
       if (pct < 100) {
-        warnings.push(`体力仅恢复${pct}%，并损失${penaltyPct}%金币（上限${PASSOUT_MONEY_PENALTY_CAP}文）`)
+        warnings.push(`体力仅恢复${pct}%，并损失${penaltyPct}%铜钱（上限${PASSOUT_MONEY_PENALTY_CAP}文）`)
       } else {
-        warnings.push(`损失${penaltyPct}%金币（上限${PASSOUT_MONEY_PENALTY_CAP}文）`)
+        warnings.push(`损失${penaltyPct}%铜钱（上限${PASSOUT_MONEY_PENALTY_CAP}文）`)
       }
     } else if (gameStore.hour >= 24) {
       const t = Math.min(Math.max(gameStore.hour - 24, 0), 1)
@@ -517,17 +740,87 @@
 
   const voidDepositableItems = computed(() =>
     inventoryStore.items.filter(i => {
+      if (i.locked) return false
       const def = getItemById(i.itemId)
       return def && def.category !== 'seed'
     })
   )
 
-  const handleVoidWithdraw = (chestId: string, itemId: string, quality: Quality) => {
-    const chest = warehouseStore.getChest(chestId)
-    if (!chest) return
-    const slot = chest.items.find(i => i.itemId === itemId && i.quality === quality)
-    if (!slot) return
-    const qty = slot.quantity
+  /** 背包中可一键存入的重复物品（虚空箱中已有且未锁定、非种子） */
+  const voidDuplicateDepositItems = computed(() => {
+    if (!expandedVoidChestId.value) return []
+    const chest = warehouseStore.getChest(expandedVoidChestId.value)
+    if (!chest) return []
+    const chestItemIds = new Set(chest.items.map(i => i.itemId))
+    return inventoryStore.items.filter(i => {
+      if (i.locked) return false
+      const def = getItemById(i.itemId)
+      if (!def || def.category === 'seed') return false
+      return chestItemIds.has(i.itemId)
+    })
+  })
+
+  /** 一键存入重复物品到虚空箱 */
+  const handleVoidDepositDuplicates = () => {
+    if (!expandedVoidChestId.value) return
+    const chestId = expandedVoidChestId.value
+    const snapshot = voidDuplicateDepositItems.value.map(i => ({ itemId: i.itemId, quality: i.quality, quantity: i.quantity }))
+    let totalDeposited = 0
+    let kindCount = 0
+    for (const item of snapshot) {
+      const actual = warehouseStore.depositToChest(chestId, item.itemId, item.quantity, item.quality)
+      if (actual > 0) {
+        totalDeposited += actual
+        kindCount++
+      }
+    }
+    if (totalDeposited > 0) {
+      addLog(`一键存入了${kindCount}种物品，共${totalDeposited}个到虚空箱。`)
+    } else {
+      addLog('虚空箱已满，无法存入。')
+    }
+  }
+
+  /** 虚空箱道具信息弹窗 */
+  const voidItemDetail = ref<{ itemId: string; quality: Quality; quantity: number } | null>(null)
+  const voidItemDef = computed(() => {
+    if (!voidItemDetail.value) return null
+    return getItemById(voidItemDetail.value.itemId) ?? null
+  })
+
+  // === 虚空箱数量选择 ===
+  interface VoidQtyModalData {
+    mode: 'withdraw' | 'deposit'
+    chestId: string
+    itemId: string
+    quality: Quality
+    max: number
+  }
+  const voidQtyModal = ref<VoidQtyModalData | null>(null)
+  const voidQty = ref(1)
+
+  const openVoidQtyModal = (mode: 'withdraw' | 'deposit', chestId: string, itemId: string, quality: Quality, max: number) => {
+    if (max <= 1) {
+      // 数量为1时直接执行，不弹窗
+      if (mode === 'withdraw') executeVoidWithdraw(chestId, itemId, quality, 1)
+      else executeVoidDeposit(chestId, itemId, quality, 1)
+      return
+    }
+    voidQtyModal.value = { mode, chestId, itemId, quality, max }
+    voidQty.value = max
+  }
+
+  const setVoidQty = (val: number) => {
+    if (!voidQtyModal.value) return
+    voidQty.value = Math.max(1, Math.min(val, voidQtyModal.value.max))
+  }
+  const addVoidQty = (delta: number) => setVoidQty(voidQty.value + delta)
+  const onVoidQtyInput = (e: Event) => {
+    const val = parseInt((e.target as HTMLInputElement).value, 10)
+    if (!isNaN(val)) setVoidQty(val)
+  }
+
+  const executeVoidWithdraw = (chestId: string, itemId: string, quality: Quality, qty: number) => {
     if (!warehouseStore.withdrawFromChest(chestId, itemId, qty, quality)) {
       addLog('背包已满，无法取出。')
       return
@@ -535,10 +828,8 @@
     addLog(`从虚空箱取出了${getItemName(itemId)}×${qty}。`)
   }
 
-  const handleVoidDeposit = (chestId: string, itemId: string, quality: Quality) => {
-    const slot = inventoryStore.items.find(i => i.itemId === itemId && i.quality === quality)
-    if (!slot) return
-    const actualQty = warehouseStore.depositToChest(chestId, itemId, slot.quantity, quality)
+  const executeVoidDeposit = (chestId: string, itemId: string, quality: Quality, qty: number) => {
+    const actualQty = warehouseStore.depositToChest(chestId, itemId, qty, quality)
     if (actualQty <= 0) {
       addLog('虚空箱已满，无法存入。')
       return
@@ -547,6 +838,14 @@
     if (voidDepositableItems.value.length === 0 || warehouseStore.isChestFull(chestId)) {
       showVoidDepositModal.value = false
     }
+  }
+
+  const confirmVoidQty = () => {
+    if (!voidQtyModal.value) return
+    const { mode, chestId, itemId, quality } = voidQtyModal.value
+    if (mode === 'withdraw') executeVoidWithdraw(chestId, itemId, quality, voidQty.value)
+    else executeVoidDeposit(chestId, itemId, quality, voidQty.value)
+    voidQtyModal.value = null
   }
 
   const confirmSleep = () => {
@@ -610,10 +909,39 @@
       color 0.15s;
   }
 
+  .mobile-log-btn {
+    position: fixed;
+    bottom: calc(calc(0.35rem * 10) + 96px + constant(safe-area-inset-bottom, 0px));
+    bottom: calc(calc(0.35rem * 10) + 96px + env(safe-area-inset-bottom, 0px));
+    right: 12px;
+    z-index: 40;
+    width: 40px;
+    height: 40px;
+    border-radius: 2px;
+    background: rgb(var(--color-panel));
+    border: 2px solid var(--color-accent);
+    color: var(--color-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    transition:
+      background-color 0.15s,
+      color 0.15s;
+  }
+
+  .mobile-log-btn.with-void {
+    bottom: calc(calc(0.35rem * 10) + 144px + constant(safe-area-inset-bottom, 0px));
+    bottom: calc(calc(0.35rem * 10) + 144px + env(safe-area-inset-bottom, 0px));
+  }
+
   .mobile-map-btn:hover,
   .mobile-map-btn:active,
   .mobile-void-btn:hover,
-  .mobile-void-btn:active {
+  .mobile-void-btn:active,
+  .mobile-log-btn:hover,
+  .mobile-log-btn:active {
     background: var(--color-accent);
     color: rgb(var(--color-bg));
   }

@@ -39,7 +39,7 @@
           <div
             v-for="item in HANHAI_SHOP_ITEMS"
             :key="item.itemId"
-            class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-2 cursor-pointer hover:bg-accent/5 transition-colors"
+            class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-2 cursor-pointer hover:bg-accent/5 transition-colors mr-1"
             @click="shopModalItem = item"
           >
             <div class="flex-1 min-w-0">

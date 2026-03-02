@@ -1,3 +1,4 @@
+import { ref } from 'vue'
 import Qmsg from 'qmsg'
 
 export type FloatColor = 'danger' | 'success' | 'accent' | 'water'
@@ -53,9 +54,29 @@ export const _registerPerkChecker = (fn: () => void) => {
   _perkChecker = fn
 }
 
-/** 添加日志消息（显示为 toast 通知） */
+// === 日志历史记录（内存中，不存档，刷新页面清空） ===
+
+export interface LogEntry {
+  msg: string
+  dayLabel: string
+}
+
+/** 全部日志历史 */
+export const logHistory = ref<LogEntry[]>([])
+
+/** 天数标签获取器 — 由 GameLayout 注册以避免循环导入 */
+let _dayLabelGetter: (() => string) | null = null
+
+/** 注册天数标签获取器（GameLayout 初始化时调用） */
+export const _registerDayLabelGetter = (fn: () => string) => {
+  _dayLabelGetter = fn
+}
+
+/** 添加日志消息（显示为 toast 通知，同时记录到历史） */
 export const addLog = (msg: string) => {
   Qmsg.info(msg)
+  const dayLabel = _dayLabelGetter?.() ?? ''
+  logHistory.value.push({ msg, dayLabel })
   _perkChecker?.()
 }
 
@@ -82,10 +103,23 @@ export const resetLogs = () => {
   Qmsg.closeAll()
 }
 
+/** 清空全部日志历史 */
+export const clearAllLogs = () => {
+  logHistory.value = []
+}
+
+/** 清空指定天的日志 */
+export const clearDayLogs = (dayLabel: string) => {
+  logHistory.value = logHistory.value.filter(e => e.dayLabel !== dayLabel)
+}
+
 export const useGameLog = () => {
   return {
     addLog,
     showFloat,
-    resetLogs
+    resetLogs,
+    clearAllLogs,
+    clearDayLogs,
+    logHistory
   }
 }

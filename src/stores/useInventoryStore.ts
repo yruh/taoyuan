@@ -272,23 +272,24 @@ export const useInventoryStore = defineStore('inventory', () => {
 
   /** 一键整理背包（按分类→物品ID→品质排序，合并同类栈） */
   const sortItems = () => {
-    // 先合并同类栈
+    // 先合并同类栈（任一栈锁定则合并后保持锁定）
     const merged: InventoryItem[] = []
     for (const item of items.value) {
       const existing = merged.find(m => m.itemId === item.itemId && m.quality === item.quality)
       if (existing) {
         existing.quantity += item.quantity
+        if (item.locked) existing.locked = true
       } else {
         merged.push({ ...item })
       }
     }
-    // 拆分超过 MAX_STACK 的栈
+    // 拆分超过 MAX_STACK 的栈（保留锁定状态）
     const split: InventoryItem[] = []
     for (const item of merged) {
       let remaining = item.quantity
       while (remaining > 0) {
         const batch = Math.min(remaining, MAX_STACK)
-        split.push({ itemId: item.itemId, quantity: batch, quality: item.quality })
+        split.push({ itemId: item.itemId, quantity: batch, quality: item.quality, locked: item.locked })
         remaining -= batch
       }
     }
@@ -615,10 +616,10 @@ export const useInventoryStore = defineStore('inventory', () => {
       }
     }
 
-    // 检查金币（延迟导入避免循环依赖）
+    // 检查铜钱（延迟导入避免循环依赖）
     const playerStore = usePlayerStore()
     if (playerStore.money < def.recipeMoney) {
-      return { success: false, message: `金币不足（需要${def.recipeMoney}文）。` }
+      return { success: false, message: `铜钱不足（需要${def.recipeMoney}文）。` }
     }
 
     // 消耗材料
@@ -690,7 +691,7 @@ export const useInventoryStore = defineStore('inventory', () => {
     }
     const playerStore = usePlayerStore()
     if (playerStore.money < def.recipeMoney) {
-      return { success: false, message: `金币不足（需要${def.recipeMoney}文）。` }
+      return { success: false, message: `铜钱不足（需要${def.recipeMoney}文）。` }
     }
     for (const mat of def.recipe) {
       removeItem(mat.itemId, mat.quantity)
@@ -758,7 +759,7 @@ export const useInventoryStore = defineStore('inventory', () => {
     }
     const playerStore = usePlayerStore()
     if (playerStore.money < def.recipeMoney) {
-      return { success: false, message: `金币不足（需要${def.recipeMoney}文）。` }
+      return { success: false, message: `铜钱不足（需要${def.recipeMoney}文）。` }
     }
     for (const mat of def.recipe) {
       removeItem(mat.itemId, mat.quantity)

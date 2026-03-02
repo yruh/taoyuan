@@ -133,7 +133,7 @@
           <div
             v-for="(weapon, idx) in inventoryStore.ownedWeapons"
             :key="idx"
-            class="flex items-center justify-between border rounded-xs px-2 py-1 cursor-pointer hover:bg-accent/5"
+            class="flex items-center justify-between border rounded-xs px-2 py-1 mr-1 cursor-pointer hover:bg-accent/5"
             :class="idx === inventoryStore.equippedWeaponIndex ? 'border-accent/30' : 'border-accent/10'"
             @click="activeWeaponIdx = idx"
           >
@@ -162,7 +162,7 @@
             <div
               v-for="(hat, idx) in inventoryStore.ownedHats"
               :key="idx"
-              class="flex items-center justify-between border rounded-xs px-2 py-1 cursor-pointer hover:bg-accent/5"
+              class="flex items-center justify-between border rounded-xs px-2 py-1 mr-1 cursor-pointer hover:bg-accent/5"
               :class="inventoryStore.equippedHatIndex === idx ? 'border-accent/30' : 'border-accent/10'"
               @click="activeHatIdx = idx"
             >
@@ -201,7 +201,7 @@
             <div
               v-for="(shoe, idx) in inventoryStore.ownedShoes"
               :key="idx"
-              class="flex items-center justify-between border rounded-xs px-2 py-1 cursor-pointer hover:bg-accent/5"
+              class="flex items-center justify-between border rounded-xs px-2 py-1 mr-1 cursor-pointer hover:bg-accent/5"
               :class="inventoryStore.equippedShoeIndex === idx ? 'border-accent/30' : 'border-accent/10'"
               @click="activeShoeIdx = idx"
             >
@@ -248,7 +248,7 @@
             <div
               v-for="(ring, idx) in inventoryStore.ownedRings"
               :key="idx"
-              class="flex items-center justify-between border rounded-xs px-2 py-1 cursor-pointer hover:bg-accent/5"
+              class="flex items-center justify-between border rounded-xs px-2 py-1 mr-1 cursor-pointer hover:bg-accent/5"
               :class="isRingEquipped(idx) ? 'border-accent/30' : 'border-accent/10'"
               @click="activeRingIdx = idx"
             >

@@ -128,7 +128,7 @@ export const getDarkFloorTrapDamage = (floor: number): number => {
   return base + Math.floor(Math.random() * (range + 1))
 }
 
-/** 暗河层隐藏宝藏金币 */
+/** 暗河层隐藏宝藏铜钱 */
 export const getDarkFloorTreasureMoney = (floor: number): number => {
   const zoneIndex = Math.floor((floor - 1) / 20)
   const base = 50 + zoneIndex * 50
@@ -474,7 +474,7 @@ export const BOSS_MONSTERS: Record<number, MonsterDef> = {
   }
 }
 
-/** BOSS 额外掉落金币 */
+/** BOSS 额外掉落铜钱 */
 export const BOSS_MONEY_REWARDS: Record<number, number> = {
   20: 100,
   40: 200,

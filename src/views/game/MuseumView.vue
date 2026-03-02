@@ -65,7 +65,7 @@
           <div
             v-for="ms in MUSEUM_MILESTONES"
             :key="ms.count"
-            class="flex items-center space-x-2 text-xs border border-accent/10 rounded-xs px-2 py-1"
+            class="flex items-center space-x-2 text-xs border border-accent/10 rounded-xs px-2 py-1 mr-1"
           >
             <CircleCheck v-if="isMilestoneClaimed(ms.count)" :size="12" class="text-success shrink-0" />
             <Circle v-else :size="12" class="shrink-0" :class="museumStore.donatedCount >= ms.count ? 'text-accent' : 'text-muted'" />
@@ -151,7 +151,7 @@
 
           <!-- 操作 -->
           <div v-if="museumStore.isDonated(selectedItem.id)" class="border border-success/30 rounded-xs p-2">
-            <div class="flex items-center space-x-1">
+            <div class="flex items-center justify-center space-x-1">
               <CircleCheck :size="12" class="text-success" />
               <span class="text-xs text-success">已捐赠至博物馆</span>
             </div>
