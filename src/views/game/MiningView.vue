@@ -127,7 +127,10 @@
                   {{ zone.name }}
                   <span class="text-muted ml-1">{{ zone.start }}-{{ zone.end }}层</span>
                 </span>
-                <span v-if="zone.bossDefeated" class="text-success">&#x2713; {{ zone.bossName }}</span>
+                <span v-if="zone.bossDefeated" class="text-success flex items-center">
+                  <Check :size="12" class="mr-0.5" />
+                  {{ zone.bossName }}
+                </span>
                 <span v-else-if="zone.reached" class="text-danger/70">{{ zone.bossName }}</span>
                 <span v-else class="text-muted/30">
                   <Lock :size="12" class="inline" />
@@ -215,7 +218,7 @@
               <span v-if="currentFloorSpecial === 'dark'" class="text-muted ml-1">暗河层</span>
               <span v-if="currentFloorSpecial === 'boss'" class="text-danger ml-1">BOSS层</span>
             </p>
-            <Button class="py-0 px-1" :icon="X" :icon-size="12" @click="handleLeave" />
+            <Button class="py-0 px-1" :icon="X" :icon-size="12" @click="showLeaveConfirm = true" />
           </div>
 
           <!-- 武器信息 -->
@@ -306,7 +309,7 @@
             </div>
             <div
               class="flex items-center justify-between border border-danger/30 rounded-xs px-3 py-1.5 cursor-pointer hover:bg-danger/5"
-              @click="handleLeave"
+              @click="showLeaveConfirm = true"
             >
               <span class="text-xs text-danger">
                 <LogOut :size="12" class="inline" />
@@ -488,7 +491,7 @@
               v-for="item in availableCombatItems"
               :key="item.itemId"
               class="flex items-center justify-between border border-success/20 rounded-xs px-3 py-1.5 cursor-pointer hover:bg-success/5"
-              @click="handleUseCombatItem(item.itemId)"
+              @click="handlePendingItem(item.itemId)"
             >
               <div class="flex flex-col">
                 <span class="text-xs">{{ item.name }}</span>
@@ -498,6 +501,58 @@
             </div>
           </div>
           <p v-if="availableCombatItems.length === 0" class="text-xs text-muted text-center py-2">没有可用道具</p>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 道具使用确认弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="pendingItem"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-[70] p-4"
+        @click.self="pendingItemId = null"
+      >
+        <div class="game-panel max-w-xs w-full relative">
+          <button class="absolute top-2 right-2 text-muted hover:text-text" @click="pendingItemId = null">
+            <X :size="14" />
+          </button>
+          <p class="text-sm text-accent mb-2">使用道具</p>
+          <div class="border border-accent/10 rounded-xs p-2 mb-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-muted">道具</span>
+              <span class="text-xs">{{ pendingItem.name }}</span>
+            </div>
+            <div class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">效果</span>
+              <span class="text-xs text-success">{{ pendingItem.desc }}</span>
+            </div>
+            <div class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">剩余</span>
+              <span class="text-xs">×{{ pendingItem.count }}</span>
+            </div>
+          </div>
+          <div class="flex space-x-1.5">
+            <Button class="flex-1 justify-center" @click="pendingItemId = null">取消</Button>
+            <Button class="flex-1 justify-center !bg-accent !text-bg" @click="handleConfirmUseItem">确认使用</Button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 离开矿洞确认弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="showLeaveConfirm"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-[70] p-4"
+        @click.self="showLeaveConfirm = false"
+      >
+        <div class="game-panel max-w-xs w-full">
+          <p class="text-sm text-accent mb-2">确认离开</p>
+          <p class="text-xs text-muted mb-3">确定要离开{{ miningStore.isInSkullCavern ? '骷髅矿穴' : '矿洞' }}吗？当前进度不会保留。</p>
+          <div class="flex space-x-1.5">
+            <Button class="flex-1 justify-center" @click="showLeaveConfirm = false">继续探索</Button>
+            <Button class="flex-1 justify-center btn-danger" :icon="LogOut" @click="confirmLeave">确认离开</Button>
+          </div>
         </div>
       </div>
     </Transition>
@@ -663,7 +718,8 @@
     Map,
     Backpack,
     Lock,
-    BookMarked
+    BookMarked,
+    Check
   } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
   import { useAchievementStore } from '@/stores/useAchievementStore'
@@ -712,6 +768,16 @@
 
   /** 战斗道具面板 */
   const showCombatItems = ref(false)
+
+  /** 道具使用确认 */
+  const pendingItemId = ref<string | null>(null)
+  const pendingItem = computed(() => {
+    if (!pendingItemId.value) return null
+    return availableCombatItems.value.find(i => i.itemId === pendingItemId.value) ?? null
+  })
+
+  /** 离开矿洞确认 */
+  const showLeaveConfirm = ref(false)
 
   // 战斗动画状态
   const combatAnimLock = ref(false)
@@ -780,6 +846,24 @@
       items.push({ itemId: 'guild_badge', name: '公会徽章', desc: '攻击力永久+3', count: badgeCount })
     }
 
+    // 生命护符
+    const talismanCount = inventoryStore.getItemCount('life_talisman')
+    if (talismanCount > 0) {
+      items.push({ itemId: 'life_talisman', name: '生命护符', desc: '最大生命值永久+15', count: talismanCount })
+    }
+
+    // 幸运铜钱
+    const coinCount = inventoryStore.getItemCount('lucky_coin')
+    if (coinCount > 0) {
+      items.push({ itemId: 'lucky_coin', name: '幸运铜钱', desc: '掉落率永久+5%', count: coinCount })
+    }
+
+    // 守护符
+    const defenseCharmCount = inventoryStore.getItemCount('defense_charm')
+    if (defenseCharmCount > 0) {
+      items.push({ itemId: 'defense_charm', name: '守护符', desc: '防御永久+3%', count: defenseCharmCount })
+    }
+
     // 猎魔符
     if (!miningStore.slayerCharmActive) {
       const charmCount = inventoryStore.getItemCount('slayer_charm')
@@ -789,7 +873,7 @@
     }
 
     // 所有可食用的恢复类道具
-    const seen = new Set<string>(['guild_badge', 'slayer_charm', 'monster_lure'])
+    const seen = new Set<string>(['guild_badge', 'slayer_charm', 'monster_lure', 'life_talisman', 'lucky_coin', 'defense_charm'])
     for (const invItem of inventoryStore.items) {
       if (invItem.quantity <= 0 || seen.has(invItem.itemId)) continue
       const def = getItemById(invItem.itemId)
@@ -851,7 +935,7 @@
 
   /** 当前层是否为特殊楼层 */
   const currentFloorSpecial = computed(() => {
-    const floor = getFloor(miningStore.currentFloor)
+    const floor = miningStore.getActiveFloorData()
     return floor?.specialType ?? null
   })
 
@@ -1119,6 +1203,17 @@
     }
   }
 
+  const handleConfirmUseItem = () => {
+    if (!pendingItemId.value) return
+    handleUseCombatItem(pendingItemId.value)
+    pendingItemId.value = null
+  }
+
+  const handlePendingItem = (itemId: string) => {
+    pendingItemId.value = itemId
+    showCombatItems.value = false
+  }
+
   /** 使用怪物诱饵 */
   const handleUseMonsterLure = () => {
     const result = miningStore.useMonsterLure()
@@ -1152,10 +1247,15 @@
   const handleLeave = () => {
     if (miningStore.inCombat) resumeNormalBgm()
     showCombatItems.value = false
+    showLeaveConfirm.value = false
     const msg = miningStore.leaveMine()
     exploreLog.value = []
     bombModeId.value = null
     addLog(msg)
+  }
+
+  const confirmLeave = () => {
+    handleLeave()
   }
 
   // ==================== 快速切装 ====================

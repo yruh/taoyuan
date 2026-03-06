@@ -1,6 +1,6 @@
 <template>
   <div class="game-panel max-w-xs w-full">
-    <p class="text-sm text-accent text-center mb-1">—— 恶魔轮盘 ——</p>
+    <Divider title class="!mb-1" label="恶魔轮盘" />
 
     <!-- 弹仓信息 -->
     <div class="border border-accent/20 rounded-xs p-2 mb-3">
@@ -101,6 +101,7 @@
   import { sfxGunshot, sfxGunEmpty, sfxCasinoWin, sfxCasinoLose } from '@/composables/useAudio'
   import type { BuckshotSetup, ShellType } from '@/types'
   import Button from '@/components/game/Button.vue'
+  import Divider from '@/components/game/Divider.vue'
 
   const props = defineProps<{ setup: BuckshotSetup }>()
   const emit = defineEmits<{ complete: [won: boolean, draw: boolean] }>()

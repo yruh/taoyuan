@@ -30,6 +30,7 @@ import { useHanhaiStore } from './useHanhaiStore'
 import { useFishPondStore } from './useFishPondStore'
 import { useTutorialStore } from './useTutorialStore'
 import { useMessageStore } from './useMessageStore'
+import { useHiddenNpcStore } from './useHiddenNpcStore'
 
 const SAVE_KEY_PREFIX = 'taoyuanxiang_save_'
 const MAX_SLOTS = 3
@@ -53,7 +54,7 @@ const decrypt = (cipher: string): string | null => {
 }
 
 /** 解密并解析存档数据 */
-const parseSaveData = (raw: string): Record<string, any> | null => {
+export const parseSaveData = (raw: string): Record<string, any> | null => {
   const decrypted = decrypt(raw)
   if (!decrypted) return null
   try {
@@ -151,6 +152,7 @@ export const useSaveStore = defineStore('save', () => {
       const fishPondStore = useFishPondStore()
       const tutorialStore = useTutorialStore()
       const messageStore = useMessageStore()
+      const hiddenNpcStore = useHiddenNpcStore()
 
       const data = {
         version: CURRENT_SAVE_VERSION,
@@ -180,6 +182,7 @@ export const useSaveStore = defineStore('save', () => {
         fishPond: fishPondStore.serialize(),
         tutorial: tutorialStore.serialize(),
         message: messageStore.serialize(),
+        hiddenNpc: hiddenNpcStore.serialize(),
         savedAt: new Date().toISOString()
       }
       await adapter.setItem(`${SAVE_KEY_PREFIX}${slot}`, encrypt(JSON.stringify(data)))
@@ -241,6 +244,7 @@ export const useSaveStore = defineStore('save', () => {
       const fishPondStore = useFishPondStore()
       const tutorialStore = useTutorialStore()
       const messageStore = useMessageStore()
+      const hiddenNpcStore = useHiddenNpcStore()
 
       gameStore.deserialize(data.game)
       playerStore.deserialize(data.player)
@@ -269,6 +273,7 @@ export const useSaveStore = defineStore('save', () => {
       if (data.tutorial) tutorialStore.deserialize(data.tutorial)
       if (data.message) messageStore.deserialize(data.message)
       else messageStore.$reset()
+      if (data.hiddenNpc) hiddenNpcStore.deserialize(data.hiddenNpc)
       activeSlot.value = slot
       return true
     } catch {
@@ -345,6 +350,7 @@ export const useSaveStore = defineStore('save', () => {
       const fishPondStore = useFishPondStore()
       const tutorialStore = useTutorialStore()
       const messageStore = useMessageStore()
+      const hiddenNpcStore = useHiddenNpcStore()
 
       const data = {
         version: CURRENT_SAVE_VERSION,
@@ -374,6 +380,7 @@ export const useSaveStore = defineStore('save', () => {
         fishPond: fishPondStore.serialize(),
         tutorial: tutorialStore.serialize(),
         message: messageStore.serialize(),
+        hiddenNpc: hiddenNpcStore.serialize(),
         savedAt: new Date().toISOString()
       }
       localStorage.setItem(`${SAVE_KEY_PREFIX}${activeSlot.value}`, encrypt(JSON.stringify(data)))

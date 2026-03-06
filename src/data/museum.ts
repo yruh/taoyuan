@@ -46,7 +46,13 @@ export const MUSEUM_ITEMS: MuseumItemDef[] = [
   { id: 'ancient_seed', name: '远古种子', category: 'artifact', sourceHint: '深层宝箱极稀有' },
   { id: 'bamboo_scroll', name: '竹简', category: 'artifact', sourceHint: '竹林稀有采集' },
   { id: 'stone_axe_head', name: '石斧头', category: 'artifact', sourceHint: '竹林稀有采集' },
-  { id: 'painted_pottery', name: '彩陶碎片', category: 'artifact', sourceHint: '熔岩层宝箱' }
+  { id: 'painted_pottery', name: '彩陶碎片', category: 'artifact', sourceHint: '熔岩层宝箱' },
+
+  // ===== 仙灵 (4) =====
+  { id: 'fox_bead', name: '狐珠', category: 'spirit', sourceHint: '矿洞深处（与狐仙有关的线索）' },
+  { id: 'spirit_peach', name: '灵桃', category: 'spirit', sourceHint: '桃夭赐福的桃树概率产出' },
+  { id: 'moon_herb', name: '月草', category: 'spirit', sourceHint: '月兔赐福后采集概率获得' },
+  { id: 'dream_silk', name: '梦丝', category: 'spirit', sourceHint: '归女赐福后织布机概率产出' }
 ]
 
 /** 博物馆分类标签 */
@@ -55,7 +61,8 @@ export const MUSEUM_CATEGORIES = [
   { key: 'gem' as const, label: '宝石' },
   { key: 'bar' as const, label: '金属锭' },
   { key: 'fossil' as const, label: '化石' },
-  { key: 'artifact' as const, label: '古物' }
+  { key: 'artifact' as const, label: '古物' },
+  { key: 'spirit' as const, label: '仙灵' }
 ]
 
 /** 博物馆里程碑奖励 */
@@ -66,7 +73,8 @@ export const MUSEUM_MILESTONES: MuseumMilestone[] = [
   { count: 20, name: '博古通今', reward: { money: 1500, items: [{ itemId: 'prismatic_shard', quantity: 1 }] } },
   { count: 25, name: '文物守护者', reward: { money: 3000 } },
   { count: 30, name: '远古探秘', reward: { money: 5000, items: [{ itemId: 'iridium_bar', quantity: 3 }] } },
-  { count: 36, name: '博物馆之星', reward: { money: 10000 } }
+  { count: 36, name: '博物馆之星', reward: { money: 10000 } },
+  { count: 40, name: '灵物全鉴', reward: { money: 8000, items: [{ itemId: 'moonstone', quantity: 3 }] } }
 ]
 
 /** 根据ID查找博物馆物品 */

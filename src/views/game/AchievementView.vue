@@ -10,48 +10,38 @@
 
     <!-- 四栏切换 -->
     <div class="flex space-x-1 mb-3">
-      <Button
-        class="flex-1 justify-center"
-        :class="{ '!bg-accent !text-bg': tab === 'collection' }"
-        @click="tab = 'collection'"
-      >
+      <Button class="flex-1 justify-center" :class="{ '!bg-accent !text-bg': tab === 'collection' }" @click="tab = 'collection'">
         图鉴
       </Button>
-      <Button
-        class="flex-1 justify-center"
-        :class="{ '!bg-accent !text-bg': tab === 'achievements' }"
-        @click="tab = 'achievements'"
-      >
+      <Button class="flex-1 justify-center" :class="{ '!bg-accent !text-bg': tab === 'achievements' }" @click="tab = 'achievements'">
         成就
       </Button>
-      <Button class="flex-1 justify-center" :class="{ '!bg-accent !text-bg': tab === 'bundles' }" @click="tab = 'bundles'">
-        社区
-      </Button>
-      <Button class="flex-1 justify-center" :class="{ '!bg-accent !text-bg': tab === 'shipping' }" @click="tab = 'shipping'">
-        出货
-      </Button>
-      <Button class="flex-1 justify-center" :class="{ '!bg-accent !text-bg': tab === 'notes' }" @click="tab = 'notes'">
-        笔记
-      </Button>
+      <Button class="flex-1 justify-center" :class="{ '!bg-accent !text-bg': tab === 'bundles' }" @click="tab = 'bundles'">祠堂</Button>
+      <Button class="flex-1 justify-center" :class="{ '!bg-accent !text-bg': tab === 'shipping' }" @click="tab = 'shipping'">出货</Button>
+      <Button class="flex-1 justify-center" :class="{ '!bg-accent !text-bg': tab === 'notes' }" @click="tab = 'notes'">笔记</Button>
     </div>
 
     <!-- 物品图鉴 -->
     <template v-if="tab === 'collection'">
       <p class="text-xs text-muted mb-2">已发现 {{ achievementStore.discoveredCount }}/{{ allItems.length }}</p>
-      <div class="grid grid-cols-3 md:grid-cols-5 gap-1 max-h-72 overflow-y-auto">
-        <div
-          v-for="item in allItems"
-          :key="item.id"
-          class="border rounded-xs p-1.5 text-xs text-center transition-colors truncate"
-          :class="
-            achievementStore.isDiscovered(item.id)
-              ? 'border-accent/20 cursor-pointer hover:bg-accent/5 ' + getCategoryColor(item.category)
-              : 'border-accent/10 text-muted/30'
-          "
-          @click="achievementStore.isDiscovered(item.id) && (activeCollectionId = item.id)"
-        >
-          <template v-if="achievementStore.isDiscovered(item.id)">{{ item.name }}</template>
-          <Lock v-else :size="12" class="mx-auto text-muted/30" />
+      <div ref="collectionRef" class="max-h-72 overflow-y-auto" @scroll="onCollectionScroll">
+        <div :style="{ paddingTop: topPad + 'px', paddingBottom: bottomPad + 'px' }">
+          <div class="grid grid-cols-3 md:grid-cols-5 gap-1">
+            <div
+              v-for="item in visibleItems"
+              :key="item.id"
+              class="border rounded-xs p-1.5 text-xs text-center truncate mr-1"
+              :class="
+                achievementStore.isDiscovered(item.id)
+                  ? 'border-accent/20 cursor-pointer hover:bg-accent/5 ' + getCategoryColor(item.category)
+                  : 'border-accent/10 text-muted/30'
+              "
+              @click="achievementStore.isDiscovered(item.id) && (activeCollectionId = item.id)"
+            >
+              <template v-if="achievementStore.isDiscovered(item.id)">{{ item.name }}</template>
+              <Lock v-else :size="12" class="mx-auto text-muted/30" />
+            </div>
+          </div>
         </div>
       </div>
     </template>
@@ -132,7 +122,7 @@
         <div
           v-for="a in ACHIEVEMENTS"
           :key="a.id"
-          class="border rounded-xs p-1.5 text-xs text-center transition-colors truncate"
+          class="border rounded-xs p-1.5 text-xs text-center transition-colors truncate mr-1"
           :class="isCompleted(a.id) ? 'border-accent/20 cursor-pointer hover:bg-accent/5 text-success' : 'border-accent/10 text-muted/30'"
           @click="isCompleted(a.id) && (activeAchievement = a)"
         >
@@ -199,13 +189,13 @@
       </div>
     </Transition>
 
-    <!-- 社区任务板 -->
+    <!-- 祠堂任务板 -->
     <template v-if="tab === 'bundles'">
       <div class="flex flex-col space-y-1.5 max-h-72 overflow-y-auto">
         <div
           v-for="bundle in COMMUNITY_BUNDLES"
           :key="bundle.id"
-          class="border rounded-xs px-3 py-1.5 cursor-pointer hover:bg-accent/5"
+          class="border rounded-xs px-3 py-1.5 cursor-pointer hover:bg-accent/5 mr-1"
           :class="achievementStore.isBundleComplete(bundle.id) ? 'border-success/30' : 'border-accent/20'"
           @click="activeBundle = bundle"
         >
@@ -226,7 +216,7 @@
       </div>
     </template>
 
-    <!-- 社区任务详情弹窗 -->
+    <!-- 祠堂任务详情弹窗 -->
     <Transition name="panel-fade">
       <div
         v-if="activeBundle"
@@ -370,7 +360,7 @@
           <div
             v-for="note in SECRET_NOTES"
             :key="note.id"
-            class="border rounded-xs p-1.5 text-center text-xs transition-colors truncate"
+            class="border rounded-xs p-1.5 text-center text-xs transition-colors truncate mr-1"
             :class="
               secretNoteStore.isCollected(note.id)
                 ? 'border-accent/20 cursor-pointer hover:bg-accent/5 ' + noteTypeColor(note.type)
@@ -475,7 +465,7 @@
 <script setup lang="ts">
   import { BookOpen, CircleCheck, Circle, Send, X, ScrollText, Lock } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
-  import { ref, computed } from 'vue'
+  import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
   import { useAchievementStore } from '@/stores/useAchievementStore'
   import { useAnimalStore } from '@/stores/useAnimalStore'
   import { useGuildStore } from '@/stores/useGuildStore'
@@ -514,13 +504,60 @@
 
   const allItems = ITEMS
 
+  // === 图鉴虚拟滚动 ===
+  const collectionRef = ref<HTMLElement | null>(null)
+  const collectionScrollTop = ref(0)
+  const ROW_H = 34
+  const VBUFFER = 5
+
+  const collectionCols = ref(window.innerWidth >= 768 ? 5 : 3)
+  const updateCols = () => {
+    collectionCols.value = window.innerWidth >= 768 ? 5 : 3
+  }
+  onMounted(() => window.addEventListener('resize', updateCols))
+  onUnmounted(() => window.removeEventListener('resize', updateCols))
+
+  let rafId = 0
+  const onCollectionScroll = (e: Event) => {
+    if (rafId) return
+    rafId = requestAnimationFrame(() => {
+      collectionScrollTop.value = (e.target as HTMLElement).scrollTop
+      rafId = 0
+    })
+  }
+
+  const containerH = ref(288)
+  onMounted(() => {
+    if (collectionRef.value) containerH.value = collectionRef.value.clientHeight
+  })
+
+  const totalRows = computed(() => Math.ceil(allItems.length / collectionCols.value))
+
+  const visibleRange = computed(() => {
+    const start = Math.max(0, Math.floor(collectionScrollTop.value / ROW_H) - VBUFFER)
+    const end = Math.min(totalRows.value, Math.ceil((collectionScrollTop.value + containerH.value) / ROW_H) + VBUFFER)
+    return { start, end }
+  })
+
+  const visibleItems = computed(() => {
+    const { start, end } = visibleRange.value
+    return allItems.slice(start * collectionCols.value, end * collectionCols.value)
+  })
+
+  const topPad = computed(() => visibleRange.value.start * ROW_H)
+  const bottomPad = computed(() => Math.max(0, (totalRows.value - visibleRange.value.end) * ROW_H))
+
+  watch(tab, () => {
+    collectionScrollTop.value = 0
+  })
+
   /** 成就详情弹窗 */
   const activeAchievement = ref<AchievementDef | null>(null)
 
-  /** 社区任务弹窗 */
+  /** 祠堂任务弹窗 */
   const activeBundle = ref<CommunityBundleDef | null>(null)
 
-  /** 社区任务完成进度文本 */
+  /** 祠堂任务完成进度文本 */
   const getBundleProgress = (bundle: CommunityBundleDef): string => {
     const done = bundle.requiredItems.filter(r => getSubmittedCount(bundle.id, r.itemId) >= r.quantity).length
     return `${done}/${bundle.requiredItems.length}`

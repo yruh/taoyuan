@@ -6,7 +6,7 @@
         <FlaskConical :size="14" />
         <span>育种</span>
       </div>
-      <span class="text-xs text-muted">种子箱 {{ breedingStore.boxCount }}/{{ MAX_BREEDING_BOX }}</span>
+      <span class="text-xs text-muted">种子箱 {{ breedingStore.boxCount }}/{{ breedingStore.maxSeedBox }}</span>
     </div>
 
     <!-- 两栏切换 -->
@@ -22,7 +22,7 @@
       <!-- 育种台区 -->
       <div class="mb-3">
         <div class="flex items-center justify-between mb-1.5">
-          <p class="text-xs text-muted">— 育种台 {{ breedingStore.stationCount }}/{{ MAX_BREEDING_STATIONS }} —</p>
+          <span class="text-xs text-muted">育种台 {{ breedingStore.stationCount }}/{{ MAX_BREEDING_STATIONS }}</span>
           <Button v-if="breedingStore.stationCount < MAX_BREEDING_STATIONS" :icon="Plus" :icon-size="12" @click="showCraftModal = true">
             建造
           </Button>
@@ -80,7 +80,18 @@
 
       <!-- 种子箱 -->
       <div>
-        <p class="text-xs text-muted mb-1.5">— 种子箱 —</p>
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-xs text-muted">种子箱 {{ breedingStore.boxCount }}/{{ breedingStore.maxSeedBox }}</span>
+          <button
+            v-if="nextSeedBoxUpgrade || breedingStore.seedBoxLevel > 0"
+            class="text-[10px] px-2 py-0.5 border rounded-xs"
+            :class="nextSeedBoxUpgrade ? 'border-accent/30 text-accent hover:bg-accent/5 cursor-pointer' : 'border-accent/10 text-muted'"
+            @click="showSeedBoxUpgradeModal = true"
+          >
+            <ArrowUpCircle :size="10" class="inline mr-0.5" />
+            Lv.{{ breedingStore.seedBoxLevel }}
+          </button>
+        </div>
         <!-- 空状态 -->
         <div v-if="breedingStore.boxCount === 0" class="border border-accent/10 rounded-xs py-6 flex flex-col items-center space-y-2">
           <PackageOpen :size="32" class="text-muted/30" />
@@ -91,7 +102,7 @@
           <button
             v-for="seed in breedingStore.breedingBox"
             :key="seed.genetics.id"
-            class="border rounded-xs px-1 py-1.5 text-center cursor-pointer hover:bg-accent/5 transition-colors"
+            class="border rounded-xs px-1 py-1.5 text-center cursor-pointer hover:bg-accent/5 transition-colors mr-1"
             :class="selectedSeedIds.includes(seed.genetics.id) ? 'border-accent bg-accent/10' : 'border-accent/20'"
             @click="openSeedDetail(seed)"
           >
@@ -123,11 +134,11 @@
         </p>
       </div>
       <!-- 阶层筛选 -->
-      <div class="flex space-x-1 mb-2 flex-wrap">
+      <div class="flex flex-wrap mb-1">
         <Button
           v-for="tf in TIER_FILTERS"
           :key="tf.value"
-          class="grow shrink-0 basis-[calc(25%-3px)] md:grow-0 md:shrink md:basis-auto justify-center"
+          class="grow shrink-0 basis-[calc(25%-4px)] md:grow-0 md:shrink md:basis-auto justify-center mr-1 mb-1"
           :class="{ '!bg-accent !text-bg': tierFilter === tf.value }"
           @click="tierFilter = tf.value"
         >
@@ -143,7 +154,7 @@
         <div
           v-for="hybrid in filteredHybrids"
           :key="hybrid.id"
-          class="border rounded-xs p-1.5 text-xs text-center transition-colors truncate"
+          class="border rounded-xs p-1.5 text-xs text-center transition-colors truncate mr-1"
           :class="
             isDiscovered(hybrid.id)
               ? 'border-accent/20 cursor-pointer hover:bg-accent/5 ' + tierColor(hybrid.id)
@@ -233,7 +244,9 @@
 
           <p class="text-sm text-accent mb-2">{{ getCropName(detailSeed.genetics.cropId) }} · G{{ detailSeed.genetics.generation }}</p>
           <p class="text-xs mb-2 flex items-center space-x-1" :class="seedStarColor(detailSeed.genetics)">
-            <span class="flex items-center space-x-px"><Star v-for="n in getStarRating(detailSeed.genetics)" :key="n" :size="10" /></span>
+            <span class="flex items-center space-x-px">
+              <Star v-for="n in getStarRating(detailSeed.genetics)" :key="n" :size="10" />
+            </span>
             <span>（总{{ getTotalStats(detailSeed.genetics) }}）</span>
           </p>
 
@@ -320,6 +333,91 @@
       </div>
     </Transition>
 
+    <!-- 种子箱升级弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="showSeedBoxUpgradeModal"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+        @click.self="showSeedBoxUpgradeModal = false"
+      >
+        <div class="game-panel max-w-xs w-full relative">
+          <button class="absolute top-2 right-2 text-muted hover:text-text" @click="showSeedBoxUpgradeModal = false">
+            <X :size="14" />
+          </button>
+
+          <p class="text-sm text-accent mb-2">
+            <ArrowUpCircle :size="14" class="inline mr-0.5" />
+            种子箱信息
+          </p>
+
+          <!-- 当前状态 -->
+          <div class="border border-accent/10 rounded-xs p-2 mb-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-muted">当前等级</span>
+              <span class="text-xs text-accent">Lv.{{ breedingStore.seedBoxLevel }}</span>
+            </div>
+            <div class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">容量上限</span>
+              <span class="text-xs text-text">{{ breedingStore.maxSeedBox }} 格</span>
+            </div>
+          </div>
+
+          <!-- 下一级升级 -->
+          <template v-if="nextSeedBoxUpgrade">
+            <div class="border border-accent/10 rounded-xs p-2 mb-2">
+              <p class="text-xs text-muted mb-1">升级至 Lv.{{ breedingStore.seedBoxLevel + 1 }}</p>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-muted">容量上限</span>
+                <span class="text-xs text-text">
+                  {{ breedingStore.maxSeedBox }} → {{ breedingStore.maxSeedBox + SEED_BOX_UPGRADE_INCREMENT }}
+                </span>
+              </div>
+            </div>
+
+            <!-- 所需材料 -->
+            <div class="border border-accent/10 rounded-xs p-2 mb-2">
+              <p class="text-xs text-muted mb-1">所需材料</p>
+              <div v-for="mat in nextSeedBoxUpgrade.materials" :key="mat.itemId" class="flex items-center justify-between">
+                <span class="text-xs text-muted">{{ getItemById(mat.itemId)?.name }}</span>
+                <span class="text-xs" :class="getCombinedItemCount(mat.itemId) >= mat.quantity ? '' : 'text-danger'">
+                  {{ getCombinedItemCount(mat.itemId) }}/{{ mat.quantity }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between mt-0.5">
+                <span class="text-xs text-muted">铜钱</span>
+                <span class="text-xs" :class="playerStore.money >= nextSeedBoxUpgrade.cost ? '' : 'text-danger'">
+                  {{ nextSeedBoxUpgrade.cost }}文
+                </span>
+              </div>
+            </div>
+
+            <!-- 扩容按钮 -->
+            <Button
+              v-if="!showSeedBoxUpgradeConfirm"
+              class="w-full justify-center"
+              :class="{ '!bg-accent !text-bg': canUpgradeSeedBox }"
+              :icon="ArrowUpCircle"
+              :icon-size="12"
+              :disabled="!canUpgradeSeedBox"
+              @click="showSeedBoxUpgradeConfirm = true"
+            >
+              扩容种子箱
+            </Button>
+
+            <!-- 确认 -->
+            <div v-else class="flex space-x-1">
+              <Button class="flex-1 justify-center" @click="showSeedBoxUpgradeConfirm = false">取消</Button>
+              <Button class="flex-1 justify-center !bg-accent !text-bg" :icon="ArrowUpCircle" :icon-size="12" @click="handleSeedBoxUpgrade">
+                确认扩容
+              </Button>
+            </div>
+          </template>
+
+          <p v-else class="text-[10px] text-muted text-center">种子箱已达到最高等级。</p>
+        </div>
+      </div>
+    </Transition>
+
     <!-- 育种选种弹窗 -->
     <Transition name="panel-fade">
       <div
@@ -402,7 +500,7 @@
 
 <script setup lang="ts">
   import { ref, computed } from 'vue'
-  import { FlaskConical, Plus, Check, X, Dna, Trash2, Sprout, PackageOpen, Star, Lock } from 'lucide-vue-next'
+  import { FlaskConical, Plus, Check, X, Dna, Trash2, Sprout, PackageOpen, Star, Lock, ArrowUpCircle } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
   import { useBreedingStore } from '@/stores/useBreedingStore'
   import { useGameStore } from '@/stores/useGameStore'
@@ -411,9 +509,9 @@
   import { getCropById } from '@/data/crops'
   import { getItemById } from '@/data/items'
   import {
-    MAX_BREEDING_BOX,
     MAX_BREEDING_STATIONS,
     BREEDING_STATION_COST,
+    SEED_BOX_UPGRADE_INCREMENT,
     getStarRating,
     getTotalStats,
     HYBRID_DEFS,
@@ -650,6 +748,32 @@
     if (tr.passedOut) {
       void handleEndDay()
     }
+  }
+
+  // === 种子箱升级 ===
+
+  const showSeedBoxUpgradeModal = ref(false)
+  const showSeedBoxUpgradeConfirm = ref(false)
+
+  const nextSeedBoxUpgrade = computed(() => breedingStore.getNextSeedBoxUpgrade())
+
+  const canUpgradeSeedBox = computed(() => {
+    return breedingStore.canUpgradeSeedBox(playerStore.money, (id: string) => getCombinedItemCount(id))
+  })
+
+  const handleSeedBoxUpgrade = () => {
+    const result = breedingStore.upgradeSeedBox(
+      (amount: number) => playerStore.spendMoney(amount),
+      (id: string, qty: number) => removeCombinedItem(id, qty)
+    )
+    addLog(result.message)
+    if (result.success) {
+      const tr = gameStore.advanceTime(ACTION_TIME_COSTS.breeding)
+      if (tr.message) addLog(tr.message)
+      if (tr.passedOut) handleEndDay()
+    }
+    showSeedBoxUpgradeConfirm.value = false
+    showSeedBoxUpgradeModal.value = false
   }
 
   // === 图鉴 ===

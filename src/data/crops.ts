@@ -46,7 +46,10 @@ export const CROPS: CropDef[] = [
     sellPrice: 160,
     seedPrice: 80,
     deepWatering: false,
-    description: '精心培育的好茶，价值不菲。'
+    description: '精心培育的好茶，价值不菲。',
+    regrowth: true,
+    regrowthDays: 4,
+    maxHarvests: 3
   },
   // 夏季
   {
@@ -179,14 +182,14 @@ export const CROPS: CropDef[] = [
   },
   {
     id: 'peach',
-    name: '桃',
+    name: '水蜜桃',
     seedId: 'seed_peach',
     season: ['spring'],
     growthDays: 7,
     sellPrice: 140,
     seedPrice: 45,
     deepWatering: false,
-    description: '鲜美多汁的桃子。',
+    description: '鲜美多汁的水蜜桃。',
     regrowth: true,
     regrowthDays: 3,
     maxHarvests: 4
@@ -229,7 +232,10 @@ export const CROPS: CropDef[] = [
     seedPrice: 28,
     deepWatering: false,
     description: '紫亮的茄子，可形成巨型作物。',
-    giantCropEligible: true
+    giantCropEligible: true,
+    regrowth: true,
+    regrowthDays: 3,
+    maxHarvests: 4
   },
   // 夏季新作物
   {
@@ -848,7 +854,7 @@ export const CROPS: CropDef[] = [
     sellPrice: 185,
     seedPrice: 0,
     deepWatering: false,
-    description: '桃子的甜与菠菜的翠绿交融，果皮碧绿如翠玉。'
+    description: '水蜜桃的甜与菠菜的翠绿交融，果皮碧绿如翠玉。'
   },
   {
     id: 'mustard_bean',
@@ -4924,14 +4930,14 @@ export const CROPS: CropDef[] = [
   },
   {
     id: 'hanhai_date',
-    name: '红枣',
+    name: '椰枣',
     seedId: 'hanhai_date_seed',
     season: ['summer', 'autumn'],
     growthDays: 10,
     sellPrice: 500,
     seedPrice: 0,
     deepWatering: false,
-    description: '丝绸之路带来的果树种子，夏秋可种植。',
+    description: '丝绸之路带来的西域果实，夏秋可种植。',
     regrowth: true,
     regrowthDays: 4,
     maxHarvests: 4
@@ -4943,6 +4949,11 @@ const _CROPS_MAP = new Map<string, CropDef>(CROPS.map(c => [c.id, c]))
 /** 根据ID查找作物 */
 export const getCropById = (id: string): CropDef | undefined => {
   return _CROPS_MAP.get(id)
+}
+
+/** 根据种子ID获取作物定义 */
+export const getCropBySeedId = (seedId: string): CropDef | undefined => {
+  return CROPS.find(c => c.seedId === seedId)
 }
 
 /** 根据季节获取可种作物 */

@@ -14,6 +14,7 @@ import { useAnimalStore } from './useAnimalStore'
 import { useGameStore } from './useGameStore'
 import { useMuseumStore } from './useMuseumStore'
 import { useGuildStore } from './useGuildStore'
+import { useHiddenNpcStore } from './useHiddenNpcStore'
 
 export const useAchievementStore = defineStore('achievement', () => {
   const playerStore = usePlayerStore()
@@ -30,10 +31,10 @@ export const useAchievementStore = defineStore('achievement', () => {
   /** 已完成的成就ID集合 */
   const completedAchievements = ref<string[]>([])
 
-  /** 社区任务已提交物品 */
+  /** 祠堂任务已提交物品 */
   const bundleSubmissions = ref<Record<string, Record<string, number>>>({})
 
-  /** 已完成的社区任务 */
+  /** 已完成的祠堂任务 */
   const completedBundles = ref<string[]>([])
 
   /** 统计计数器 */
@@ -216,6 +217,16 @@ export const useAchievementStore = defineStore('achievement', () => {
         const guildStore = useGuildStore()
         return guildStore.completedGoalCount >= c.count
       }
+      case 'hiddenNpcRevealed': {
+        const hiddenNpcStore = useHiddenNpcStore()
+        return hiddenNpcStore.getRevealedNpcs.length >= c.count
+      }
+      case 'hiddenNpcBonded': {
+        const hiddenNpcStore = useHiddenNpcStore()
+        return hiddenNpcStore.getBondedNpc != null
+      }
+      case 'itemDiscovered':
+        return discoveredItems.value.includes(c.itemId)
     }
   }
 
@@ -243,16 +254,7 @@ export const useAchievementStore = defineStore('achievement', () => {
     return newlyCompleted
   }
 
-  /** 重新验证已完成成就，移除不再满足条件的（修复旧存档中错误授予的成就） */
-  const revalidateAchievements = () => {
-    completedAchievements.value = completedAchievements.value.filter(id => {
-      const achievement = ACHIEVEMENTS.find(a => a.id === id)
-      if (!achievement) return false
-      return isConditionMet(achievement.condition)
-    })
-  }
-
-  // === 社区任务 ===
+  // === 祠堂任务 ===
 
   const submitToBundle = (bundleId: string, itemId: string, quantity: number): boolean => {
     if (completedBundles.value.includes(bundleId)) return false
@@ -309,7 +311,7 @@ export const useAchievementStore = defineStore('achievement', () => {
     const achievementRate = completedAchievements.value.length / ACHIEVEMENTS.length
     // 出货 20%
     const shippingRate = shippableItemCount > 0 ? shopStore.shippedItems.length / shippableItemCount : 0
-    // 社区任务 15%
+    // 祠堂任务 15%
     const bundleRate = COMMUNITY_BUNDLES.length > 0 ? completedBundles.value.length / COMMUNITY_BUNDLES.length : 0
     // 图鉴 15%
     const collectionRate = ITEMS.length > 0 ? discoveredItems.value.length / ITEMS.length : 0
@@ -385,9 +387,6 @@ export const useAchievementStore = defineStore('achievement', () => {
         discoverItem(slot.itemId)
       }
     }
-
-    // 重新验证已完成成就，清理旧存档中错误授予的成就
-    revalidateAchievements()
   }
 
   return {

@@ -2,7 +2,7 @@ import type { EquipmentEffectType } from '@/types'
 
 /** 套装奖励档位 */
 export interface SetBonusLevel {
-  count: 2 | 3
+  count: 2 | 3 | 4
   effects: { type: EquipmentEffectType; value: number }[]
   description: string
 }
@@ -13,6 +13,7 @@ export interface EquipmentSetDef {
   name: string
   description: string
   pieces: {
+    weapon?: string
     ring: string
     hat: string
     shoe: string
@@ -132,10 +133,39 @@ export const EQUIPMENT_SETS: EquipmentSetDef[] = [
         description: '吸血+8%，防御+8%'
       }
     ]
+  },
+
+  // === 公会专属 ===
+  {
+    id: 'guild_champion_set',
+    name: '公会勇士套装',
+    description: '冒险家公会精英战士的专属装备',
+    pieces: { weapon: 'guild_war_blade', ring: 'guild_war_ring', hat: 'guild_war_helm', shoe: 'guild_war_boots' },
+    bonuses: [
+      { count: 2, effects: [{ type: 'attack_bonus', value: 3 }], description: '攻击力+3' },
+      {
+        count: 3,
+        effects: [
+          { type: 'defense_bonus', value: 0.08 },
+          { type: 'max_hp_bonus', value: 20 }
+        ],
+        description: '防御+8%，HP+20'
+      },
+      {
+        count: 4,
+        effects: [
+          { type: 'vampiric', value: 0.08 },
+          { type: 'crit_rate_bonus', value: 0.05 }
+        ],
+        description: '吸血+8%，暴击率+5%'
+      }
+    ]
   }
 ]
 
 /** 根据装备ID查找所属套装 */
 export const getSetByPieceId = (defId: string): EquipmentSetDef | undefined => {
-  return EQUIPMENT_SETS.find(s => s.pieces.ring === defId || s.pieces.hat === defId || s.pieces.shoe === defId)
+  return EQUIPMENT_SETS.find(
+    s => s.pieces.weapon === defId || s.pieces.ring === defId || s.pieces.hat === defId || s.pieces.shoe === defId
+  )
 }

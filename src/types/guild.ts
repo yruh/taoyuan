@@ -11,12 +11,35 @@ export interface MonsterGoalDef {
   description: string
 }
 
+/** 捐献物品定义 */
+export interface GuildDonationDef {
+  itemId: string
+  points: number
+}
+
+/** 公会等级定义 */
+export interface GuildLevelDef {
+  level: number
+  expRequired: number
+}
+
 /** 公会商店物品定义 */
 export interface GuildShopItemDef {
   itemId: string
   name: string
   price: number
+  contributionCost?: number
   description: string
-  /** 解锁条件：需完成指定数量的讨伐目标 */
-  unlockGoalCount?: number
+  /** 解锁所需公会等级 */
+  unlockGuildLevel?: number
+  /** 每日限购数 */
+  dailyLimit?: number
+  /** 每周限购数 */
+  weeklyLimit?: number
+  /** 永久总购买上限 */
+  totalLimit?: number
+  /** 装备类型（购买后加入对应装备栏） */
+  equipType?: 'weapon' | 'ring' | 'hat' | 'shoe'
+  /** 合成材料 */
+  materials?: { itemId: string; quantity: number }[]
 }

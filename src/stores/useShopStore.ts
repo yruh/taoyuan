@@ -7,11 +7,12 @@ import { useSkillStore } from './useSkillStore'
 import { useWalletStore } from './useWalletStore'
 import { getCropsBySeason, getItemById } from '@/data'
 import { BAITS, TACKLES, FERTILIZERS } from '@/data/processing'
-import { isTravelingMerchantDay, generateMerchantStock } from '@/data/travelingMerchant'
+import { isTravelingMerchantDay, generateMerchantStock, TRAVELING_MERCHANT_POOL } from '@/data/travelingMerchant'
 import { getMarketMultiplier } from '@/data/market'
 import type { MarketCategory } from '@/data/market'
 import type { TravelingMerchantStock } from '@/data/travelingMerchant'
 import type { Quality } from '@/types'
+import { useHiddenNpcStore } from './useHiddenNpcStore'
 
 /** 商铺商品项 */
 export interface ShopItemEntry {
@@ -39,7 +40,9 @@ export const useShopStore = defineStore('shop', () => {
     const walletStore = useWalletStore()
     const discount = walletStore.getShopDiscount()
     const ringDiscount = inventoryStore.getRingEffectValue('shop_discount')
-    return Math.floor(price * (1 - discount) * (1 - ringDiscount))
+    // 仙缘能力：狐眼（hu_xian_1）商店价格降低
+    const spiritDiscount = useHiddenNpcStore().getAbilityValue('hu_xian_1') / 100
+    return Math.floor(price * (1 - discount) * (1 - ringDiscount) * (1 - spiritDiscount))
   }
 
   // === 万物铺 (陈伯) ===
@@ -55,7 +58,8 @@ export const useShopStore = defineStore('shop', () => {
         growthDays: crop.growthDays,
         sellPrice: crop.sellPrice,
         regrowth: crop.regrowth ?? false,
-        regrowthDays: crop.regrowthDays
+        regrowthDays: crop.regrowthDays,
+        season: crop.season
       }))
   })
 
@@ -183,7 +187,11 @@ export const useShopStore = defineStore('shop', () => {
     if (itemDef.category === 'fish' && gameStore.farmMapType === 'riverland') bonus *= 1.1
     if (itemDef.category === 'ore' && skillStore.getSkill('mining').perk10 === 'blacksmith') bonus *= 1.5
     const ringSelBonus = inventoryStore.getRingEffectValue('sell_price_bonus')
-    return Math.floor(itemDef.sellPrice * quantity * qualityMultiplier[quality] * bonus * (1 + ringSelBonus))
+    // 仙缘结缘：狐仙出售加成
+    const hiddenNpcStore = useHiddenNpcStore()
+    const sellBonusData = hiddenNpcStore.getBondBonusByType('sell_bonus')
+    const spiritSellBonus = sellBonusData?.type === 'sell_bonus' ? sellBonusData.percent / 100 : 0
+    return Math.floor(itemDef.sellPrice * quantity * qualityMultiplier[quality] * bonus * (1 + ringSelBonus) * (1 + spiritSellBonus))
   }
 
   /** 计算物品售价（不执行出售，用于估价） */
@@ -219,6 +227,23 @@ export const useShopStore = defineStore('shop', () => {
     const key = `${gameStore.year}_${gameStore.seasonIndex}_${gameStore.day}`
     if (travelingStockKey.value === key) return
     travelingStock.value = generateMerchantStock(gameStore.year, gameStore.seasonIndex, gameStore.day, gameStore.season)
+    // 仙缘能力：狐运（hu_xian_3）旅行商人多1件稀有品
+    if (useHiddenNpcStore().isAbilityActive('hu_xian_3')) {
+      const existingIds = new Set(travelingStock.value.map(s => s.itemId))
+      const available = TRAVELING_MERCHANT_POOL.filter(p => !existingIds.has(p.itemId))
+      if (available.length > 0) {
+        const pick = available[Math.floor(Math.random() * available.length)]!
+        const def = getItemById(pick.itemId)
+        let price = pick.basePrice
+        if (def && def.sellPrice > 0) price = Math.max(price, def.sellPrice * 2)
+        travelingStock.value.push({
+          itemId: pick.itemId,
+          name: pick.name,
+          price,
+          quantity: 1
+        })
+      }
+    }
     travelingStockKey.value = key
   }
 

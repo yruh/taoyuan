@@ -411,10 +411,21 @@ export const WEAPONS: Record<string, WeaponDef> = {
     shopPrice: null,
     shopMaterials: [],
     fixedEnchantment: null
+  },
+
+  // === 公会专属 ===
+  guild_war_blade: {
+    id: 'guild_war_blade',
+    name: '公会战刃',
+    type: 'sword',
+    attack: 36,
+    critRate: 0.1,
+    description: '冒险家公会为精英成员锻造的佩剑，剑身刻有公会徽记。',
+    shopPrice: null,
+    shopMaterials: [],
+    fixedEnchantment: null
   }
 }
-
-/** 可在商店购买的武器列表 */
 export const SHOP_WEAPONS: WeaponDef[] = Object.values(WEAPONS).filter(w => w.shopPrice !== null)
 
 /** 各区域怪物可掉落的武器 ID */

@@ -28,6 +28,9 @@ export type AchievementCondition =
   | { type: 'hybridsShipped'; count: number }
   | { type: 'museumDonations'; count: number }
   | { type: 'guildGoalsCompleted'; count: number }
+  | { type: 'hiddenNpcRevealed'; count: number }
+  | { type: 'hiddenNpcBonded' }
+  | { type: 'itemDiscovered'; itemId: string }
 
 /** 成就定义 */
 export interface AchievementDef {
@@ -41,7 +44,7 @@ export interface AchievementDef {
   }
 }
 
-/** 社区任务定义 */
+/** 祠堂任务定义 */
 export interface CommunityBundleDef {
   id: string
   name: string

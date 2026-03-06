@@ -41,9 +41,9 @@
           </div>
           <span class="text-xs whitespace-nowrap">{{ playerStore.hp }}/{{ playerStore.getMaxHp() }}</span>
         </div>
-        <!-- 金币 -->
+        <!-- 铜钱 -->
         <div class="flex items-center justify-between">
-          <span class="text-xs text-muted">金币</span>
+          <span class="text-xs text-muted">铜钱</span>
           <span class="text-xs text-accent">{{ playerStore.money }}文</span>
         </div>
       </div>
@@ -110,7 +110,7 @@
               <div
                 v-for="(weapon, index) in inventoryStore.ownedWeapons"
                 :key="index"
-                class="flex items-center justify-between border rounded-xs px-2 py-1.5 cursor-pointer hover:bg-accent/5"
+                class="flex items-center justify-between border rounded-xs px-2 py-1.5 cursor-pointer hover:bg-accent/5 mr-1"
                 :class="index === inventoryStore.equippedWeaponIndex ? 'border-accent/30' : 'border-accent/10'"
                 @click="handleEquipWeapon(index)"
               >
@@ -135,7 +135,7 @@
               <!-- 卸下按钮 -->
               <div
                 v-if="(activeSlot === 'ring1' ? inventoryStore.equippedRingSlot1 : inventoryStore.equippedRingSlot2) >= 0"
-                class="flex items-center border border-danger/20 rounded-xs px-2 py-1.5 cursor-pointer hover:bg-danger/5"
+                class="flex items-center border border-danger/20 rounded-xs px-2 py-1.5 cursor-pointer hover:bg-danger/5 mr-1"
                 @click="handleUnequipRingFromPopup"
               >
                 <span class="text-xs text-danger">卸下当前戒指</span>
@@ -145,7 +145,7 @@
                 <div
                   v-for="(ring, idx) in ownedRingList"
                   :key="idx"
-                  class="flex items-center justify-between border rounded-xs px-2 py-1.5 cursor-pointer hover:bg-accent/5"
+                  class="flex items-center justify-between border rounded-xs px-2 py-1.5 cursor-pointer hover:bg-accent/5 mr-1"
                   :class="isRingInCurrentSlot(idx) ? 'border-accent/30' : 'border-accent/10'"
                   @click="handleEquipRingFromPopup(idx)"
                 >
@@ -169,7 +169,7 @@
             <div class="flex flex-col space-y-1 max-h-60 overflow-y-auto">
               <div
                 v-if="inventoryStore.equippedHatIndex >= 0"
-                class="flex items-center border border-danger/20 rounded-xs px-2 py-1.5 cursor-pointer hover:bg-danger/5"
+                class="flex items-center border border-danger/20 rounded-xs px-2 py-1.5 cursor-pointer hover:bg-danger/5 mr-1"
                 @click="handleUnequipHatFromPopup"
               >
                 <span class="text-xs text-danger">卸下当前帽子</span>
@@ -178,7 +178,7 @@
                 <div
                   v-for="hat in ownedHatList"
                   :key="hat.index"
-                  class="flex items-center justify-between border rounded-xs px-2 py-1.5 cursor-pointer hover:bg-accent/5"
+                  class="flex items-center justify-between border rounded-xs px-2 py-1.5 cursor-pointer hover:bg-accent/5 mr-1"
                   :class="hat.index === inventoryStore.equippedHatIndex ? 'border-accent/30' : 'border-accent/10'"
                   @click="handleEquipHatFromPopup(hat.index)"
                 >
@@ -199,7 +199,7 @@
             <div class="flex flex-col space-y-1 max-h-60 overflow-y-auto">
               <div
                 v-if="inventoryStore.equippedShoeIndex >= 0"
-                class="flex items-center border border-danger/20 rounded-xs px-2 py-1.5 cursor-pointer hover:bg-danger/5"
+                class="flex items-center border border-danger/20 rounded-xs px-2 py-1.5 cursor-pointer hover:bg-danger/5 mr-1"
                 @click="handleUnequipShoeFromPopup"
               >
                 <span class="text-xs text-danger">卸下当前鞋子</span>
@@ -208,7 +208,7 @@
                 <div
                   v-for="shoe in ownedShoeList"
                   :key="shoe.index"
-                  class="flex items-center justify-between border rounded-xs px-2 py-1.5 cursor-pointer hover:bg-accent/5"
+                  class="flex items-center justify-between border rounded-xs px-2 py-1.5 cursor-pointer hover:bg-accent/5 mr-1"
                   :class="shoe.index === inventoryStore.equippedShoeIndex ? 'border-accent/30' : 'border-accent/10'"
                   @click="handleEquipShoeFromPopup(shoe.index)"
                 >

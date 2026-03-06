@@ -1,10 +1,13 @@
 import { ref } from 'vue'
 import type { HeartEventDef, SkillType, SkillPerk5, SkillPerk10 } from '@/types'
+import type { DiscoveryStep } from '@/types/hiddenNpc'
 import type { SeasonEventDef } from '@/data/events'
 import type { MorningChoiceEvent } from '@/data/farmEvents'
 import { WEDDING_EVENT } from '@/data/heartEvents'
+import { HIDDEN_NPCS } from '@/data/hiddenNpcs'
 import { useGameStore } from '@/stores/useGameStore'
 import { useNpcStore } from '@/stores/useNpcStore'
+import { useHiddenNpcStore } from '@/stores/useHiddenNpcStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useSkillStore } from '@/stores/useSkillStore'
 import { addLog, showFloat, _registerPerkChecker } from './useGameLog'
@@ -61,18 +64,31 @@ export const handlePerkSelect = (perk: SkillPerk5 | SkillPerk10) => {
   pendingPerk.value = null
 }
 
-/** 触发心事件（由 NpcView 调用） */
+/** 判断是否为隐藏NPC */
+const isHiddenNpcId = (npcId: string): boolean => HIDDEN_NPCS.some(n => n.id === npcId)
+
+/** 触发心事件（由 NpcView / HiddenNpcModal 调用） */
 export const triggerHeartEvent = (event: HeartEventDef) => {
-  const npcStore = useNpcStore()
-  npcStore.markHeartEventTriggered(event.npcId, event.id)
+  if (isHiddenNpcId(event.npcId)) {
+    const hiddenNpcStore = useHiddenNpcStore()
+    hiddenNpcStore.markHeartEventTriggered(event.npcId, event.id)
+  } else {
+    const npcStore = useNpcStore()
+    npcStore.markHeartEventTriggered(event.npcId, event.id)
+  }
   pendingHeartEvent.value = event
 }
 
 /** 关闭心事件对话框并应用友好度变化 */
 export const closeHeartEvent = (changes: { npcId: string; amount: number }[]) => {
-  const npcStore = useNpcStore()
   for (const change of changes) {
-    npcStore.adjustFriendship(change.npcId, change.amount)
+    if (isHiddenNpcId(change.npcId)) {
+      const hiddenNpcStore = useHiddenNpcStore()
+      hiddenNpcStore.addAffinity(change.npcId, change.amount)
+    } else {
+      const npcStore = useNpcStore()
+      npcStore.adjustFriendship(change.npcId, change.amount)
+    }
     if (change.amount > 0) {
       addLog(`好感度+${change.amount}`)
     } else if (change.amount < 0) {
@@ -163,6 +179,25 @@ export const closeFarmEvent = () => {
   pendingFarmEvent.value = null
 }
 
+/** 仙灵发现场景弹窗队列 */
+const pendingDiscoveryScenes = ref<{ npcId: string; step: DiscoveryStep }[]>([])
+
+/** 当前显示的发现场景（队列头部） */
+const pendingDiscoveryScene = ref<{ npcId: string; step: DiscoveryStep } | null>(null)
+
+/** 添加仙灵发现场景到队列 */
+export const showDiscoveryScene = (npcId: string, step: DiscoveryStep) => {
+  pendingDiscoveryScenes.value.push({ npcId, step })
+  if (!pendingDiscoveryScene.value) {
+    pendingDiscoveryScene.value = pendingDiscoveryScenes.value.shift() ?? null
+  }
+}
+
+/** 关闭当前仙灵发现场景，显示队列中的下一个 */
+export const closeDiscoveryScene = () => {
+  pendingDiscoveryScene.value = pendingDiscoveryScenes.value.shift() ?? null
+}
+
 export const useDialogs = () => {
   return {
     currentEvent,
@@ -186,6 +221,9 @@ export const useDialogs = () => {
     closeChildProposal,
     pendingFarmEvent,
     showFarmEvent,
-    closeFarmEvent
+    closeFarmEvent,
+    pendingDiscoveryScene,
+    showDiscoveryScene,
+    closeDiscoveryScene
   }
 }

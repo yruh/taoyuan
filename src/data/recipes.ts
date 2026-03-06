@@ -1661,7 +1661,7 @@ export const RECIPES: RecipeDef[] = [
       healthRestore: 20,
       buff: { type: 'farming', value: 2, description: '种植技能+2（当天）' }
     },
-    unlockSource: '收获红枣后解锁',
+    unlockSource: '收获椰枣后解锁',
     description: '甜蜜软糯的枣糕，补气养血。'
   }
 ]

@@ -1,5 +1,5 @@
 /** 博物馆物品分类 */
-export type MuseumCategory = 'ore' | 'gem' | 'bar' | 'fossil' | 'artifact'
+export type MuseumCategory = 'ore' | 'gem' | 'bar' | 'fossil' | 'artifact' | 'spirit'
 
 /** 博物馆可捐赠物品定义 */
 export interface MuseumItemDef {

@@ -39,14 +39,23 @@
           <div
             v-for="item in HANHAI_SHOP_ITEMS"
             :key="item.itemId"
-            class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-2 cursor-pointer hover:bg-accent/5 transition-colors"
+            class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-2 cursor-pointer hover:bg-accent/5 transition-colors mr-1"
             @click="shopModalItem = item"
           >
             <div class="flex-1 min-w-0">
               <p class="text-xs truncate">{{ item.name }}</p>
               <p class="text-xs text-muted truncate">{{ item.description }}</p>
             </div>
-            <span class="text-xs text-accent ml-2 shrink-0">{{ item.price }}文</span>
+            <div class="flex flex-col items-end ml-2 shrink-0">
+              <span class="text-xs text-accent">{{ item.price }}文</span>
+              <span
+                v-if="item.weeklyLimit"
+                class="text-[10px]"
+                :class="hanhaiStore.getWeeklyRemaining(item.itemId) > 0 ? 'text-muted' : 'text-danger'"
+              >
+                限购 {{ hanhaiStore.getWeeklyRemaining(item.itemId) }}/{{ item.weeklyLimit }}
+              </span>
+            </div>
           </div>
         </div>
         <!-- 藏宝图寻宝 -->
@@ -249,14 +258,20 @@
               <span class="text-xs text-muted">持有</span>
               <span class="text-xs">{{ playerStore.money }}文</span>
             </div>
+            <div v-if="shopModalItem.weeklyLimit" class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">本周限购</span>
+              <span class="text-xs" :class="hanhaiStore.getWeeklyRemaining(shopModalItem.itemId) > 0 ? '' : 'text-danger'">
+                剩余 {{ hanhaiStore.getWeeklyRemaining(shopModalItem.itemId) }}/{{ shopModalItem.weeklyLimit }}
+              </span>
+            </div>
           </div>
 
           <Button
             class="w-full justify-center !bg-accent !text-bg"
-            :disabled="playerStore.money < shopModalItem.price"
+            :disabled="playerStore.money < shopModalItem.price || hanhaiStore.getWeeklyRemaining(shopModalItem.itemId) <= 0"
             @click="handleBuyItem(shopModalItem.itemId)"
           >
-            购买
+            {{ hanhaiStore.getWeeklyRemaining(shopModalItem.itemId) <= 0 ? '本周已售罄' : '购买' }}
           </Button>
         </div>
       </div>

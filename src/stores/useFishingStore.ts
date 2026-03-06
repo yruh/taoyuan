@@ -24,6 +24,7 @@ import { useQuestStore } from './useQuestStore'
 import { useCookingStore } from './useCookingStore'
 import { useWalletStore } from './useWalletStore'
 import { useSecretNoteStore } from './useSecretNoteStore'
+import { useHiddenNpcStore } from './useHiddenNpcStore'
 
 const STAMINA_COST = 4
 const MAX_CRAB_POTS = 10
@@ -305,15 +306,20 @@ export const useFishingStore = defineStore('fishing', () => {
     // 定向鱼饵权重倍率
     const hardMult = activeBaitDef.value?.hardWeightMult ?? 1
     const legendaryMult = activeBaitDef.value?.legendaryWeightMult ?? 1
+    // 仙缘：龙瞳（long_ling_3）传说鱼捕获率+20%，鱼引结缘提升稀有鱼概率
+    const hiddenNpcStore = useHiddenNpcStore()
+    const legendaryBoost = 1 + hiddenNpcStore.getAbilityValue('long_ling_3') / 100
+    const bondBonus = hiddenNpcStore.getBondBonusByType('fish_attraction')
+    const fishAttractionMult = bondBonus?.type === 'fish_attraction' ? 1.5 : 1
     const weights: number[] = fishPool.map(f => {
       if (f.difficulty === 'legendary') {
         const minLevel = hasAngler ? 6 : 8
         if (rodTier === 'basic' || effectiveLevel < minLevel) return 0
-        return (hasAngler ? 1.5 : 0.5) * (1 + luckBuff) * legendaryMult
+        return (hasAngler ? 1.5 : 0.5) * (1 + luckBuff) * legendaryMult * legendaryBoost
       }
       if (f.difficulty === 'hard') {
         if (rodTier === 'basic' && effectiveLevel < 4) return 0
-        return (rodTier === 'basic' ? 0.5 : 1) * (1 + luckBuff) * hardMult
+        return (rodTier === 'basic' ? 0.5 : 1) * (1 + luckBuff) * hardMult * fishAttractionMult
       }
       if (f.difficulty === 'easy') return 3
       if (f.difficulty === 'normal') return 2
@@ -329,14 +335,14 @@ export const useFishingStore = defineStore('fishing', () => {
   }
 
   /** 完成钓鱼（小游戏结束后调用） */
-  const completeFishing = (rating: MiniGameRating): { message: string } | null => {
+  const completeFishing = (rating: MiniGameRating): { message: string; fishName?: string; fishId?: string; difficulty?: string; sellPrice?: number; description?: string; quality?: Quality; quantity?: number; success: boolean } | null => {
     if (!currentFish.value) return null
 
     // poor = 鱼跑了
     if (rating === 'poor') {
-      const fishName = currentFish.value.name
+      const fish = currentFish.value
       endFishing()
-      return { message: `鱼跑掉了……${fishName}逃脱了！` }
+      return { message: `鱼跑掉了……${fish.name}逃脱了！`, fishName: fish.name, fishId: fish.id, difficulty: fish.difficulty, sellPrice: fish.sellPrice, description: fish.description, success: false }
     }
 
     // 品质计算
@@ -378,10 +384,19 @@ export const useFishingStore = defineStore('fishing', () => {
       }
     }
 
+    // 仙缘能力：龙泽（long_ling_1）瀑布钓鱼品质+1
+    if (fishingLocation.value === 'waterfall' && useHiddenNpcStore().isAbilityActive('long_ling_1')) {
+      const idx = qualityOrder.indexOf(quality)
+      if (idx < qualityOrder.length - 1) {
+        quality = qualityOrder[idx + 1]!
+      }
+    }
+
     // 野生鱼饵：概率双倍（诱饵师专精翻倍）
     const luremasterCatchMult = skillStore.getSkill('fishing').perk10 === 'luremaster' ? 2 : 1
     const doubleCatchChance = (activeBaitDef.value?.doubleCatchChance ?? 0) * luremasterCatchMult
     const catchQty = doubleCatchChance > 0 && Math.random() < doubleCatchChance ? 2 : 1
+    const caughtFish = { name: currentFish.value.name, id: currentFish.value.id, difficulty: currentFish.value.difficulty, sellPrice: currentFish.value.sellPrice, description: currentFish.value.description }
 
     const added = inventoryStore.addItem(currentFish.value.id, catchQty, quality)
     const achievementStore = useAchievementStore()
@@ -426,7 +441,7 @@ export const useFishingStore = defineStore('fishing', () => {
 
     lastPerfect.value = rating === 'perfect'
     endFishing()
-    return { message }
+    return { message, fishName: caughtFish.name, fishId: caughtFish.id, difficulty: caughtFish.difficulty, sellPrice: caughtFish.sellPrice, description: caughtFish.description, quality, quantity: catchQty, success: true }
   }
 
   /** 钓鱼宝箱 */

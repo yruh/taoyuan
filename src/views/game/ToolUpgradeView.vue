@@ -8,7 +8,7 @@
       </div>
       <span class="text-xs text-muted">铁匠·小满</span>
     </div>
-    <p class="text-xs text-muted mb-3">消耗金属锭和金币升级工具，需等待2天。</p>
+    <p class="text-xs text-muted mb-3">消耗金属锭和铜钱升级工具，需等待2天。</p>
 
     <!-- 正在升级提示 -->
     <div v-if="inventoryStore.pendingUpgrade" class="border border-accent/30 rounded-xs px-3 py-2 mb-3 flex items-center justify-between">
@@ -98,7 +98,7 @@
             <div class="border border-accent/10 rounded-xs p-2 mb-2">
               <p class="text-xs text-muted mb-1">升级至 {{ TIER_NAMES[selectedUpgradeCost.toTier] }}</p>
               <div class="flex items-center justify-between">
-                <span class="text-xs text-muted">金币</span>
+                <span class="text-xs text-muted">铜钱</span>
                 <span class="text-xs" :class="playerStore.money >= selectedUpgradeCost.money ? '' : 'text-danger'">
                   {{ selectedUpgradeCost.money }}文
                 </span>
@@ -167,7 +167,7 @@
 
           <!-- 满级 -->
           <div v-else-if="!isUpgrading(selectedTool)" class="border border-success/30 rounded-xs p-2">
-            <div class="flex items-center space-x-1">
+            <div class="flex items-center justify-center space-x-1">
               <CircleCheck :size="12" class="text-success" />
               <span class="text-xs text-success">已达到最高等级</span>
             </div>
@@ -280,7 +280,7 @@
       return `需要小满好感达到「${LEVEL_NAMES[requiredLevel]}」`
     }
 
-    if (playerStore.money < cost.money) return '金币不足'
+    if (playerStore.money < cost.money) return '铜钱不足'
     for (const mat of cost.materials) {
       if (getCombinedItemCount(mat.itemId) < mat.quantity) {
         const itemName = getItemById(mat.itemId)?.name ?? mat.itemId

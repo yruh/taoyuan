@@ -49,6 +49,7 @@ export interface InventoryItem {
   itemId: string
   quantity: number
   quality: Quality
+  locked?: boolean
 }
 
 /** 工具等级 */

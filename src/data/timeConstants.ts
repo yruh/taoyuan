@@ -117,6 +117,20 @@ export const ACTION_TIME_COSTS = {
   collectFishProducts: 0.17
 } as const
 
+/** 工具等级对行动时间的减免（分钟） */
+export const TOOL_TIME_SAVINGS: Record<string, number> = {
+  basic: 0,
+  iron: 10,
+  steel: 20,
+  iridium: 30
+}
+
+/** 技能等级每级减免行动时间的比例 */
+export const SKILL_TIME_REDUCTION_PER_LEVEL = 0.02
+
+/** 行动最低时间（分钟） */
+export const MIN_ACTION_MINUTES = 10
+
 // === 地点分组映射 ===
 export const TAB_TO_LOCATION_GROUP: Record<string, LocationGroup | null> = {
   farm: 'farm',

@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { RecipeDef } from '@/types'
+import type { RecipeDef, Quality } from '@/types'
 import { getRecipeById } from '@/data'
 import { useInventoryStore } from './useInventoryStore'
 import { usePlayerStore } from './usePlayerStore'
@@ -8,7 +8,12 @@ import { useSkillStore } from './useSkillStore'
 import { useAchievementStore } from './useAchievementStore'
 import { useWalletStore } from './useWalletStore'
 import { useHomeStore } from './useHomeStore'
-import { getCombinedItemCount, removeCombinedItem } from '@/composables/useCombinedInventory'
+import { useHiddenNpcStore } from './useHiddenNpcStore'
+import { getCombinedItemCount, removeCombinedItem, getLowestCombinedQuality } from '@/composables/useCombinedInventory'
+
+const QUALITY_ORDER: Quality[] = ['normal', 'fine', 'excellent', 'supreme']
+const QUALITY_MULTIPLIER: Record<Quality, number> = { normal: 1, fine: 1.25, excellent: 1.5, supreme: 2 }
+const QUALITY_LABEL: Record<Quality, string> = { normal: '', fine: '优良', excellent: '精品', supreme: '极品' }
 
 export const useCookingStore = defineStore('cooking', () => {
   const inventoryStore = useInventoryStore()
@@ -54,52 +59,105 @@ export const useCookingStore = defineStore('cooking', () => {
     return recipe.ingredients.every(ing => getCombinedItemCount(ing.itemId) >= ing.quantity)
   }
 
+  /** 计算最多能烹饪几份 */
+  const maxCookable = (recipeId: string): number => {
+    const recipe = getRecipeById(recipeId)
+    if (!recipe) return 0
+    if (!unlockedRecipes.value.includes(recipeId)) return 0
+    if (recipe.requiredSkill) {
+      const skill = skillStore.getSkill(recipe.requiredSkill.type)
+      if (skill.level < recipe.requiredSkill.level) return 0
+    }
+    let max = Infinity
+    for (const ing of recipe.ingredients) {
+      const available = getCombinedItemCount(ing.itemId)
+      max = Math.min(max, Math.floor(available / ing.quantity))
+    }
+    return max === Infinity ? 0 : max
+  }
+
+  /** 预览烹饪品质（取所有材料最低品质） */
+  const previewCookQuality = (recipeId: string): Quality => {
+    const recipe = getRecipeById(recipeId)
+    if (!recipe) return 'normal'
+    let minIdx = 3
+    for (const ing of recipe.ingredients) {
+      const q = getLowestCombinedQuality(ing.itemId)
+      const idx = QUALITY_ORDER.indexOf(q)
+      if (idx < minIdx) minIdx = idx
+    }
+    return QUALITY_ORDER[minIdx]!
+  }
+
   /** 烹饪 */
-  const cook = (recipeId: string): { success: boolean; message: string } => {
+  const cook = (recipeId: string, quantity: number = 1): { success: boolean; message: string } => {
     const recipe = getRecipeById(recipeId)
     if (!recipe) return { success: false, message: '食谱不存在。' }
     if (!unlockedRecipes.value.includes(recipeId)) return { success: false, message: '尚未解锁此食谱。' }
 
-    // 检查材料
+    // 计算最多能做几份
+    let maxPossible = quantity
     for (const ing of recipe.ingredients) {
-      if (getCombinedItemCount(ing.itemId) < ing.quantity) {
-        return { success: false, message: '材料不足。' }
-      }
+      const available = getCombinedItemCount(ing.itemId)
+      maxPossible = Math.min(maxPossible, Math.floor(available / ing.quantity))
     }
+    if (maxPossible <= 0) return { success: false, message: '材料不足。' }
 
-    // 消耗材料
+    // 计算品质（取所有材料中最低品质）
+    let minQualityIndex = 3
     for (const ing of recipe.ingredients) {
-      removeCombinedItem(ing.itemId, ing.quantity)
+      const quality = getLowestCombinedQuality(ing.itemId)
+      const idx = QUALITY_ORDER.indexOf(quality)
+      if (idx < minQualityIndex) minQualityIndex = idx
+    }
+    const resultQuality = QUALITY_ORDER[minQualityIndex]!
+
+    // 批量消耗材料
+    for (const ing of recipe.ingredients) {
+      removeCombinedItem(ing.itemId, ing.quantity * maxPossible)
     }
 
     // 添加食物到背包
-    inventoryStore.addItem(`food_${recipe.id}`)
-    useAchievementStore().recordRecipeCooked()
-    return { success: true, message: `烹饪了${recipe.name}！` }
+    inventoryStore.addItem(`food_${recipe.id}`, maxPossible, resultQuality)
+    for (let i = 0; i < maxPossible; i++) {
+      useAchievementStore().recordRecipeCooked()
+    }
+    const qualityTag = QUALITY_LABEL[resultQuality] ? `【${QUALITY_LABEL[resultQuality]}】` : ''
+    const qtyTag = maxPossible > 1 ? `${maxPossible}份` : ''
+    return { success: true, message: `烹饪了${qtyTag}${qualityTag}${recipe.name}！` }
   }
 
   /** 食用烹饪品 */
-  const eat = (recipeId: string): { success: boolean; message: string } => {
+  const eat = (recipeId: string, quality: Quality = 'normal'): { success: boolean; message: string } => {
     const foodItemId = `food_${recipeId}`
-    if (!inventoryStore.removeItem(foodItemId)) {
+    if (!inventoryStore.removeItem(foodItemId, 1, quality)) {
       return { success: false, message: '背包中没有这个食物。' }
     }
 
     const recipe = getRecipeById(recipeId)
     if (!recipe) return { success: false, message: '食谱数据丢失。' }
 
+    // 品质加成
+    const qualityBonus = QUALITY_MULTIPLIER[quality]
     // 炼金师专精：食物恢复+50%
     const walletStore = useWalletStore()
     const homeStore = useHomeStore()
     const chefBonus = 1 + walletStore.getCookingRestoreBonus()
     const alchemistBonus = skillStore.getSkill('foraging').perk10 === 'alchemist' ? 1.5 : 1.0
     const kitchenBonus = homeStore.getKitchenBonus()
-    const staminaRestore = Math.floor(recipe.effect.staminaRestore * alchemistBonus * chefBonus * kitchenBonus)
+    // 仙缘能力：月膳（yue_tu_2）食物恢复+50%
+    const moonRabbitBonus = useHiddenNpcStore().isAbilityActive('yue_tu_2') ? 1.5 : 1.0
+    const staminaRestore = Math.floor(
+      recipe.effect.staminaRestore * qualityBonus * alchemistBonus * chefBonus * kitchenBonus * moonRabbitBonus
+    )
     playerStore.restoreStamina(staminaRestore)
-    let msg = `食用了${recipe.name}，恢复${staminaRestore}体力`
+    const qualityTag = QUALITY_LABEL[quality] ? `【${QUALITY_LABEL[quality]}】` : ''
+    let msg = `食用了${qualityTag}${recipe.name}，恢复${staminaRestore}体力`
 
     if (recipe.effect.healthRestore) {
-      const healthRestore = Math.floor(recipe.effect.healthRestore * alchemistBonus * chefBonus * kitchenBonus)
+      const healthRestore = Math.floor(
+        recipe.effect.healthRestore * qualityBonus * alchemistBonus * chefBonus * kitchenBonus * moonRabbitBonus
+      )
       playerStore.restoreHealth(healthRestore)
       msg += `、${healthRestore}生命值`
     }
@@ -145,6 +203,8 @@ export const useCookingStore = defineStore('cooking', () => {
     activeBuff,
     recipes,
     canCook,
+    maxCookable,
+    previewCookQuality,
     cook,
     eat,
     unlockRecipe,

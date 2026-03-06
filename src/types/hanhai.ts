@@ -4,6 +4,8 @@ export interface HanhaiShopItemDef {
   name: string
   price: number
   description: string
+  /** 每周限购数量（0或不填=不限购） */
+  weeklyLimit?: number
 }
 
 /** 赌坊游戏类型 */

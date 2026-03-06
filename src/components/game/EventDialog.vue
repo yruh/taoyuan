@@ -12,9 +12,9 @@
           {{ line }}
         </p>
       </div>
-      <div class="flex justify-end">
-        <Button v-if="!allLinesShown" @click="showNextLine">继续</Button>
-        <Button v-else @click="emit('close')">关闭</Button>
+      <div class="flex justify-center">
+        <Button v-if="!allLinesShown" class="w-full" @click="showNextLine">继续</Button>
+        <Button v-else class="w-full" @click="emit('close')">关闭</Button>
       </div>
     </div>
   </div>

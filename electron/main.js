@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } from 'electron'
+import { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, session } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import pkg from '../package.json'
@@ -169,6 +169,18 @@ const createWindow = () => {
 
   createAppMenu()
   win.loadFile(path.join(docsPath, 'index.html'))
+
+  // WebDAV CORS 绕过：对所有非同源请求注入 CORS 响应头
+  win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    const headers = { ...details.responseHeaders }
+    headers['access-control-allow-origin'] = ['*']
+    headers['access-control-allow-methods'] = ['GET, PUT, DELETE, PROPFIND, HEAD, OPTIONS']
+    headers['access-control-allow-headers'] = ['Authorization, Content-Type, Depth']
+    // 剥离 WWW-Authenticate 防止浏览器弹出原生认证对话框（由应用自行处理认证错误）
+    delete headers['www-authenticate']
+    delete headers['WWW-Authenticate']
+    callback({ responseHeaders: headers })
+  })
 
   // 窗口关闭事件
   win.on('close', e => {

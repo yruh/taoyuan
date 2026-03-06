@@ -14,6 +14,8 @@ const TICK_MS = 200
 const gameSpeed = ref(1)
 const isPaused = ref(true)
 let timerId: ReturnType<typeof setInterval> | null = null
+/** 页面隐藏前时钟是否在运行（用于恢复） */
+let wasRunningBeforeHidden = false
 
 /** 每个 tick 推进的游戏小时数 */
 const getHoursPerTick = (): number => {
@@ -36,6 +38,8 @@ const tick = () => {
     isPaused.value = true
     addLog('已经凌晨2点了，你撑不住倒下了……')
     void handleEndDay()
+    // 新一天开始后恢复时钟（如果 handleEndDay 触发了弹窗，GameLayout 的 watcher 会自动暂停）
+    isPaused.value = false
     return
   }
 
@@ -102,3 +106,14 @@ export const useGameClock = () => {
     togglePause
   }
 }
+
+// === 页面可见性处理（切标签页时暂停时钟，防止后台累积时间跳跃） ===
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    wasRunningBeforeHidden = !isPaused.value
+    if (!isPaused.value) isPaused.value = true
+  } else {
+    if (wasRunningBeforeHidden) isPaused.value = false
+    wasRunningBeforeHidden = false
+  }
+})

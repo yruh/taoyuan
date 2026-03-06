@@ -178,17 +178,22 @@
             </div>
           </div>
           <p class="text-[10px] text-muted mb-0.5">{{ CHILD_STAGE_NAMES[child.stage] }} · {{ child.daysOld }}天</p>
-          <div v-if="child.stage !== 'baby'" class="flex space-x-0.5">
-            <span v-for="h in 10" :key="h" class="text-xs" :class="child.friendship >= h * 30 ? 'text-danger' : 'text-muted/30'">
-              &#x2665;
-            </span>
+          <div v-if="child.stage !== 'baby'" class="flex items-center space-x-0.5">
+            <Heart
+              v-for="h in 10"
+              :key="h"
+              :size="10"
+              class="flex-shrink-0"
+              :class="child.friendship >= h * 30 ? 'text-danger' : 'text-muted/30'"
+              :fill="child.friendship >= h * 30 ? 'currentColor' : 'none'"
+            />
           </div>
         </div>
       </div>
       <!-- 送走子女确认 -->
       <div v-if="releaseConfirmChildId !== null" class="mt-2 game-panel border-danger/40">
         <p class="text-xs text-danger mb-2">确定将{{ getChildName(releaseConfirmChildId) }}送往远方亲戚家吗？（花费10000文）</p>
-        <div class="flex space-x-2">
+        <div class="grid grid-cols-2 gap-2">
           <Button class="text-danger" @click="handleReleaseChild">确认</Button>
           <Button @click="releaseConfirmChildId = null">取消</Button>
         </div>
@@ -221,11 +226,14 @@
           </div>
           <div class="flex items-center space-x-1.5">
             <span class="text-[10px] text-muted">{{ h.dailyWage }}文/天</span>
-            <Button class="py-0 px-1 btn-danger" :icon="X" :icon-size="10" @click="handleDismiss(h.npcId)" />
+            <Button class="py-0 px-1 btn-danger" :icon="X" :icon-size="10" @click="dismissConfirmNpcId = h.npcId" />
           </div>
         </div>
       </div>
-      <p v-else class="text-xs text-muted/40">暂未雇佣</p>
+      <div v-if="currentHelpers.length === 0" class="flex flex-col items-center justify-center py-6 text-muted">
+        <Hammer :size="32" class="mb-2" />
+        <p class="text-xs">暂未雇佣</p>
+      </div>
     </div>
 
     <!-- 酒窖 -->
@@ -248,7 +256,7 @@
             >
               {{ getItemName(slot.itemId) }}
             </span>
-            <Button class="py-0 px-1" @click="handleRemoveAging(idx)">取出</Button>
+            <Button class="py-0 px-1" @click="removeAgingConfirmIdx = idx">取出</Button>
           </div>
           <div class="flex items-center space-x-1">
             <span class="text-[10px] text-muted w-6">陈酿</span>
@@ -262,13 +270,15 @@
           </div>
         </div>
       </div>
-      <div v-else class="flex flex-col items-center justify-center py-6 text-muted mb-3">
+      <div v-if="homeStore.cellarSlots.length === 0" class="flex flex-col items-center justify-center py-6 text-muted mb-3">
         <Gem :size="32" class="mb-2" />
         <p class="text-xs">酒窖空空如也</p>
       </div>
 
       <!-- 放入新酒 -->
-      <Button v-if="homeStore.cellarSlots.length < 6 && ageableInInventory.length > 0" @click="showAgingModal = true">放入陈酿</Button>
+      <Button class="w-full" v-if="homeStore.cellarSlots.length < 6 && ageableInInventory.length > 0" @click="showAgingModal = true">
+        放入陈酿
+      </Button>
     </div>
 
     <!-- 升级农舍弹窗 -->
@@ -299,7 +309,7 @@
               </span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-xs text-muted">金币</span>
+              <span class="text-xs text-muted">铜钱</span>
               <span class="text-xs" :class="playerStore.money >= homeStore.nextUpgrade.cost ? '' : 'text-danger'">
                 {{ homeStore.nextUpgrade.cost }}文
               </span>
@@ -388,6 +398,9 @@
 
           <!-- 28天网格 -->
           <div class="grid grid-cols-7 gap-px">
+            <div v-for="wd in WEEKDAYS" :key="wd" class="text-center py-0.5">
+              <span class="text-[10px]" :class="wd === 'sat' || wd === 'sun' ? 'text-accent' : 'text-muted'">{{ WEEKDAY_NAMES[wd] }}</span>
+            </div>
             <div
               v-for="entry in calendarDays"
               :key="entry.day"
@@ -542,6 +555,42 @@
         </div>
       </div>
     </Transition>
+
+    <!-- 解雇确认弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="dismissConfirmNpcId"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+        @click.self="dismissConfirmNpcId = null"
+      >
+        <div class="game-panel max-w-xs w-full text-center">
+          <p class="text-sm text-danger mb-3">确定解雇{{ getNpcById(dismissConfirmNpcId)?.name }}吗？</p>
+          <p class="text-xs text-muted mb-4">解雇后需要重新招募。</p>
+          <div class="flex space-x-3 justify-center">
+            <Button @click="dismissConfirmNpcId = null">取消</Button>
+            <Button class="btn-danger" @click="handleDismiss(dismissConfirmNpcId!)">确认解雇</Button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 取出陈酿确认弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="removeAgingConfirmSlot"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+        @click.self="removeAgingConfirmIdx = null"
+      >
+        <div class="game-panel max-w-xs w-full text-center">
+          <p class="text-sm text-accent mb-3">确定取出{{ getItemName(removeAgingConfirmSlot.itemId) }}吗？</p>
+          <p class="text-xs text-muted mb-4">已陈酿{{ removeAgingConfirmSlot.daysAging }}天，满14天可提升品质。</p>
+          <div class="flex space-x-3 justify-center">
+            <Button @click="removeAgingConfirmIdx = null">取消</Button>
+            <Button @click="handleRemoveAging(removeAgingConfirmIdx!)">确认取出</Button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -558,7 +607,7 @@
   import { getCombinedItemCount } from '@/composables/useCombinedInventory'
   import { getItemById, getNpcById, NPCS } from '@/data'
   import { SEASON_EVENTS } from '@/data/events'
-  import { ACTION_TIME_COSTS } from '@/data/timeConstants'
+  import { ACTION_TIME_COSTS, WEEKDAYS, WEEKDAY_NAMES } from '@/data/timeConstants'
   import type { Quality, ChildStage, PregnancyStage, Season, FarmHelperTask } from '@/types'
   import { addLog } from '@/composables/useGameLog'
   import { showChildProposal, triggerHeartEvent } from '@/composables/useDialogs'
@@ -579,6 +628,11 @@
   const showHireModal = ref(false)
   const selectedHireTask = ref<FarmHelperTask>('water')
   const hireConfirmNpcId = ref<string | null>(null)
+  const dismissConfirmNpcId = ref<string | null>(null)
+  const removeAgingConfirmIdx = ref<number | null>(null)
+  const removeAgingConfirmSlot = computed(() =>
+    removeAgingConfirmIdx.value !== null ? (homeStore.cellarSlots[removeAgingConfirmIdx.value] ?? null) : null
+  )
 
   const hireableNpcs = computed(() => npcStore.getHireableNpcs())
   const currentHelpers = computed(() => npcStore.hiredHelpers)
@@ -606,6 +660,7 @@
   const handleDismiss = (npcId: string) => {
     const result = npcStore.dismissHelper(npcId)
     addLog(result.message)
+    dismissConfirmNpcId.value = null
   }
 
   // === 配偶互动 ===
@@ -794,7 +849,7 @@
       addLog(`农舍升级为「${upgrade.name}」！${upgrade.description}`)
       showUpgradeModal.value = false
     } else {
-      addLog('金币或材料不足，无法升级。')
+      addLog('铜钱或材料不足，无法升级。')
     }
   }
 
@@ -855,5 +910,6 @@
       const name = getItemName(result.itemId)
       addLog(`从酒窖取出了${name}。`)
     }
+    removeAgingConfirmIdx.value = null
   }
 </script>

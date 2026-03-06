@@ -2,7 +2,9 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import type { SeedGenetics, BreedingSlot, BreedingSeed, CompendiumEntry } from '@/types/breeding'
 import {
-  MAX_BREEDING_BOX,
+  BASE_BREEDING_BOX,
+  SEED_BOX_UPGRADES,
+  SEED_BOX_UPGRADE_INCREMENT,
   BREEDING_DAYS,
   BASE_MUTATION_MAGNITUDE,
   GENERATIONAL_STABILITY_GAIN,
@@ -46,15 +48,21 @@ export const useBreedingStore = defineStore('breeding', () => {
   /** 是否已解锁育种系统（拥有种子制造机即解锁） */
   const unlocked = ref(false)
 
+  /** 种子箱等级：0/1/2，对应 30/45/60 */
+  const seedBoxLevel = ref(0)
+
   // === 计算属性 ===
 
+  /** 种子箱最大容量（基于等级） */
+  const maxSeedBox = computed(() => BASE_BREEDING_BOX + seedBoxLevel.value * SEED_BOX_UPGRADE_INCREMENT)
+
   const boxCount = computed(() => breedingBox.value.length)
-  const boxFull = computed(() => breedingBox.value.length >= MAX_BREEDING_BOX)
+  const boxFull = computed(() => breedingBox.value.length >= maxSeedBox.value)
 
   // === 种子箱操作 ===
 
   const addToBox = (genetics: SeedGenetics): boolean => {
-    if (breedingBox.value.length >= MAX_BREEDING_BOX) return false
+    if (breedingBox.value.length >= maxSeedBox.value) return false
     breedingBox.value.push({
       genetics,
       label: makeSeedLabel(genetics)
@@ -71,7 +79,7 @@ export const useBreedingStore = defineStore('breeding', () => {
   // === 种子制造机增强 ===
 
   const trySeedMakerGeneticSeed = (cropId: string, farmingLevel: number): boolean => {
-    if (breedingBox.value.length >= MAX_BREEDING_BOX) return false
+    if (breedingBox.value.length >= maxSeedBox.value) return false
 
     const chance = getSeedMakerGeneticChance(farmingLevel)
     if (Math.random() > chance) return false
@@ -118,6 +126,37 @@ export const useBreedingStore = defineStore('breeding', () => {
       if (getItemCount(mat.itemId) < mat.quantity) return false
     }
     return true
+  }
+
+  // === 种子箱升级 ===
+
+  const getNextSeedBoxUpgrade = () => {
+    const next = seedBoxLevel.value + 1
+    return SEED_BOX_UPGRADES.find(u => u.level === next) ?? null
+  }
+
+  const canUpgradeSeedBox = (money: number, getItemCount: (id: string) => number): boolean => {
+    const upgrade = getNextSeedBoxUpgrade()
+    if (!upgrade) return false
+    if (money < upgrade.cost) return false
+    for (const mat of upgrade.materials) {
+      if (getItemCount(mat.itemId) < mat.quantity) return false
+    }
+    return true
+  }
+
+  const upgradeSeedBox = (
+    spendMoney: (amount: number) => void,
+    removeItem: (id: string, qty: number) => void
+  ): { success: boolean; message: string } => {
+    const upgrade = getNextSeedBoxUpgrade()
+    if (!upgrade) return { success: false, message: '种子箱已达到最高等级。' }
+    spendMoney(upgrade.cost)
+    for (const mat of upgrade.materials) {
+      removeItem(mat.itemId, mat.quantity)
+    }
+    seedBoxLevel.value++
+    return { success: true, message: `种子箱扩容完成！容量提升至${maxSeedBox.value}格。` }
   }
 
   const startBreeding = (slotIndex: number, seedAId: string, seedBId: string): boolean => {
@@ -210,7 +249,12 @@ export const useBreedingStore = defineStore('breeding', () => {
     if (Math.random() < avgMutationRate / 100) {
       const mutateCount = Math.random() < 0.5 ? 1 : 2
       const stats: ('sweetness' | 'yield' | 'resistance')[] = ['sweetness', 'yield', 'resistance']
-      const shuffled = stats.sort(() => Math.random() - 0.5)
+      // Fisher-Yates 洗牌
+      for (let j = stats.length - 1; j > 0; j--) {
+        const k = Math.floor(Math.random() * (j + 1))
+        ;[stats[j], stats[k]] = [stats[k]!, stats[j]!]
+      }
+      const shuffled = stats
       const current = { sweetness, yield: yieldVal, resistance }
 
       for (let i = 0; i < mutateCount; i++) {
@@ -239,8 +283,8 @@ export const useBreedingStore = defineStore('breeding', () => {
       mutationRate,
       parentA: a.id,
       parentB: b.id,
-      isHybrid: a.isHybrid,
-      hybridId: a.hybridId
+      isHybrid: a.isHybrid || b.isHybrid,
+      hybridId: a.hybridId ?? b.hybridId
     }
 
     // 同种杂交也需要同步图鉴（防止图鉴条目丢失后无法恢复）
@@ -331,7 +375,9 @@ export const useBreedingStore = defineStore('breeding', () => {
       } as SeedGenetics
 
       if (hybrid) {
-        addLog(`杂交失败：父本平均甜度${Math.round(avgSweetness)}（需≥${hybrid.minSweetness}），平均产量${Math.round(avgYield)}（需≥${hybrid.minYield}）。请先通过同种培育提升属性。`)
+        addLog(
+          `杂交失败：父本平均甜度${Math.round(avgSweetness)}（需≥${hybrid.minSweetness}），平均产量${Math.round(avgYield)}（需≥${hybrid.minYield}）。请先通过同种培育提升属性。`
+        )
       } else {
         addLog('这两个品种无法杂交，返回了一颗种子。')
       }
@@ -390,6 +436,7 @@ export const useBreedingStore = defineStore('breeding', () => {
       ready: s.ready
     })),
     stationCount: stationCount.value,
+    seedBoxLevel: seedBoxLevel.value,
     compendium: compendium.value,
     unlocked: unlocked.value
   })
@@ -408,6 +455,7 @@ export const useBreedingStore = defineStore('breeding', () => {
       ready: s.ready ?? false
     }))
     stationCount.value = data.stationCount ?? 0
+    seedBoxLevel.value = data.seedBoxLevel ?? 0
     compendium.value = data.compendium ?? []
     unlocked.value = data.unlocked ?? false
   }
@@ -416,6 +464,7 @@ export const useBreedingStore = defineStore('breeding', () => {
     breedingBox.value = []
     stations.value = []
     stationCount.value = 0
+    seedBoxLevel.value = 0
     compendium.value = []
     unlocked.value = false
   }
@@ -425,17 +474,22 @@ export const useBreedingStore = defineStore('breeding', () => {
     breedingBox,
     stations,
     stationCount,
+    seedBoxLevel,
     compendium,
     unlocked,
     // 计算
     boxCount,
     boxFull,
+    maxSeedBox,
     // 方法
     addToBox,
     removeFromBox,
     trySeedMakerGeneticSeed,
     craftStation,
     canCraftStation,
+    getNextSeedBoxUpgrade,
+    canUpgradeSeedBox,
+    upgradeSeedBox,
     startBreeding,
     collectResult,
     dailyUpdate,

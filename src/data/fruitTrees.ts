@@ -74,7 +74,7 @@ export const FRUIT_TREE_DEFS: FruitTreeDef[] = [
     saplingId: 'sapling_persimmon',
     saplingPrice: 400,
     fruitId: 'persimmon',
-    fruitName: '柿子',
+    fruitName: '鲜柿',
     fruitSeason: 'autumn',
     growthDays: 28,
     fruitSellPrice: 85

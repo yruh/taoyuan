@@ -31,6 +31,8 @@ export interface ProcessingMachineDef {
   description: string
   craftCost: { itemId: string; quantity: number }[]
   craftMoney: number
+  /** 完成后自动收取产物（默认 false，需手动收取） */
+  autoCollect?: boolean
 }
 
 /** 加工配方定义 */

@@ -4,7 +4,7 @@
   "github": "https://github.com/yruh/taoyuan",
   "homepage": "https://yruh.github.io/taoyuan/",
   "private": true,
-  "version": "1.9.1",
+  "version": "2.2.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {

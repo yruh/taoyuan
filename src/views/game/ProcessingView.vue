@@ -1,45 +1,50 @@
 <template>
   <div>
-    <!-- 制造区 -->
-    <div class="border border-accent/20 rounded-xs p-3 mb-4">
-      <div class="flex items-center justify-between mb-2">
-        <div class="flex items-center space-x-1.5 text-sm text-accent">
-          <Hammer :size="14" />
-          <span>制造</span>
-        </div>
-        <span class="text-xs text-muted">机器 {{ processingStore.machineCount }}/{{ processingStore.MAX_MACHINES }}</span>
-      </div>
-
-      <div v-for="cat in craftCategories" :key="cat.label" class="mb-3 last:mb-0">
-        <p class="text-xs text-muted mb-1">{{ cat.label }}</p>
-        <div class="flex flex-col space-y-1 max-h-60 overflow-y-auto">
-          <div
-            v-for="item in cat.items"
-            :key="item.id"
-            class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-1.5 cursor-pointer hover:bg-accent/5"
-            @click="craftModal = item"
-          >
-            <div class="text-xs truncate mr-2">
-              {{ item.name }}
-              <span v-if="item.badge" class="text-muted ml-1">[{{ item.badge }}]</span>
-            </div>
-            <span v-if="item.cost > 0" class="text-xs text-accent whitespace-nowrap">{{ item.cost }}文</span>
-          </div>
-        </div>
-      </div>
+    <!-- 标签切换 -->
+    <div class="flex space-x-1.5 mb-3">
+      <Button
+        class="flex-1 justify-center"
+        :class="{ '!bg-accent !text-bg': activeTab === 'process' }"
+        :icon="Boxes"
+        @click="activeTab = 'process'"
+      >
+        加工区
+        <span class="text-[10px] ml-0.5 opacity-70">{{ processingStore.machineCount }}/{{ processingStore.maxMachines }}</span>
+      </Button>
+      <Button
+        class="flex-1 justify-center"
+        :class="{ '!bg-accent !text-bg': activeTab === 'craft' }"
+        :icon="Hammer"
+        @click="activeTab = 'craft'"
+      >
+        制造
+      </Button>
     </div>
 
     <!-- 加工区 -->
-    <div class="border border-accent/20 rounded-xs p-3">
-      <div class="flex items-center space-x-1.5 text-sm text-accent mb-2">
-        <Boxes :size="14" />
-        <span>加工区</span>
+    <div v-if="activeTab === 'process'" class="border border-accent/20 rounded-xs p-3">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center space-x-1.5 text-sm text-accent">
+          <Boxes :size="14" />
+          <span>加工区</span>
+          <span class="text-[10px] text-muted font-normal">{{ processingStore.machineCount }}/{{ processingStore.maxMachines }}</span>
+        </div>
+        <button
+          v-if="nextUpgrade || processingStore.workshopLevel > 0"
+          class="text-[10px] px-2 py-0.5 border rounded-xs"
+          :class="nextUpgrade ? 'border-accent/30 text-accent hover:bg-accent/5 cursor-pointer' : 'border-accent/10 text-muted'"
+          @click="showUpgradeModal = true"
+        >
+          <ArrowUpCircle :size="10" class="inline mr-0.5" />
+          工坊 Lv.{{ processingStore.workshopLevel }}
+        </button>
       </div>
 
       <!-- 空状态 -->
-      <div v-if="processingStore.machines.length === 0" class="flex flex-col items-center justify-center py-4 text-muted">
-        <Boxes :size="24" />
-        <p class="text-xs mt-1">还没有机器，先制造一台吧</p>
+      <div v-if="processingStore.machines.length === 0" class="flex flex-col items-center justify-center py-8">
+        <Boxes :size="36" class="text-accent/20 mb-2" />
+        <p class="text-xs text-muted">还没有机器</p>
+        <p class="text-[10px] text-muted/50 mt-0.5">切换到「制造」标签制造一台加工机器吧</p>
       </div>
 
       <!-- 机器列表 -->
@@ -100,7 +105,122 @@
       </div>
     </div>
 
-    <!-- 制造详情弹窗 -->
+    <!-- 制造区 -->
+    <div v-if="activeTab === 'craft'" class="border border-accent/20 rounded-xs p-3">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center space-x-1.5 text-sm text-accent">
+          <Hammer :size="14" />
+          <span>制造</span>
+        </div>
+        <span class="text-xs text-muted">机器 {{ processingStore.machineCount }}/{{ processingStore.maxMachines }}</span>
+      </div>
+
+      <div v-for="cat in craftCategories" :key="cat.label" class="mb-3 last:mb-0">
+        <p class="text-xs text-muted mb-1">{{ cat.label }}</p>
+        <div class="flex flex-col space-y-1 max-h-60 overflow-y-auto">
+          <div
+            v-for="item in cat.items"
+            :key="item.id"
+            class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-1.5 cursor-pointer hover:bg-accent/5 mr-1"
+            @click="openCraftModal(item)"
+          >
+            <div class="text-xs truncate mr-2">
+              {{ item.name }}
+              <span v-if="item.badge" class="text-muted ml-1">[{{ item.badge }}]</span>
+            </div>
+            <span v-if="item.cost > 0" class="text-xs text-accent whitespace-nowrap">{{ item.cost }}文</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 工坊扩建弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="showUpgradeModal"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+        @click.self="showUpgradeModal = false"
+      >
+        <div class="game-panel max-w-xs w-full relative">
+          <button class="absolute top-2 right-2 text-muted hover:text-text" @click="showUpgradeModal = false">
+            <X :size="14" />
+          </button>
+
+          <p class="text-sm text-accent mb-2">
+            <ArrowUpCircle :size="14" class="inline mr-0.5" />
+            工坊信息
+          </p>
+
+          <!-- 当前状态 -->
+          <div class="border border-accent/10 rounded-xs p-2 mb-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-muted">当前等级</span>
+              <span class="text-xs text-accent">Lv.{{ processingStore.workshopLevel }}</span>
+            </div>
+            <div class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">机器上限</span>
+              <span class="text-xs text-text">{{ processingStore.maxMachines }} 台</span>
+            </div>
+          </div>
+
+          <!-- 下一级升级 -->
+          <template v-if="nextUpgrade">
+            <div class="border border-accent/10 rounded-xs p-2 mb-2">
+              <p class="text-xs text-muted mb-1">升级至 Lv.{{ processingStore.workshopLevel + 1 }}</p>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-muted">机器上限</span>
+                <span class="text-xs text-text">{{ processingStore.maxMachines }} → {{ processingStore.maxMachines + 5 }}</span>
+              </div>
+            </div>
+
+            <!-- 所需材料 -->
+            <div class="border border-accent/10 rounded-xs p-2 mb-2">
+              <p class="text-xs text-muted mb-1">所需材料</p>
+              <div v-for="mat in nextUpgrade.materials" :key="mat.itemId" class="flex items-center justify-between">
+                <span class="text-xs text-muted">{{ getItemById(mat.itemId)?.name }}</span>
+                <span class="text-xs" :class="getCombinedItemCount(mat.itemId) >= mat.quantity ? '' : 'text-danger'">
+                  {{ getCombinedItemCount(mat.itemId) }}/{{ mat.quantity }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between mt-0.5">
+                <span class="text-xs text-muted">铜钱</span>
+                <span class="text-xs" :class="playerStore.money >= nextUpgrade.cost ? '' : 'text-danger'">{{ nextUpgrade.cost }}文</span>
+              </div>
+            </div>
+
+            <!-- 扩建按钮 -->
+            <Button
+              v-if="!showUpgradeConfirm"
+              class="w-full justify-center"
+              :class="{ '!bg-accent !text-bg': canUpgrade }"
+              :icon="ArrowUpCircle"
+              :icon-size="12"
+              :disabled="!canUpgrade"
+              @click="showUpgradeConfirm = true"
+            >
+              扩建工坊
+            </Button>
+
+            <!-- 确认 -->
+            <div v-else class="flex space-x-1">
+              <Button class="flex-1 justify-center" @click="showUpgradeConfirm = false">取消</Button>
+              <Button
+                class="flex-1 justify-center !bg-accent !text-bg"
+                :icon="ArrowUpCircle"
+                :icon-size="12"
+                @click="handleUpgradeFromModal"
+              >
+                确认扩建
+              </Button>
+            </div>
+          </template>
+
+          <p v-else class="text-[10px] text-muted text-center">工坊已达到最高等级。</p>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 制造弹窗 -->
     <Transition name="panel-fade">
       <div v-if="craftModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" @click.self="craftModal = null">
         <div class="game-panel max-w-xs w-full relative">
@@ -119,13 +239,52 @@
             <p class="text-xs text-muted mb-1">所需材料</p>
             <div v-for="mat in craftModal.materials" :key="mat.itemId" class="flex items-center justify-between">
               <span class="text-xs text-muted">{{ getItemName(mat.itemId) }}</span>
-              <span class="text-xs" :class="getCombinedItemCount(mat.itemId) >= mat.quantity ? '' : 'text-danger'">
-                {{ getCombinedItemCount(mat.itemId) }}/{{ mat.quantity }}
+              <span class="text-xs" :class="getCombinedItemCount(mat.itemId) >= mat.quantity * displayQty ? '' : 'text-danger'">
+                {{ getCombinedItemCount(mat.itemId) }}/{{ mat.quantity * displayQty }}
               </span>
             </div>
             <div v-if="craftModal.cost > 0" class="flex items-center justify-between mt-0.5">
-              <span class="text-xs text-muted">金币</span>
-              <span class="text-xs" :class="playerStore.money >= craftModal.cost ? '' : 'text-danger'">{{ craftModal.cost }}文</span>
+              <span class="text-xs text-muted">铜钱</span>
+              <span class="text-xs" :class="playerStore.money >= craftModal.cost * displayQty ? '' : 'text-danger'">
+                {{ craftModal.cost * displayQty }}文
+              </span>
+            </div>
+          </div>
+
+          <!-- 批量数量控制 -->
+          <div v-if="craftModal.batchable && maxCraftable > 1" class="border border-accent/10 rounded-xs p-2 mb-2">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs text-muted">数量</span>
+              <div class="flex items-center space-x-1">
+                <Button class="h-6 px-1.5 py-0.5 text-xs justify-center" :disabled="craftQuantity <= 1" @click="addCraftQuantity(-1)">
+                  -
+                </Button>
+                <input
+                  type="number"
+                  :value="craftQuantity"
+                  min="1"
+                  :max="maxCraftable"
+                  class="w-16 h-6 px-2 py-0.5 bg-bg border border-accent/30 rounded-xs text-xs text-center text-accent outline-none focus:border-accent transition-colors"
+                  @input="onCraftQuantityInput"
+                />
+                <Button
+                  class="h-6 px-1.5 py-0.5 text-xs justify-center"
+                  :disabled="craftQuantity >= maxCraftable"
+                  @click="addCraftQuantity(1)"
+                >
+                  +
+                </Button>
+              </div>
+            </div>
+            <div class="flex space-x-1">
+              <Button class="flex-1 justify-center" :disabled="craftQuantity <= 1" @click="setCraftQuantity(1)">最少</Button>
+              <Button class="flex-1 justify-center" :disabled="craftQuantity >= maxCraftable" @click="setCraftQuantity(maxCraftable)">
+                最多
+              </Button>
+            </div>
+            <div v-if="craftModal.cost > 0" class="flex items-center justify-between mt-1.5">
+              <span class="text-xs text-muted">合计</span>
+              <span class="text-xs text-accent">{{ craftModal.cost * craftQuantity }}文</span>
             </div>
           </div>
 
@@ -137,7 +296,7 @@
             :disabled="!craftModal.canCraft()"
             @click="handleCraftFromModal"
           >
-            制造
+            {{ craftModal.batchable && craftQuantity > 1 ? `制造 ×${craftQuantity}` : '制造' }}
           </Button>
         </div>
       </div>
@@ -147,9 +306,9 @@
 
 <script setup lang="ts">
   import { ref, computed } from 'vue'
-  import { Hammer, Trash2, Package, Boxes, X } from 'lucide-vue-next'
+  import { Hammer, Trash2, Package, Boxes, X, ArrowUpCircle } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
-  import type { MachineType, AnimalBuildingType } from '@/types'
+  import type { MachineType, AnimalBuildingType, ChestTier } from '@/types'
   import { useAnimalStore } from '@/stores/useAnimalStore'
   import { useFarmStore } from '@/stores/useFarmStore'
   import { useGameStore } from '@/stores/useGameStore'
@@ -157,6 +316,7 @@
   import { usePlayerStore } from '@/stores/usePlayerStore'
   import { useProcessingStore } from '@/stores/useProcessingStore'
   import { useSkillStore } from '@/stores/useSkillStore'
+  import { useWarehouseStore } from '@/stores/useWarehouseStore'
   import { getCombinedItemCount, hasCombinedItem, removeCombinedItem } from '@/composables/useCombinedInventory'
   import {
     PROCESSING_MACHINES,
@@ -172,7 +332,7 @@
     BOMBS,
     getProcessingRecipeById
   } from '@/data/processing'
-  import { getItemById } from '@/data/items'
+  import { getItemById, CHEST_DEFS, CHEST_TIER_ORDER } from '@/data/items'
   import { ACTION_TIME_COSTS } from '@/data/timeConstants'
   import { sfxClick } from '@/composables/useAudio'
   import { addLog } from '@/composables/useGameLog'
@@ -185,6 +345,35 @@
   const farmStore = useFarmStore()
   const animalStore = useAnimalStore()
   const skillStore = useSkillStore()
+  const warehouseStore = useWarehouseStore()
+
+  const activeTab = ref<'process' | 'craft'>('process')
+
+  // === 工坊升级 ===
+
+  const showUpgradeModal = ref(false)
+  const showUpgradeConfirm = ref(false)
+
+  const nextUpgrade = computed(() => processingStore.getNextUpgrade())
+
+  const canUpgrade = computed(() => {
+    const u = nextUpgrade.value
+    if (!u) return false
+    return processingStore.canCraft(u.materials, u.cost)
+  })
+
+  const handleUpgradeFromModal = () => {
+    const result = processingStore.upgradeWorkshop()
+    sfxClick()
+    addLog(result.message)
+    if (result.success) {
+      const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
+      if (tr.message) addLog(tr.message)
+      if (tr.passedOut) handleEndDay()
+    }
+    showUpgradeConfirm.value = false
+    showUpgradeModal.value = false
+  }
 
   // === 制造弹窗 ===
 
@@ -197,9 +386,48 @@
     onCraft: () => void
     canCraft: () => boolean
     badge?: string
+    batchable?: boolean
+    maxBatch?: () => number
   }
 
   const craftModal = ref<CraftableItem | null>(null)
+  const craftQuantity = ref(1)
+
+  const maxCraftable = computed(() => {
+    const item = craftModal.value
+    if (!item?.batchable) return 1
+    let max = 99
+    for (const m of item.materials) {
+      max = Math.min(max, Math.floor(getCombinedItemCount(m.itemId) / m.quantity))
+    }
+    if (item.cost > 0) {
+      max = Math.min(max, Math.floor(playerStore.money / item.cost))
+    }
+    if (item.maxBatch) {
+      max = Math.min(max, item.maxBatch())
+    }
+    return Math.max(1, max)
+  })
+
+  const displayQty = computed(() => (craftModal.value?.batchable ? craftQuantity.value : 1))
+
+  const openCraftModal = (item: CraftableItem) => {
+    craftModal.value = item
+    craftQuantity.value = 1
+  }
+
+  const setCraftQuantity = (val: number) => {
+    craftQuantity.value = Math.max(1, Math.min(val, maxCraftable.value))
+  }
+
+  const addCraftQuantity = (delta: number) => {
+    setCraftQuantity(craftQuantity.value + delta)
+  }
+
+  const onCraftQuantityInput = (e: Event) => {
+    const val = parseInt((e.target as HTMLInputElement).value, 10)
+    if (!isNaN(val)) setCraftQuantity(val)
+  }
 
   const JADE_RING_COST = [
     { itemId: 'jade', quantity: 1 },
@@ -222,7 +450,7 @@
     () => allSkillsAbove8.value && playerStore.staminaCapLevel < 4 && processingStore.canCraft(STAMINA_FRUIT_COST, STAMINA_FRUIT_MONEY)
   )
 
-  const craftCategories = computed(() => [
+  const craftCategories = computed((): { label: string; items: CraftableItem[] }[] => [
     {
       label: '加工机器',
       items: PROCESSING_MACHINES.map(m => ({
@@ -232,7 +460,9 @@
         materials: m.craftCost,
         cost: m.craftMoney,
         onCraft: () => handleCraftMachine(m.id),
-        canCraft: () => processingStore.canCraft(m.craftCost, m.craftMoney) && processingStore.machineCount < processingStore.MAX_MACHINES
+        canCraft: () => processingStore.canCraft(m.craftCost, m.craftMoney) && processingStore.machineCount < processingStore.maxMachines,
+        batchable: true,
+        maxBatch: () => processingStore.maxMachines - processingStore.machineCount
       }))
     },
     {
@@ -245,7 +475,8 @@
           materials: s.craftCost,
           cost: s.craftMoney,
           onCraft: () => handleCraftSprinkler(s.id),
-          canCraft: () => processingStore.canCraft(s.craftCost, s.craftMoney)
+          canCraft: () => processingStore.canCraft(s.craftCost, s.craftMoney),
+          batchable: true
         })),
         ...FERTILIZERS.map(f => ({
           id: f.id,
@@ -254,7 +485,8 @@
           materials: f.craftCost,
           cost: f.craftMoney,
           onCraft: () => handleCraftFertilizer(f.id),
-          canCraft: () => processingStore.canCraft(f.craftCost, f.craftMoney)
+          canCraft: () => processingStore.canCraft(f.craftCost, f.craftMoney),
+          batchable: true
         })),
         {
           id: 'tapper',
@@ -263,7 +495,8 @@
           materials: TAPPER.craftCost,
           cost: TAPPER.craftMoney,
           onCraft: () => handleCraftTapper(),
-          canCraft: () => processingStore.canCraft(TAPPER.craftCost, TAPPER.craftMoney)
+          canCraft: () => processingStore.canCraft(TAPPER.craftCost, TAPPER.craftMoney),
+          batchable: true
         },
         {
           id: 'lightning_rod',
@@ -273,7 +506,8 @@
           cost: LIGHTNING_ROD.craftMoney,
           onCraft: () => handleCraftLightningRod(),
           canCraft: () => processingStore.canCraft(LIGHTNING_ROD.craftCost, LIGHTNING_ROD.craftMoney),
-          badge: `已有${farmStore.lightningRods}`
+          badge: `已有${farmStore.lightningRods}`,
+          batchable: true
         },
         {
           id: 'scarecrow',
@@ -283,7 +517,8 @@
           cost: SCARECROW.craftMoney,
           onCraft: () => handleCraftScarecrow(),
           canCraft: () => processingStore.canCraft(SCARECROW.craftCost, SCARECROW.craftMoney),
-          badge: `已有${farmStore.scarecrows}`
+          badge: `已有${farmStore.scarecrows}`,
+          batchable: true
         },
         ...((animalStore.buildings.find(b => b.type === 'coop')?.level ?? 0) >= 2
           ? [
@@ -327,7 +562,8 @@
           materials: b.craftCost,
           cost: b.craftMoney,
           onCraft: () => handleCraftBait(b.id),
-          canCraft: () => processingStore.canCraft(b.craftCost, b.craftMoney)
+          canCraft: () => processingStore.canCraft(b.craftCost, b.craftMoney),
+          batchable: true
         })),
         ...TACKLES.map(t => ({
           id: t.id,
@@ -336,7 +572,8 @@
           materials: t.craftCost,
           cost: t.craftMoney,
           onCraft: () => handleCraftTackle(t.id),
-          canCraft: () => processingStore.canCraft(t.craftCost, t.craftMoney)
+          canCraft: () => processingStore.canCraft(t.craftCost, t.craftMoney),
+          batchable: true
         })),
         {
           id: CRAB_POT_CRAFT.id,
@@ -345,7 +582,8 @@
           materials: CRAB_POT_CRAFT.craftCost,
           cost: CRAB_POT_CRAFT.craftMoney,
           onCraft: () => handleCraftCrabPot(),
-          canCraft: () => processingStore.canCraft(CRAB_POT_CRAFT.craftCost, CRAB_POT_CRAFT.craftMoney)
+          canCraft: () => processingStore.canCraft(CRAB_POT_CRAFT.craftCost, CRAB_POT_CRAFT.craftMoney),
+          batchable: true
         }
       ]
     },
@@ -360,7 +598,8 @@
           cost: b.craftMoney,
           onCraft: () => handleCraftBomb(b.id),
           canCraft: () =>
-            (b.id !== 'mega_bomb' || inventoryStore.hasItem('mega_bomb_recipe')) && processingStore.canCraft(b.craftCost, b.craftMoney)
+            (b.id !== 'mega_bomb' || hasCombinedItem('mega_bomb_recipe')) && processingStore.canCraft(b.craftCost, b.craftMoney),
+          batchable: true
         })),
         {
           id: 'jade_ring',
@@ -386,12 +625,43 @@
             ]
           : [])
       ]
-    }
+    },
+    ...(warehouseStore.unlocked
+      ? [
+          {
+            label: '箱子',
+            items: CHEST_TIER_ORDER.map(tier => {
+              const def = CHEST_DEFS[tier]
+              return {
+                id: `chest_${tier}`,
+                name: def.name,
+                description: def.description,
+                materials: def.craftCost,
+                cost: def.craftMoney,
+                onCraft: () => handleCraftChest(tier),
+                canCraft: () =>
+                  warehouseStore.chests.length < warehouseStore.maxChests && processingStore.canCraft(def.craftCost, def.craftMoney),
+                badge: `${warehouseStore.chests.length}/${warehouseStore.maxChests}`,
+                batchable: true,
+                maxBatch: () => warehouseStore.maxChests - warehouseStore.chests.length
+              }
+            })
+          }
+        ]
+      : [])
   ])
 
   const handleCraftFromModal = () => {
     if (!craftModal.value) return
-    craftModal.value.onCraft()
+    const qty = craftModal.value.batchable ? Math.min(craftQuantity.value, maxCraftable.value) : 1
+    const startDay = gameStore.day
+    for (let i = 0; i < qty; i++) {
+      if (!craftModal.value.canCraft()) break
+      craftModal.value.onCraft()
+      // 晕倒导致日期变更，停止批量制造
+      if (gameStore.day !== startDay) break
+    }
+    craftModal.value = null
   }
 
   // === 工具函数 ===
@@ -619,6 +889,27 @@
       sfxClick()
       inventoryStore.addItem('stamina_fruit')
       addLog('制造了仙桃！在背包中使用可永久提升体力上限。')
+      const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
+      if (tr.message) addLog(tr.message)
+      if (tr.passedOut) {
+        handleEndDay()
+        return
+      }
+    } else {
+      addLog('材料不足。')
+    }
+  }
+
+  const handleCraftChest = (tier: ChestTier) => {
+    const def = CHEST_DEFS[tier]
+    if (warehouseStore.chests.length >= warehouseStore.maxChests) {
+      addLog('箱子槽位已满，请先扩建仓库。')
+      return
+    }
+    if (processingStore.consumeCraftMaterials(def.craftCost, def.craftMoney)) {
+      sfxClick()
+      warehouseStore.addChest(tier)
+      addLog(`制造了${def.name}，已放入仓库。`)
       const tr = gameStore.advanceTime(ACTION_TIME_COSTS.craftMachine)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {

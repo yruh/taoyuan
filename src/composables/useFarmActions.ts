@@ -10,10 +10,11 @@ import { useQuestStore } from '@/stores/useQuestStore'
 import { useShopStore } from '@/stores/useShopStore'
 import { useSkillStore } from '@/stores/useSkillStore'
 import { useWalletStore } from '@/stores/useWalletStore'
+import { useHiddenNpcStore } from '@/stores/useHiddenNpcStore'
 import { getCropById, getItemById } from '@/data'
 import { getFertilizerById } from '@/data/processing'
 import { ACTION_TIME_COSTS } from '@/data/timeConstants'
-import type { Quality } from '@/types'
+import type { Quality, ItemCategory } from '@/types'
 import type { FertilizerType } from '@/types/processing'
 import { addLog, showFloat } from './useGameLog'
 import { handleEndDay } from './useEndDay'
@@ -24,6 +25,17 @@ export const QUALITY_NAMES: Record<Quality, string> = {
   fine: '优良',
   excellent: '精品',
   supreme: '极品'
+}
+
+/** 仙缘结缘：作物祝福（crop_blessing）概率品质+1 */
+const QUALITY_ORDER: Quality[] = ['normal', 'fine', 'excellent', 'supreme']
+export const applyCropBlessing = (quality: Quality): Quality => {
+  const bondBonus = useHiddenNpcStore().getBondBonusByType('crop_blessing')
+  if (bondBonus?.type === 'crop_blessing' && Math.random() < bondBonus.chance) {
+    const idx = QUALITY_ORDER.indexOf(quality)
+    if (idx < QUALITY_ORDER.length - 1) return QUALITY_ORDER[idx + 1]!
+  }
+  return quality
 }
 
 // 模块级单例状态
@@ -112,6 +124,16 @@ export const handlePlotClick = (plotId: number) => {
     sfxPlant()
     showFloat(`-${cost}体力`, 'danger')
     addLog(`种下了${cropDef.name}。(-${cost}体力)`)
+    // 种植预警：作物可能无法在本季成熟
+    const daysLeft = 28 - gameStore.day
+    if (cropDef.growthDays > daysLeft) {
+      const SEASON_ORDER = ['spring', 'summer', 'autumn', 'winter'] as const
+      const nextSeason = SEASON_ORDER[(SEASON_ORDER.indexOf(gameStore.season) + 1) % 4]!
+      if (!cropDef.season.includes(nextSeason)) {
+        showFloat(`${cropDef.name}需${cropDef.growthDays}天，本季仅剩${daysLeft}天！`, 'danger')
+        addLog(`注意：${cropDef.name}需要${cropDef.growthDays}天成熟，但本季仅剩${daysLeft}天，换季后将枯萎。`)
+      }
+    }
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.plant)
     if (tr.message) addLog(tr.message)
     if (tr.passedOut) {
@@ -174,7 +196,8 @@ export const handlePlotClick = (plotId: number) => {
       const fertDef = plotFertilizer ? getFertilizerById(plotFertilizer) : null
       const ringCropQualityBonus = inventoryStore.getRingEffectValue('crop_quality_bonus')
       const allSkillsBuff = cookingStore.activeBuff?.type === 'all_skills' ? cookingStore.activeBuff.value : 0
-      const quality = skillStore.rollCropQualityWithBonus((fertDef?.qualityBonus ?? 0) + ringCropQualityBonus, allSkillsBuff)
+      let quality = skillStore.rollCropQualityWithBonus((fertDef?.qualityBonus ?? 0) + ringCropQualityBonus, allSkillsBuff)
+      quality = applyCropBlessing(quality)
       // 精耕细作天赋：20% 概率双倍收获
       const intensiveDouble = skillStore.getSkill('farming').perk10 === 'intensive' && Math.random() < 0.2
       // 育种产量加成：yield/100 × 30% 概率双收
@@ -192,7 +215,7 @@ export const handlePlotClick = (plotId: number) => {
       let msg = `收获了${cropDef?.name ?? cropId}${qtyLabel}${qualityLabel}！`
       if (intensiveDouble) msg += ' 精耕细作，双倍丰收！'
       if (yieldDouble) msg += ' 育种产量加成，双倍丰收！'
-      // 育种甜度加成：额外金币
+      // 育种甜度加成：额外铜钱
       if (genetics && genetics.sweetness > 0 && cropDef) {
         const bonusMoney = Math.floor((cropDef.sellPrice * harvestQty * genetics.sweetness) / 200)
         if (bonusMoney > 0) {
@@ -233,7 +256,7 @@ export const handleBuySeed = (seedId: string) => {
     showFloat(`-${actualPrice}文`, 'danger')
     addLog(`购买了${seed.cropName}种子。(-${actualPrice}文)`)
   } else {
-    addLog('金币不足或背包已满。')
+    addLog('铜钱不足或背包已满。')
   }
 }
 
@@ -264,16 +287,17 @@ export const handleSellItemAll = (itemId: string, quantity: number, quality: Qua
 }
 
 /** 一键出售背包中所有可出售物品 */
-export const handleSellAll = () => {
+export const handleSellAll = (filterCategories?: ItemCategory[]) => {
   const shopStore = useShopStore()
   const inventoryStore = useInventoryStore()
   let totalEarned = 0
   let totalCount = 0
+  const allowed = filterCategories && filterCategories.length > 0 ? new Set(filterCategories) : null
   // 快照当前可卖物品（避免遍历中修改数组）
   const sellable = inventoryStore.items
     .filter(inv => {
       const def = getItemById(inv.itemId)
-      return def && def.category !== 'seed'
+      return def && def.category !== 'seed' && !inv.locked && (!allowed || allowed.has(def.category))
     })
     .map(inv => ({ itemId: inv.itemId, quantity: inv.quantity, quality: inv.quality }))
   for (const item of sellable) {
@@ -462,7 +486,8 @@ export const handleBatchHarvest = () => {
     if (cropId) {
       const cropDef = getCropById(cropId)
       const fertDef = plotFertilizer ? getFertilizerById(plotFertilizer) : null
-      const quality = skillStore.rollCropQualityWithBonus((fertDef?.qualityBonus ?? 0) + batchRingCropQuality, batchAllSkillsBuff)
+      let quality = skillStore.rollCropQualityWithBonus((fertDef?.qualityBonus ?? 0) + batchRingCropQuality, batchAllSkillsBuff)
+      quality = applyCropBlessing(quality)
       const intensiveDouble = isIntensivePerk && Math.random() < 0.2
       const yieldDouble = genetics && !intensiveDouble && Math.random() < (genetics.yield / 100) * 0.3
       const harvestQty = intensiveDouble || yieldDouble ? 2 : 1
@@ -555,6 +580,16 @@ export const handleBatchPlant = (cropId: string) => {
   if (planted > 0) {
     sfxPlant()
     addLog(`一键种植了${planted}株${cropDef.name}。`)
+    // 种植预警：作物可能无法在本季成熟
+    const daysLeft = 28 - gameStore.day
+    if (cropDef.growthDays > daysLeft) {
+      const SEASON_ORDER = ['spring', 'summer', 'autumn', 'winter'] as const
+      const nextSeason = SEASON_ORDER[(SEASON_ORDER.indexOf(gameStore.season) + 1) % 4]!
+      if (!cropDef.season.includes(nextSeason)) {
+        showFloat(`${cropDef.name}需${cropDef.growthDays}天，本季仅剩${daysLeft}天！`, 'danger')
+        addLog(`注意：${cropDef.name}需要${cropDef.growthDays}天成熟，但本季仅剩${daysLeft}天，换季后将枯萎。`)
+      }
+    }
     const tr = gameStore.advanceTime(ACTION_TIME_COSTS.plant * Math.min(planted, 3))
     if (tr.message) addLog(tr.message)
     if (tr.passedOut) void handleEndDay()

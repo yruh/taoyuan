@@ -19,7 +19,7 @@ export interface FarmPlot {
   unwateredDays: number
   /** 已施加的肥料类型 */
   fertilizer: FertilizerType | null
-  /** 再生作物已收获次数 */
+  /** 多茬作物已收获次数 */
   harvestCount: number
   /** 巨型作物组 ID，非 null 表示属于巨型作物 */
   giantCropGroup: number | null
@@ -47,11 +47,11 @@ export interface CropDef {
   /** 是否需要深度灌溉 */
   deepWatering: boolean
   description: string
-  /** 是否为再生作物（收获后可重新长出） */
+  /** 是否为多茬作物（收获后可重新长出） */
   regrowth?: boolean
-  /** 再生天数 */
+  /** 多茬天数 */
   regrowthDays?: number
-  /** 再生作物最大收获次数 */
+  /** 多茬作物最大收获次数 */
   maxHarvests?: number
   /** 是否可形成巨型作物 */
   giantCropEligible?: boolean

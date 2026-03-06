@@ -18,6 +18,7 @@ import { useCookingStore } from './useCookingStore'
 import { useAnimalStore } from './useAnimalStore'
 import { useInventoryStore } from './useInventoryStore'
 import { usePlayerStore } from './usePlayerStore'
+import { useHiddenNpcStore } from './useHiddenNpcStore'
 
 /** 季节顺序 */
 const SEASON_ORDER: Season[] = ['spring', 'summer', 'autumn', 'winter']
@@ -104,16 +105,18 @@ export const useGameStore = defineStore('game', () => {
 
     // 按季节概率随机
     const roll = Math.random()
+    // 仙缘能力：唤雨（long_ling_2）下雨概率+15%，通过压缩晴天概率实现
+    const rainBoost = useHiddenNpcStore().getAbilityValue('long_ling_2') / 100
     switch (targetSeason) {
       case 'spring':
-        return roll < 0.5 ? 'sunny' : roll < 0.75 ? 'rainy' : roll < 0.85 ? 'stormy' : 'windy'
+        return roll < 0.5 - rainBoost ? 'sunny' : roll < 0.75 ? 'rainy' : roll < 0.85 ? 'stormy' : 'windy'
       case 'summer':
         // 绿雨: 8% 概率 (仅夏季)
-        return roll < 0.08 ? 'green_rain' : roll < 0.42 ? 'sunny' : roll < 0.68 ? 'rainy' : roll < 0.83 ? 'stormy' : 'windy'
+        return roll < 0.08 ? 'green_rain' : roll < 0.42 - rainBoost ? 'sunny' : roll < 0.68 ? 'rainy' : roll < 0.83 ? 'stormy' : 'windy'
       case 'autumn':
-        return roll < 0.45 ? 'sunny' : roll < 0.7 ? 'rainy' : roll < 0.8 ? 'stormy' : 'windy'
+        return roll < 0.45 - rainBoost ? 'sunny' : roll < 0.7 ? 'rainy' : roll < 0.8 ? 'stormy' : 'windy'
       case 'winter':
-        return roll < 0.5 ? 'sunny' : roll < 0.8 ? 'snowy' : 'windy'
+        return roll < 0.5 - rainBoost ? 'sunny' : roll < 0.8 ? 'snowy' : 'windy'
     }
   }
 
@@ -176,7 +179,7 @@ export const useGameStore = defineStore('game', () => {
     const key = `${currentLocationGroup.value}->${targetGroup}`
     const baseStamina = TRAVEL_STAMINA[key] ?? 1
     const animalStore = useAnimalStore()
-    const staminaCost = animalStore.hasHorse ? Math.floor(baseStamina / 2) : baseStamina
+    const staminaCost = animalStore.hasHorse ? Math.max(1, Math.floor(baseStamina / 2)) : baseStamina
     const playerStore = usePlayerStore()
     playerStore.consumeStamina(staminaCost)
 

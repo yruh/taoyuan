@@ -137,13 +137,14 @@ export const PROCESSING_MACHINES: ProcessingMachineDef[] = [
   {
     id: 'furnace',
     name: '熔炉',
-    description: '将矿石冶炼成金属锭。',
+    description: '将矿石冶炼成金属锭。完成后自动收取。',
     craftCost: [
       { itemId: 'copper_ore', quantity: 10 },
       { itemId: 'iron_ore', quantity: 5 },
       { itemId: 'quartz', quantity: 2 }
     ],
-    craftMoney: 500
+    craftMoney: 500,
+    autoCollect: true
   },
   {
     id: 'charcoal_kiln',
@@ -721,13 +722,13 @@ export const PROCESSING_RECIPES: ProcessingRecipeDef[] = [
   {
     id: 'seed_from_peach',
     machineType: 'seed_maker',
-    name: '桃种子',
+    name: '水蜜桃种子',
     inputItemId: 'peach',
     inputQuantity: 1,
     outputItemId: 'seed_peach',
     outputQuantity: 2,
     processingDays: 1,
-    description: '从桃中提取种子。'
+    description: '从水蜜桃中提取种子。'
   },
   {
     id: 'seed_from_green_bean',
@@ -1082,7 +1083,7 @@ export const PROCESSING_RECIPES: ProcessingRecipeDef[] = [
     outputItemId: 'dried_peach',
     outputQuantity: 1,
     processingDays: 1,
-    description: '将桃子脱水制成桃干。'
+    description: '将鲜桃脱水制成桃干。'
   },
   {
     id: 'dry_lychee',

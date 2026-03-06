@@ -7,28 +7,33 @@
 
     <div class="flex space-x-2 items-end justify-center">
       <!-- 进度条 (左侧竖条) -->
-      <div class="w-3 h-62.5 bg-bg border border-accent/30 rounded-xs relative overflow-hidden">
+      <div
+        class="w-3 bg-bg border border-accent/30 rounded-xs relative overflow-hidden"
+        :style="{ height: CONTAINER_HEIGHT + 'px' }"
+        style="box-sizing: content-box"
+      >
         <div class="absolute bottom-0 w-full bg-success rounded-[1px]" :style="{ height: score + '%' }" />
       </div>
 
       <!-- 钓鱼区 -->
       <div
-        class="w-10 h-62.5 bg-water/20 border border-accent/30 rounded-xs relative overflow-hidden select-none"
-        style="touch-action: none"
+        class="w-10 bg-water/20 border border-accent/30 rounded-xs relative overflow-hidden select-none"
+        :style="{ height: CONTAINER_HEIGHT + 'px' }"
+        style="touch-action: none; box-sizing: content-box"
         @mousedown.prevent="startHold"
         @mouseup.prevent="stopHold"
         @mouseleave="stopHold"
         @touchstart="startHold"
         @touchend="stopHold"
       >
-        <!-- 鱼 -->
-        <div class="absolute w-full bg-accent/60 rounded-[1px]" :style="{ top: fishPos + 'px', height: FISH_HEIGHT + 'px' }" />
-        <!-- 钩子 -->
+        <!-- 钩子（底层） -->
         <div
           class="absolute w-full rounded-[1px]"
           :class="isOverlap ? 'bg-success/80' : 'bg-success/40'"
-          :style="{ top: (CONTAINER_HEIGHT - hookPos - hookHeight) + 'px', height: hookHeight + 'px' }"
+          :style="{ top: CONTAINER_HEIGHT - hookPos - hookHeight + 'px', height: hookHeight + 'px' }"
         />
+        <!-- 鱼（顶层，始终可见） -->
+        <div class="absolute w-full bg-accent/60 rounded-[1px]" :style="{ top: fishPos + 'px', height: FISH_HEIGHT + 'px' }" />
       </div>
 
       <!-- 倒计时+分数 -->

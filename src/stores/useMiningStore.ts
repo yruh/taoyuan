@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { MonsterDef, CombatAction, MineFloorDef, MineTile } from '@/types'
+import type { MonsterDef, CombatAction, MineFloorDef, MineTile, Quality } from '@/types'
 import {
   getFloor,
   getRewardNames,
@@ -40,6 +40,7 @@ import { useCookingStore } from './useCookingStore'
 import { useGameStore } from './useGameStore'
 import { useWalletStore } from './useWalletStore'
 import { useSecretNoteStore } from './useSecretNoteStore'
+import { useHiddenNpcStore } from './useHiddenNpcStore'
 import type { SkullCavernFloorDef } from '@/data/mine'
 
 const DEFEAT_MONEY_PENALTY_RATE = 0.1
@@ -80,6 +81,12 @@ export const useMiningStore = defineStore('mining', () => {
   const slayerCharmActive = ref(false)
   /** 公会徽章累积攻击力加成（永久） */
   const guildBadgeBonusAttack = ref(0)
+  /** 生命护符累积最大HP加成（永久） */
+  const guildBonusMaxHp = ref(0)
+  /** 幸运铜钱累积掉落率加成（永久，每次+0.05） */
+  const guildBonusDropRate = ref(0)
+  /** 守护符累积防御加成（永久，每次+0.03） */
+  const guildBonusDefense = ref(0)
 
   // ==================== 格子探索状态 ====================
 
@@ -247,6 +254,8 @@ export const useMiningStore = defineStore('mining', () => {
     const walletMiningReduction = walletStore.getMiningStaminaReduction()
     const ringMiningReduction = inventoryStore.getRingEffectValue('mining_stamina')
     const ringGlobalReduction = inventoryStore.getRingEffectValue('stamina_reduction')
+    // 仙缘能力：聚气（shan_weng_1）挖矿体力-15%
+    const spiritMiningReduction = useHiddenNpcStore().getAbilityValue('shan_weng_1') / 100
     const staminaCost = Math.max(
       1,
       Math.floor(
@@ -256,7 +265,8 @@ export const useMiningStore = defineStore('mining', () => {
           (1 - miningBuff) *
           (1 - walletMiningReduction) *
           (1 - ringMiningReduction) *
-          (1 - ringGlobalReduction)
+          (1 - ringGlobalReduction) *
+          (1 - spiritMiningReduction)
       )
     )
     if (!playerStore.consumeStamina(staminaCost)) {
@@ -313,11 +323,22 @@ export const useMiningStore = defineStore('mining', () => {
     // 戒指矿石加成
     const ringOreBonus = inventoryStore.getRingEffectValue('ore_bonus')
     if (ringOreBonus > 0) quantity += Math.floor(ringOreBonus)
+    // 仙缘能力：灵狐眼（hu_xian_2）15%概率额外掉落矿石
+    if (useHiddenNpcStore().isAbilityActive('hu_xian_2') && Math.random() < 0.15) quantity += 1
 
     inventoryStore.addItem(oreId, quantity)
     sessionLoot.value.push({ itemId: oreId, quantity })
     useAchievementStore().discoverItem(oreId)
     useQuestStore().onItemObtained(oreId, quantity)
+
+    // 仙缘能力：药山（shan_weng_2）矿洞15%概率采到稀有草药
+    const hiddenNpcStore = useHiddenNpcStore()
+    if (hiddenNpcStore.isAbilityActive('shan_weng_2') && Math.random() < 0.15) {
+      const herbs = ['herb', 'ginseng'] as const
+      const herbId = herbs[Math.floor(Math.random() * herbs.length)]!
+      inventoryStore.addItem(herbId, 1)
+      sessionLoot.value.push({ itemId: herbId, quantity: 1 })
+    }
 
     // 经验
     const hilltopXpBonus = gameStore.farmMapType === 'hilltop' ? 1.25 : 1.0
@@ -713,7 +734,14 @@ export const useMiningStore = defineStore('mining', () => {
       const ringDefenseBonus = inventoryStore.getRingEffectValue('defense_bonus')
       const damage = Math.max(
         1,
-        Math.floor(monster.attack * (1 - tankReduction) * (1 - defenseReduction) * sturdyReduction * (1 - ringDefenseBonus))
+        Math.floor(
+          monster.attack *
+            (1 - tankReduction) *
+            (1 - defenseReduction) *
+            sturdyReduction *
+            (1 - ringDefenseBonus) *
+            (1 - guildBonusDefense.value)
+        )
       )
       playerStore.takeDamage(damage)
       let defendMsg = `你举盾防御，受到${damage}点伤害。`
@@ -741,8 +769,13 @@ export const useMiningStore = defineStore('mining', () => {
     // 基础攻击力（含戒指加成 + 料理全技能加成）
     const ringAttackBonus = inventoryStore.getRingEffectValue('attack_bonus')
     const allSkillsBuff = cookingStore.activeBuff?.type === 'all_skills' ? cookingStore.activeBuff.value : 0
+    const guildStore = useGuildStore()
     const baseAttack =
-      inventoryStore.getWeaponAttack() + (skillStore.combatLevel + allSkillsBuff) * 2 + ringAttackBonus + guildBadgeBonusAttack.value
+      inventoryStore.getWeaponAttack() +
+      (skillStore.combatLevel + allSkillsBuff) * 2 +
+      ringAttackBonus +
+      guildBadgeBonusAttack.value +
+      guildStore.getGuildAttackBonus()
     const bruteBonus = skillStore.getSkill('combat').perk10 === 'brute' ? 1.25 : 1.0
 
     // 暴击判定（含戒指加成 + 幸运加成）
@@ -807,7 +840,14 @@ export const useMiningStore = defineStore('mining', () => {
     const ringDefenseBonus = inventoryStore.getRingEffectValue('defense_bonus')
     const monsterDamage = Math.max(
       1,
-      Math.floor(monster.attack * (1 - fighterReduction) * (1 - defenseReduction) * sturdyReduction * (1 - ringDefenseBonus))
+      Math.floor(
+        monster.attack *
+          (1 - fighterReduction) *
+          (1 - defenseReduction) *
+          sturdyReduction *
+          (1 - ringDefenseBonus) *
+          (1 - guildBonusDefense.value)
+      )
     )
     playerStore.takeDamage(monsterDamage)
     msg += ` ${monster.name}反击，你受到${monsterDamage}点伤害。`
@@ -839,7 +879,12 @@ export const useMiningStore = defineStore('mining', () => {
     const enchant = owned.enchantmentId ? getEnchantmentById(owned.enchantmentId) : null
     const ringDropBonus = inventoryStore.getRingEffectValue('monster_drop_bonus')
     const ringLuckBonus = inventoryStore.getRingEffectValue('luck')
-    const luckyBonus = (enchant?.special === 'lucky' ? 0.2 : 0) + ringDropBonus + ringLuckBonus * 0.5 + (slayerCharmActive.value ? 0.2 : 0)
+    const luckyBonus =
+      (enchant?.special === 'lucky' ? 0.2 : 0) +
+      ringDropBonus +
+      ringLuckBonus * 0.5 +
+      (slayerCharmActive.value ? 0.2 : 0) +
+      guildBonusDropRate.value
 
     // 普通掉落
     const drops: string[] = []
@@ -914,7 +959,7 @@ export const useMiningStore = defineStore('mining', () => {
     // BOSS 击败处理
     if (combatIsBoss.value) {
       if (isInSkullCavern.value) {
-        // 骷髅矿穴BOSS：奖励金币和矿石（按深度缩放）
+        // 骷髅矿穴BOSS：奖励铜钱和矿石（按深度缩放）
         const scFloor = skullCavernFloor.value
         const moneyReward = 200 + scFloor * 20
         playerStore.earnMoney(moneyReward)
@@ -943,30 +988,28 @@ export const useMiningStore = defineStore('mining', () => {
             const displayName = getWeaponDisplayName(weaponId, fixedEnchant)
             msg += ` 首次击败BOSS！获得了传说武器：${displayName}！`
           }
-          // 首杀掉落戒指
-          const bossRingId = BOSS_DROP_RINGS[currentFloor.value]
-          if (bossRingId && !inventoryStore.hasRing(bossRingId)) {
-            inventoryStore.addRing(bossRingId)
-            const bossRingDef = getRingById(bossRingId)
-            msg += ` 获得了戒指：${bossRingDef?.name ?? bossRingId}！`
-          }
-          // 首杀掉落帽子
-          const bossHatId = BOSS_DROP_HATS[currentFloor.value]
-          if (bossHatId && !inventoryStore.hasHat(bossHatId)) {
-            inventoryStore.addHat(bossHatId)
-            const bossHatDef = getHatById(bossHatId)
-            msg += ` 获得了帽子：${bossHatDef?.name ?? bossHatId}！`
-          }
-          // 首杀掉落鞋子
-          const bossShoeId = BOSS_DROP_SHOES[currentFloor.value]
-          if (bossShoeId && !inventoryStore.hasShoe(bossShoeId)) {
-            inventoryStore.addShoe(bossShoeId)
-            const bossShoeDef = getShoeById(bossShoeId)
-            msg += ` 获得了鞋子：${bossShoeDef?.name ?? bossShoeId}！`
-          }
+        }
+        // 装备掉落（独立于首杀，使用 has* 去重，兼容旧存档补发）
+        const bossRingId = BOSS_DROP_RINGS[currentFloor.value]
+        if (bossRingId && !inventoryStore.hasRing(bossRingId)) {
+          inventoryStore.addRing(bossRingId)
+          const bossRingDef = getRingById(bossRingId)
+          msg += ` 获得了戒指：${bossRingDef?.name ?? bossRingId}！`
+        }
+        const bossHatId = BOSS_DROP_HATS[currentFloor.value]
+        if (bossHatId && !inventoryStore.hasHat(bossHatId)) {
+          inventoryStore.addHat(bossHatId)
+          const bossHatDef = getHatById(bossHatId)
+          msg += ` 获得了帽子：${bossHatDef?.name ?? bossHatId}！`
+        }
+        const bossShoeId = BOSS_DROP_SHOES[currentFloor.value]
+        if (bossShoeId && !inventoryStore.hasShoe(bossShoeId)) {
+          inventoryStore.addShoe(bossShoeId)
+          const bossShoeDef = getShoeById(bossShoeId)
+          msg += ` 获得了鞋子：${bossShoeDef?.name ?? bossShoeId}！`
         }
 
-        // BOSS 额外掉落金币和矿石
+        // BOSS 额外掉落铜钱和矿石
         const moneyReward = BOSS_MONEY_REWARDS[currentFloor.value] ?? 0
         if (moneyReward > 0) {
           playerStore.earnMoney(moneyReward)
@@ -1053,7 +1096,7 @@ export const useMiningStore = defineStore('mining', () => {
       inventoryStore.removeItem(pick.itemId, 1, pick.quality)
     }
 
-    // 扣除金币
+    // 扣除铜钱
     const moneyLost = Math.min(Math.floor(playerStore.money * DEFEAT_MONEY_PENALTY_RATE), DEFEAT_MONEY_PENALTY_CAP)
     if (moneyLost > 0) playerStore.spendMoney(moneyLost)
 
@@ -1187,6 +1230,33 @@ export const useMiningStore = defineStore('mining', () => {
       return { success: true, message: msg }
     }
 
+    // 生命护符：永久+15最大HP
+    if (itemId === 'life_talisman') {
+      if (!inventoryStore.removeItem('life_talisman')) return { success: false, message: '没有生命护符。' }
+      guildBonusMaxHp.value += 15
+      const msg = '使用了生命护符，最大生命值永久+15！'
+      if (inCombat.value) combatLog.value.push(msg)
+      return { success: true, message: msg }
+    }
+
+    // 幸运铜钱：永久掉落率+5%
+    if (itemId === 'lucky_coin') {
+      if (!inventoryStore.removeItem('lucky_coin')) return { success: false, message: '没有幸运铜钱。' }
+      guildBonusDropRate.value += 0.05
+      const msg = '使用了幸运铜钱，怪物掉落率永久+5%！'
+      if (inCombat.value) combatLog.value.push(msg)
+      return { success: true, message: msg }
+    }
+
+    // 守护符：永久防御+3%
+    if (itemId === 'defense_charm') {
+      if (!inventoryStore.removeItem('defense_charm')) return { success: false, message: '没有守护符。' }
+      guildBonusDefense.value += 0.03
+      const msg = '使用了守护符，防御永久+3%！'
+      if (inCombat.value) combatLog.value.push(msg)
+      return { success: true, message: msg }
+    }
+
     // 猎魔符：本次探索掉落率+20%
     if (itemId === 'slayer_charm') {
       if (slayerCharmActive.value) return { success: false, message: '猎魔符效果已激活。' }
@@ -1200,6 +1270,22 @@ export const useMiningStore = defineStore('mining', () => {
     // 食物/药剂类道具
     const def = getItemById(itemId)
     if (!def) return { success: false, message: '未知物品。' }
+
+    // 烹饪品走 cookingStore.eat()，以正确应用buff、厨房加成等
+    if (itemId.startsWith('food_')) {
+      const cookingStore = useCookingStore()
+      const hpFull = playerStore.hp >= playerStore.getMaxHp()
+      const staminaFull = playerStore.stamina >= playerStore.maxStamina
+      if (hpFull && staminaFull) {
+        return { success: false, message: '体力和生命值都已满。' }
+      }
+      // 查找背包中该食物的最低品质
+      const qualityOrder: Quality[] = ['normal', 'fine', 'excellent', 'supreme']
+      const foodQuality = qualityOrder.find(q => inventoryStore.getItemCount(itemId, q) > 0) ?? 'normal'
+      const result = cookingStore.eat(itemId.slice(5), foodQuality)
+      if (result.success && inCombat.value) combatLog.value.push(result.message)
+      return result
+    }
 
     const hpFull = playerStore.hp >= playerStore.getMaxHp()
     const staminaFull = playerStore.stamina >= playerStore.maxStamina
@@ -1218,15 +1304,18 @@ export const useMiningStore = defineStore('mining', () => {
 
     if (!inventoryStore.removeItem(itemId)) return { success: false, message: `没有${def.name}。` }
 
+    // 炼金师专精：食物恢复+50%
+    const alchemistBonus = skillStore.getSkill('foraging').perk10 === 'alchemist' ? 1.5 : 1.0
     const parts: string[] = []
     if (hasHpRestore) {
-      const restore = def.healthRestore! >= 999 ? playerStore.getMaxHp() : def.healthRestore!
+      const restore = def.healthRestore! >= 999 ? playerStore.getMaxHp() : Math.floor(def.healthRestore! * alchemistBonus)
       playerStore.restoreHealth(restore)
-      parts.push(`恢复${def.healthRestore! >= 999 ? '全部' : def.healthRestore}HP`)
+      parts.push(`恢复${def.healthRestore! >= 999 ? '全部' : restore}HP`)
     }
     if (hasStaminaRestore) {
-      playerStore.restoreStamina(def.staminaRestore!)
-      parts.push(`恢复${def.staminaRestore}体力`)
+      const restore = Math.floor(def.staminaRestore! * alchemistBonus)
+      playerStore.restoreStamina(restore)
+      parts.push(`恢复${restore}体力`)
     }
 
     const msg = `使用了${def.name}，${parts.join('和')}！`
@@ -1280,7 +1369,10 @@ export const useMiningStore = defineStore('mining', () => {
       isInSkullCavern: isInSkullCavern.value,
       skullCavernFloor: skullCavernFloor.value,
       skullCavernBestFloor: skullCavernBestFloor.value,
-      guildBadgeBonusAttack: guildBadgeBonusAttack.value
+      guildBadgeBonusAttack: guildBadgeBonusAttack.value,
+      guildBonusMaxHp: guildBonusMaxHp.value,
+      guildBonusDropRate: guildBonusDropRate.value,
+      guildBonusDefense: guildBonusDefense.value
     }
   }
 
@@ -1312,6 +1404,9 @@ export const useMiningStore = defineStore('mining', () => {
 
     // 公会徽章永久加成
     guildBadgeBonusAttack.value = ((data as Record<string, unknown>).guildBadgeBonusAttack as number) ?? 0
+    guildBonusMaxHp.value = ((data as Record<string, unknown>).guildBonusMaxHp as number) ?? 0
+    guildBonusDropRate.value = ((data as Record<string, unknown>).guildBonusDropRate as number) ?? 0
+    guildBonusDefense.value = ((data as Record<string, unknown>).guildBonusDefense as number) ?? 0
   }
 
   return {
@@ -1338,8 +1433,12 @@ export const useMiningStore = defineStore('mining', () => {
     // 道具系统
     slayerCharmActive,
     guildBadgeBonusAttack,
+    guildBonusMaxHp,
+    guildBonusDropRate,
+    guildBonusDefense,
     // 方法
     isSkullCavernUnlocked,
+    getActiveFloorData,
     getUnlockedSafePoints,
     canRevealTile,
     engageRevealedMonster,

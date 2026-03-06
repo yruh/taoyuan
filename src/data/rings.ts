@@ -464,6 +464,21 @@ export const RINGS: RingDef[] = [
     recipeMoney: 0,
     obtainSource: '矿洞宝箱',
     sellPrice: 600
+  },
+
+  // === 公会专属 ===
+  {
+    id: 'guild_war_ring',
+    name: '公会战戒',
+    description: '冒险家公会精英成员的战斗指环，蕴含公会的力量。',
+    effects: [
+      { type: 'attack_bonus', value: 4 },
+      { type: 'defense_bonus', value: 0.06 }
+    ],
+    recipe: null,
+    recipeMoney: 0,
+    obtainSource: '公会商店',
+    sellPrice: 800
   }
 ]
 

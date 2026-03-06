@@ -19,6 +19,8 @@ import { useBreedingStore } from '@/stores/useBreedingStore'
 import { useHanhaiStore } from '@/stores/useHanhaiStore'
 import { useFishPondStore } from '@/stores/useFishPondStore'
 import { useTutorialStore } from '@/stores/useTutorialStore'
+import { useHiddenNpcStore } from '@/stores/useHiddenNpcStore'
+import { useMiningStore } from '@/stores/useMiningStore'
 import { getItemById, getTodayEvent, getNpcById, getCropById, getForageItems } from '@/data'
 import { getFertilizerById } from '@/data/processing'
 import { FISH } from '@/data/fish'
@@ -27,7 +29,7 @@ import { CAVE_UNLOCK_EARNINGS } from '@/data/buildings'
 import { TOOL_NAMES, TIER_NAMES } from '@/data/upgrades'
 import { addLog, showFloat } from './useGameLog'
 import { getDailyMarketInfo, MARKET_CATEGORY_NAMES } from '@/data/market'
-import { showEvent, showFestival, triggerWeddingEvent, triggerPetAdoption, showFarmEvent } from './useDialogs'
+import { showEvent, showFestival, triggerWeddingEvent, triggerPetAdoption, showFarmEvent, showDiscoveryScene } from './useDialogs'
 import { sfxSleep, useAudio } from './useAudio'
 import { MORNING_NARRATIONS, NARRATIONS_NO_LOSS, MORNING_CHOICE_EVENTS, MORNING_EASTER_EGGS } from '@/data/farmEvents'
 import { MORNING_TIPS } from '@/data/tutorials'
@@ -401,6 +403,12 @@ export const handleEndDay = async () => {
     recoveryMode = 'normal'
   }
 
+  // 矿洞强制退出：无论玩家是否在探索中，睡觉/晕厥后都重置矿洞状态
+  const miningStore = useMiningStore()
+  if (miningStore.isExploring) {
+    miningStore.leaveMine()
+  }
+
   const pestResult = farmStore.dailyUpdate(gameStore.isRainy)
   processingStore.dailyUpdate()
 
@@ -501,55 +509,22 @@ export const handleEndDay = async () => {
     addLog(`巨型${gc.cropName}出现了！3×3的作物合体成了巨型作物！`)
   }
 
-  // 配偶助手（在 dailyReset 之前，因为需要检查 talkedToday）
+  // 雇工喂食结算（必须在 animalStore.dailyUpdate 之前，确保喂食状态生效）
+  const helperFeedResult = npcStore.processDailyHelpers(['feed'])
+  for (const msg of helperFeedResult.messages) addLog(msg)
+
+  // 配偶喂食（必须在 animalStore.dailyUpdate 之前）
   const spouse = npcStore.getSpouse()
   if (spouse) {
-    const spouseDef = getNpcById(spouse.npcId)
-    const spouseName = spouseDef?.name ?? '配偶'
-    const bonusChance = spouse.friendship >= 2500 ? 0.1 : 0
-    const highBond = spouse.friendship >= 3000 ? 0.15 : 0
-
-    // 浇水：50% + bonus + highBond，3-6块
-    if (Math.random() < 0.5 + bonusChance + highBond) {
-      const unwatered = farmStore.plots.filter(p => (p.state === 'planted' || p.state === 'growing') && !p.watered)
-      const count = Math.min(unwatered.length, 3 + Math.floor(Math.random() * 4))
-      for (let i = 0; i < count; i++) farmStore.waterPlot(unwatered[i]!.id)
-      if (count > 0) addLog(`${spouseName}帮你浇了${count}块地。`)
-    }
-
-    // 喂食：40% + bonus
-    if (Math.random() < 0.4 + bonusChance) {
+    const bonusChanceEve = spouse.friendship >= 2500 ? 0.1 : 0
+    if (Math.random() < 0.4 + bonusChanceEve) {
       const result = animalStore.feedAll()
-      if (result.fedCount > 0) addLog(`${spouseName}帮你喂了所有牲畜。`)
-    }
-
-    // 做饭：30% + bonus（好感>=2000）
-    if (spouse.friendship >= 2000 && Math.random() < 0.3 + bonusChance) {
-      const foods = ['food_rice_ball', 'food_congee', 'food_steamed_bun', 'food_honey_tea', 'food_stir_fry', 'food_dumpling']
-      const food = foods[Math.floor(Math.random() * foods.length)]!
-      inventoryStore.addItem(food)
-      addLog(`${spouseName}做了一份${getItemById(food)?.name ?? '食物'}。`)
-    }
-
-    // 收获：30%（好感>=3000），最多3块
-    if (spouse.friendship >= 3000 && Math.random() < 0.3 + bonusChance) {
-      const harvestable = farmStore.plots.filter(p => p.state === 'harvestable')
-      const harvestCount = Math.min(harvestable.length, 3)
-      let harvested = 0
-      for (let i = 0; i < harvestCount; i++) {
-        const hResult = farmStore.harvestPlot(harvestable[i]!.id)
-        if (hResult.cropId) {
-          inventoryStore.addItem(hResult.cropId, 1, 'normal')
-          harvested++
-        }
+      if (result.fedCount > 0) {
+        const spouseDefEve = getNpcById(spouse.npcId)
+        addLog(`${spouseDefEve?.name ?? '配偶'}帮你喂了所有牲畜。`)
       }
-      if (harvested > 0) addLog(`${spouseName}帮你收了${harvested}块地的庄稼。`)
     }
   }
-
-  // 雇工每日结算
-  const helperResult = npcStore.processDailyHelpers()
-  for (const msg of helperResult.messages) addLog(msg)
 
   // 知己每日加成（在 dailyReset 之前）
   const zhiji = npcStore.getZhiji()
@@ -655,6 +630,30 @@ export const handleEndDay = async () => {
   cookingStore.dailyReset()
   useHanhaiStore().resetDailyBets()
 
+  // 仙灵每日处理
+  const hiddenNpcStore = useHiddenNpcStore()
+  const discoveryTriggered = hiddenNpcStore.checkDiscoveryConditions()
+  for (const { npcId, step } of discoveryTriggered) {
+    if (step.logMessage) addLog(step.logMessage)
+    if (step.scenes.length > 0) showDiscoveryScene(npcId, step)
+  }
+  hiddenNpcStore.dailyReset()
+  const newAbilities = hiddenNpcStore.checkAbilityUnlocks()
+  for (const a of newAbilities) {
+    addLog(`【仙缘】${a.name}：${a.description}`)
+    // 永久效果：最大体力+20
+    if (a.id === 'shan_weng_3') {
+      playerStore.addBonusMaxStamina(20)
+    }
+  }
+  // 修复旧存档：确保已激活的 shan_weng_3 体力加成正确应用
+  if (hiddenNpcStore.isAbilityActive('shan_weng_3')) {
+    const expected = 20
+    if (playerStore.bonusMaxStamina < expected) {
+      playerStore.addBonusMaxStamina(expected - playerStore.bonusMaxStamina)
+    }
+  }
+
   // 动物产出
   const animalResult = animalStore.dailyUpdate()
   if (animalResult.products.length > 0) {
@@ -671,6 +670,65 @@ export const handleEndDay = async () => {
   }
   if (animalResult.healed.length > 0) {
     addLog(`${animalResult.healed.join('、')}吃饱后恢复了健康。`)
+  }
+
+  // 晨间喂食：雇工和配偶在新一天开始时标记已喂食，让玩家当天可以直接放牧
+  // 使用 markAllFed 标记已喂食状态（不消耗饲料，饲料已在上面的结算中消耗过）
+  const hasHelperFeed = npcStore.hiredHelpers.some(h => h.task === 'feed')
+  if (hasHelperFeed) {
+    animalStore.markAllFed()
+  }
+  if (spouse && !hasHelperFeed) {
+    const bonusChanceFeed = spouse.friendship >= 2500 ? 0.1 : 0
+    if (Math.random() < 0.4 + bonusChanceFeed) {
+      animalStore.markAllFed()
+      const spouseDefFeed = getNpcById(spouse.npcId)
+      addLog(`${spouseDefFeed?.name ?? '配偶'}一早就帮你喂好了牲畜。`)
+    }
+  }
+
+  // 晨间工作：雇工浇水/收获/除草
+  const helperMorningResult = npcStore.processDailyHelpers(['water', 'harvest', 'weed'])
+  for (const msg of helperMorningResult.messages) addLog(msg)
+
+  // 晨间工作：配偶浇水/做饭/收获
+  if (spouse) {
+    const spouseDef = getNpcById(spouse.npcId)
+    const spouseName = spouseDef?.name ?? '配偶'
+    const bonusChance = spouse.friendship >= 2500 ? 0.1 : 0
+    const highBond = spouse.friendship >= 3000 ? 0.15 : 0
+
+    // 浇水：50% + bonus + highBond，3-6块
+    if (Math.random() < 0.5 + bonusChance + highBond) {
+      const unwatered = farmStore.plots.filter(p => (p.state === 'planted' || p.state === 'growing') && !p.watered)
+      const count = Math.min(unwatered.length, 3 + Math.floor(Math.random() * 4))
+      for (let i = 0; i < count; i++) farmStore.waterPlot(unwatered[i]!.id)
+      if (count > 0) addLog(`${spouseName}一早帮你浇了${count}块地。`)
+    }
+
+    // 做饭：30% + bonus（好感>=2000）
+    if (spouse.friendship >= 2000 && Math.random() < 0.3 + bonusChance) {
+      const foods = ['food_rice_ball', 'food_congee', 'food_steamed_bun', 'food_honey_tea', 'food_stir_fry', 'food_dumpling']
+      const food = foods[Math.floor(Math.random() * foods.length)]!
+      inventoryStore.addItem(food)
+      addLog(`${spouseName}一早做了一份${getItemById(food)?.name ?? '食物'}。`)
+    }
+
+    // 收获：30%（好感>=3000），最多3块，背包满时不收
+    if (spouse.friendship >= 3000 && !inventoryStore.isFull && Math.random() < 0.3 + bonusChance) {
+      const harvestable = farmStore.plots.filter(p => p.state === 'harvestable')
+      const harvestCount = Math.min(harvestable.length, 3)
+      let harvested = 0
+      for (let i = 0; i < harvestCount; i++) {
+        if (inventoryStore.isFull) break
+        const hResult = farmStore.harvestPlot(harvestable[i]!.id)
+        if (hResult.cropId) {
+          inventoryStore.addItem(hResult.cropId, 1, 'normal')
+          harvested++
+        }
+      }
+      if (harvested > 0) addLog(`${spouseName}一早帮你收了${harvested}块地的庄稼。`)
+    }
   }
 
   // 孵化器更新
@@ -846,6 +904,10 @@ export const handleEndDay = async () => {
   const bedHour = gameStore.hour
   const { moneyLost, recoveryPct } = playerStore.dailyReset(recoveryMode, bedHour)
 
+  // 仙灵结缘每日奖励（必须在 dailyReset 之后，否则 stamina_restore 会被覆盖）
+  const bondMessages = hiddenNpcStore.dailyBondBonus()
+  for (const msg of bondMessages.messages) addLog(msg)
+
   let summary: string
   if (recoveryMode === 'passout') {
     summary =
@@ -859,9 +921,6 @@ export const handleEndDay = async () => {
     summary = '美好的一天结束了。'
   }
 
-  addLog(
-    `—— 第${gameStore.year}年 ${SEASON_NAMES[gameStore.season]} 第${gameStore.day}天 ${gameStore.weekdayName} ${WEATHER_NAMES[gameStore.weather]} ——`
-  )
   addLog(summary)
 
   // 换季处理
@@ -908,6 +967,26 @@ export const handleEndDay = async () => {
 
   // 天气预报
   addLog(`明日天气预报：${WEATHER_NAMES[gameStore.tomorrowWeather]}`)
+
+  // 换季倒计时提醒（第25-27天早晨）
+  if (!seasonChanged && gameStore.day >= 25 && gameStore.day <= 27) {
+    const daysLeft = 28 - gameStore.day
+    const SEASON_ORDER = ['spring', 'summer', 'autumn', 'winter'] as const
+    const nextSeason = SEASON_ORDER[(SEASON_ORDER.indexOf(gameStore.season) + 1) % 4]!
+    let cropAtRisk = 0
+    for (const plot of farmStore.plots) {
+      if ((plot.state === 'planted' || plot.state === 'growing' || plot.state === 'harvestable') && plot.cropId) {
+        const crop = getCropById(plot.cropId)
+        if (crop && !crop.season.includes(nextSeason)) cropAtRisk++
+      }
+    }
+    if (cropAtRisk > 0) {
+      addLog(`距离换季还有${daysLeft}天，${cropAtRisk}株作物不适应${SEASON_NAMES[nextSeason]}季，届时将会枯萎。`)
+      showFloat(`换季倒计时${daysLeft}天！${cropAtRisk}株作物将枯萎`, 'danger')
+    } else {
+      addLog(`距离换季还有${daysLeft}天。`)
+    }
+  }
 
   // 今日行情
   const marketInfo = getDailyMarketInfo(gameStore.year, gameStore.seasonIndex, gameStore.day, shopStore.getRecentShipping())
@@ -977,7 +1056,14 @@ export const handleEndDay = async () => {
       const { startFestivalBgm } = useAudio()
       startFestivalBgm(gameStore.season)
     }
-    showEvent(event)
+    // 替换 narrative 中的动态占位符
+    const ORDINALS = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
+    const yearStr = gameStore.year <= 10 ? ORDINALS[gameStore.year - 1]! : String(gameStore.year)
+    const resolved = {
+      ...event,
+      narrative: event.narrative.map(line => line.replace('{year}', yearStr))
+    }
+    showEvent(resolved)
   }
 
   // 成就检查

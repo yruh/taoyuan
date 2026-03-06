@@ -27,6 +27,7 @@ import {
 } from '@/data/hanhai'
 import { usePlayerStore } from './usePlayerStore'
 import { useInventoryStore } from './useInventoryStore'
+import { useGameStore } from './useGameStore'
 import { addLog } from '@/composables/useGameLog'
 import type { TexasSetup, TexasTierId, BuckshotSetup } from '@/types'
 
@@ -35,6 +36,8 @@ export const useHanhaiStore = defineStore('hanhai', () => {
   const unlocked = ref(false)
   /** 今日赌博次数 */
   const casinoBetsToday = ref(0)
+  /** 本周商店购买计数 { itemId: count } */
+  const weeklyPurchases = ref<Record<string, number>>({})
 
   const canBet = computed(() => casinoBetsToday.value < MAX_DAILY_BETS)
   const betsRemaining = computed(() => MAX_DAILY_BETS - casinoBetsToday.value)
@@ -51,10 +54,20 @@ export const useHanhaiStore = defineStore('hanhai', () => {
     return { success: true, message: '瀚海商路已开通！' }
   }
 
+  /** 查询某商品本周剩余可购买数量 */
+  const getWeeklyRemaining = (itemId: string): number => {
+    const item = HANHAI_SHOP_ITEMS.find(i => i.itemId === itemId)
+    if (!item?.weeklyLimit) return Infinity
+    return Math.max(0, item.weeklyLimit - (weeklyPurchases.value[itemId] ?? 0))
+  }
+
   /** 购买驿站商品 */
   const buyShopItem = (itemId: string): { success: boolean; message: string } => {
     const item = HANHAI_SHOP_ITEMS.find(i => i.itemId === itemId)
     if (!item) return { success: false, message: '商品不存在。' }
+    if (item.weeklyLimit && (weeklyPurchases.value[itemId] ?? 0) >= item.weeklyLimit) {
+      return { success: false, message: `${item.name}本周限购已达上限。` }
+    }
     const playerStore = usePlayerStore()
     if (!playerStore.spendMoney(item.price)) {
       return { success: false, message: '金钱不足。' }
@@ -64,6 +77,7 @@ export const useHanhaiStore = defineStore('hanhai', () => {
       playerStore.earnMoney(item.price)
       return { success: false, message: '背包已满，无法购买。' }
     }
+    weeklyPurchases.value[itemId] = (weeklyPurchases.value[itemId] ?? 0) + 1
     return { success: true, message: `购买了${item.name}。` }
   }
 
@@ -83,7 +97,7 @@ export const useHanhaiStore = defineStore('hanhai', () => {
       rewards.push({ itemId: '', name: '5000文', quantity: 1 })
       rewards.push({ itemId: 'hanhai_turquoise', name: '绿松石', quantity: 2 })
       inventoryStore.addItem('hanhai_turquoise', 2)
-    } else if (roll < 0.20) {
+    } else if (roll < 0.2) {
       // 15% 中奖：金钱+材料
       playerStore.earnMoney(2000)
       rewards.push({ itemId: '', name: '2000文', quantity: 1 })
@@ -295,27 +309,36 @@ export const useHanhaiStore = defineStore('hanhai', () => {
     }
   }
 
-  /** 每日重置赌博次数 */
+  /** 每日重置赌博次数，每周重置商店限购 */
   const resetDailyBets = () => {
     casinoBetsToday.value = 0
+    // 每周重置商店限购 (day 7, 14, 21, 28)
+    const gameStore = useGameStore()
+    if (gameStore.day % 7 === 0) {
+      weeklyPurchases.value = {}
+    }
   }
 
   const serialize = () => ({
     unlocked: unlocked.value,
-    casinoBetsToday: casinoBetsToday.value
+    casinoBetsToday: casinoBetsToday.value,
+    weeklyPurchases: weeklyPurchases.value
   })
 
   const deserialize = (data: any) => {
     unlocked.value = data.unlocked ?? false
     casinoBetsToday.value = data.casinoBetsToday ?? 0
+    weeklyPurchases.value = data.weeklyPurchases ?? {}
   }
 
   return {
     unlocked,
     casinoBetsToday,
+    weeklyPurchases,
     canBet,
     betsRemaining,
     unlockHanhai,
+    getWeeklyRemaining,
     buyShopItem,
     useTreasureMap,
     playRoulette,

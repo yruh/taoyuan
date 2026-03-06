@@ -21,6 +21,7 @@ import { usePlayerStore } from './usePlayerStore'
 import { useCookingStore } from './useCookingStore'
 import { useFarmStore } from './useFarmStore'
 import { useAnimalStore } from './useAnimalStore'
+import { useFishPondStore } from './useFishPondStore'
 
 /** 好感等级阈值 (10心制, 每心250点, 上限2500) */
 const FRIENDSHIP_THRESHOLDS: { level: FriendshipLevel; min: number }[] = [
@@ -143,7 +144,7 @@ export const useNpcStore = defineStore('npc', () => {
   }
 
   /** 每日雇工结算（useEndDay调用） */
-  const processDailyHelpers = (): { messages: string[]; dismissedNpcs: string[] } => {
+  const processDailyHelpers = (taskFilter?: FarmHelperTask[]): { messages: string[]; dismissedNpcs: string[] } => {
     const playerStore = usePlayerStore()
     const farmStore = useFarmStore()
     const animalStore = useAnimalStore()
@@ -152,6 +153,9 @@ export const useNpcStore = defineStore('npc', () => {
     const dismissed: string[] = []
 
     for (const helper of [...hiredHelpers.value]) {
+      // 按任务类型过滤
+      if (taskFilter && !taskFilter.includes(helper.task)) continue
+
       const npcDef = getNpcById(helper.npcId)
       const name = npcDef?.name ?? '雇工'
       const state = getNpcState(helper.npcId)
@@ -185,8 +189,17 @@ export const useNpcStore = defineStore('npc', () => {
         }
         case 'feed': {
           const result = animalStore.feedAll()
-          if (result.fedCount > 0) messages.push(`${name}帮你喂了${result.fedCount}只牲畜。(-${helper.dailyWage}文)`)
-          else messages.push(`${name}今天没什么需要喂的。(-${helper.dailyWage}文)`)
+          const fishPondStore = useFishPondStore()
+          const fedFish = fishPondStore.pond.built && !fishPondStore.pond.fedToday ? fishPondStore.feedFish() : false
+          if (result.fedCount > 0 && fedFish) {
+            messages.push(`${name}帮你喂了${result.fedCount}只牲畜和鱼塘的鱼。(-${helper.dailyWage}文)`)
+          } else if (result.fedCount > 0) {
+            messages.push(`${name}帮你喂了${result.fedCount}只牲畜。(-${helper.dailyWage}文)`)
+          } else if (fedFish) {
+            messages.push(`${name}帮你喂了鱼塘的鱼。(-${helper.dailyWage}文)`)
+          } else {
+            messages.push(`${name}今天没什么需要喂的。(-${helper.dailyWage}文)`)
+          }
           break
         }
         case 'harvest': {
@@ -417,8 +430,8 @@ export const useNpcStore = defineStore('npc', () => {
 
     // 品质加成
     const qualityMultiplier: Record<Quality, number> = { normal: 1.0, fine: 1.25, excellent: 1.5, supreme: 2.0 }
-    // 生日加成 (8倍)
-    const birthdayMultiplier = isBirthday(npcId) ? 8 : 1
+    // 生日加成 (4倍)
+    const birthdayMultiplier = isBirthday(npcId) ? 4 : 1
 
     gain = Math.floor(gain * qualityMultiplier[quality] * birthdayMultiplier * giftBonusMultiplier)
     state.friendship = Math.max(0, state.friendship + gain)

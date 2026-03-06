@@ -15,6 +15,7 @@ import { usePlayerStore } from './usePlayerStore'
 import { useInventoryStore } from './useInventoryStore'
 import { useGameStore } from './useGameStore'
 import { useSkillStore } from './useSkillStore'
+import { useHiddenNpcStore } from './useHiddenNpcStore'
 import { getCombinedItemCount, removeCombinedItem } from '@/composables/useCombinedInventory'
 
 export const useAnimalStore = defineStore('animal', () => {
@@ -78,7 +79,7 @@ export const useAnimalStore = defineStore('animal', () => {
     for (const mat of def.materialCost) {
       if (getCombinedItemCount(mat.itemId) < mat.quantity) return false
     }
-    // 检查金币
+    // 检查铜钱
     if (!playerStore.spendMoney(def.cost)) return false
 
     // 扣除材料
@@ -131,7 +132,7 @@ export const useAnimalStore = defineStore('animal', () => {
     }).length
     if (currentCount >= maxCapacity) return false
 
-    // 检查金币
+    // 检查铜钱
     if (!playerStore.spendMoney(def.cost)) return false
 
     animals.value.push({
@@ -152,24 +153,34 @@ export const useAnimalStore = defineStore('animal', () => {
     return true
   }
 
-  /** 喂食所有动物（消耗指定饲料，马也需要喂食） */
+  /** 喂食所有动物（消耗指定饲料，马也需要喂食；从背包+仓库箱子取饲料） */
   const feedAll = (feedId: string = HAY_ITEM_ID): { fedCount: number; noFeedCount: number } => {
-    const inventoryStore = useInventoryStore()
-
     let fedCount = 0
     let noFeedCount = 0
     const unfed = animals.value.filter(a => !a.wasFed)
 
     for (const animal of unfed) {
-      if (inventoryStore.removeItem(feedId, 1)) {
+      if (removeCombinedItem(feedId, 1)) {
         animal.wasFed = true
         animal.fedWith = feedId
+        animal.hunger = 0
         fedCount++
       } else {
         noFeedCount++
       }
     }
     return { fedCount, noFeedCount }
+  }
+
+  /** 标记所有动物为已喂食（不消耗饲料，用于晨间雇工/配偶预喂食） */
+  const markAllFed = () => {
+    for (const animal of animals.value) {
+      if (!animal.wasFed) {
+        animal.wasFed = true
+        animal.fedWith = HAY_ITEM_ID
+        animal.hunger = 0
+      }
+    }
   }
 
   /** 抚摸动物 */
@@ -516,6 +527,8 @@ export const useAnimalStore = defineStore('animal', () => {
 
       // 友好度变化
       const friendshipMultiplier = gameStore.farmMapType === 'meadowlands' ? 1.5 : 1.0
+      // 仙缘能力：灵抚（gui_nv_3）动物好感获取+25%
+      const spiritFriendshipBonus = 1 + useHiddenNpcStore().getAbilityValue('gui_nv_3') / 100
 
       // 自动抚摸机：若所在建筑已安装，自动标记已抚摸
       if (!animal.wasPetted) {
@@ -538,10 +551,16 @@ export const useAnimalStore = defineStore('animal', () => {
       }
       if (animal.wasFed && animal.wasPetted) {
         const base = animal.fedWith === PREMIUM_FEED_ID ? 25 : 15
-        animal.friendship = Math.min(1000, animal.friendship + Math.floor(base * friendshipMultiplier * coopmasterBonus))
+        animal.friendship = Math.min(
+          1000,
+          animal.friendship + Math.floor(base * friendshipMultiplier * coopmasterBonus * spiritFriendshipBonus)
+        )
       } else if (animal.wasFed) {
         const base = animal.fedWith === PREMIUM_FEED_ID ? 10 : 5
-        animal.friendship = Math.min(1000, animal.friendship + Math.floor(base * friendshipMultiplier * coopmasterBonus))
+        animal.friendship = Math.min(
+          1000,
+          animal.friendship + Math.floor(base * friendshipMultiplier * coopmasterBonus * spiritFriendshipBonus)
+        )
       }
 
       // 心情根据喂食调整
@@ -571,6 +590,13 @@ export const useAnimalStore = defineStore('animal', () => {
             const idx = qualityOrder.indexOf(quality)
             quality = qualityOrder[Math.min(idx + 1, qualityOrder.length - 1)]!
           }
+          // 仙缘结缘：灵织（animal_blessing）动物产品品质+1
+          const animalBondBonus = useHiddenNpcStore().getBondBonusByType('animal_blessing')
+          if (animalBondBonus?.type === 'animal_blessing' && Math.random() < animalBondBonus.chance) {
+            const qualityOrder2: Quality[] = ['normal', 'fine', 'excellent', 'supreme']
+            const idx2 = qualityOrder2.indexOf(quality)
+            if (idx2 < qualityOrder2.length - 1) quality = qualityOrder2[idx2 + 1]!
+          }
           products.push({ itemId: def.productId, quality })
           animal.daysSinceProduct = 0
 
@@ -599,6 +625,14 @@ export const useAnimalStore = defineStore('animal', () => {
 
     // 重置放牧状态
     grazedToday.value = false
+
+    // 自动抚摸机：为新一天预设抚摸状态，使 UI 正确显示「已摸」
+    for (const animal of animals.value) {
+      const animalDef = ANIMAL_DEFS.find(d => d.type === animal.type)
+      if (animalDef && autoPetterBuildings.value.includes(animalDef.building)) {
+        animal.wasPetted = true
+      }
+    }
 
     return { products, died, gotSick, healed }
   }
@@ -701,7 +735,10 @@ export const useAnimalStore = defineStore('animal', () => {
 
   const deserialize = (data: any) => {
     if (data.buildings) {
-      const savedBuildings = data.buildings.map((b: any) => ({ ...b, level: b.level ?? (b.built ? 1 : 0) }))
+      const savedBuildings = data.buildings.map((b: any) => ({
+        ...b,
+        level: b.level && b.level > 0 ? b.level : b.built ? 1 : 0
+      }))
       // 兼容旧存档：补充缺少的 stable 建筑
       const savedTypes = new Set(savedBuildings.map((b: any) => b.type))
       if (!savedTypes.has('stable')) {
@@ -746,6 +783,7 @@ export const useAnimalStore = defineStore('animal', () => {
     healAnimal,
     healAllSick,
     feedAll,
+    markAllFed,
     petAnimal,
     petAllAnimals,
     startIncubation,

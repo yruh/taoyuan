@@ -407,6 +407,23 @@ export const SHOES: ShoeDef[] = [
     recipeMoney: 0,
     obtainSource: '矿洞宝箱',
     sellPrice: 450
+  },
+
+  // === 公会专属 ===
+  {
+    id: 'guild_war_boots',
+    name: '公会战靴',
+    description: '冒险家公会精英成员的战斗靴，轻便且坚韧。',
+    effects: [
+      { type: 'attack_bonus', value: 2 },
+      { type: 'defense_bonus', value: 0.05 },
+      { type: 'travel_speed', value: 0.1 }
+    ],
+    shopPrice: null,
+    recipe: null,
+    recipeMoney: 0,
+    obtainSource: '公会商店',
+    sellPrice: 800
   }
 ]
 

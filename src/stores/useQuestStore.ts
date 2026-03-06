@@ -109,7 +109,7 @@ export const useQuestStore = defineStore('quest', () => {
       }
     }
 
-    // 发放金币奖励
+    // 发放铜钱奖励
     playerStore.earnMoney(quest.moneyReward)
     npcStore.adjustFriendship(quest.npcId, quest.friendshipReward)
 
@@ -361,7 +361,7 @@ export const useQuestStore = defineStore('quest', () => {
       }
     }
 
-    // 发放金币奖励
+    // 发放铜钱奖励
     playerStore.earnMoney(def.moneyReward)
 
     // 发放好感奖励

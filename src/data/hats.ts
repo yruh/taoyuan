@@ -398,6 +398,22 @@ export const HATS: HatDef[] = [
     recipeMoney: 0,
     obtainSource: '矿洞宝箱',
     sellPrice: 400
+  },
+
+  // === 公会专属 ===
+  {
+    id: 'guild_war_helm',
+    name: '公会战盔',
+    description: '冒险家公会精英成员的战斗头盔，坚固而威严。',
+    effects: [
+      { type: 'attack_bonus', value: 3 },
+      { type: 'max_hp_bonus', value: 15 }
+    ],
+    shopPrice: null,
+    recipe: null,
+    recipeMoney: 0,
+    obtainSource: '公会商店',
+    sellPrice: 800
   }
 ]
 

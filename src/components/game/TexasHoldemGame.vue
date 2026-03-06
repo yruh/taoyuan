@@ -1,6 +1,6 @@
 <template>
   <div class="game-panel max-w-sm w-full">
-    <p class="text-sm text-accent text-center mb-1">—— 瀚海扑克 · {{ tier.name }} ——</p>
+    <Divider title class="!mb-1">瀚海扑克 · {{ tier.name }}</Divider>
     <div class="flex items-center justify-center space-x-2 mb-2">
       <span class="text-xs text-muted">第 {{ currentRound }}/{{ tier.rounds }} 手</span>
       <span class="text-xs text-muted">入场费 {{ tier.entryFee }}文</span>
@@ -131,6 +131,7 @@
   import { usePlayerStore } from '@/stores/usePlayerStore'
   import { sfxChipBet, sfxFoldCards, sfxCardFlip, sfxCasinoWin, sfxCasinoLose } from '@/composables/useAudio'
   import Button from '@/components/game/Button.vue'
+  import Divider from '@/components/game/Divider.vue'
   import type { TexasSetup, TexasStreet, PokerSuit, PokerHandResult, PokerCard } from '@/types'
 
   const playerStore = usePlayerStore()

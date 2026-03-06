@@ -1,4 +1,4 @@
-import type { MonsterGoalDef, GuildShopItemDef } from '@/types'
+import type { MonsterGoalDef, GuildShopItemDef, GuildDonationDef, GuildLevelDef } from '@/types'
 
 /** 怪物讨伐目标 */
 export const MONSTER_GOALS: MonsterGoalDef[] = [
@@ -154,16 +154,153 @@ export const MONSTER_GOALS: MonsterGoalDef[] = [
 
 /** 公会商店物品 (与镖局互补，不重复) */
 export const GUILD_SHOP_ITEMS: GuildShopItemDef[] = [
-  // --- 基础战斗补给 ---
+  // --- 消耗品（铜钱购买，不限购）---
   { itemId: 'combat_tonic', name: '战斗补剂', price: 200, description: '恢复30点HP。' },
+  { itemId: 'adventurer_ration', name: '冒险口粮', price: 350, description: '恢复25体力和25HP。', unlockGuildLevel: 2 },
   { itemId: 'fortify_brew', name: '强化药水', price: 500, description: '恢复60点HP。' },
   { itemId: 'ironhide_potion', name: '铁壁药剂', price: 800, description: '恢复全部HP。' },
-  // --- 里程碑解锁 ---
-  { itemId: 'slayer_charm', name: '猎魔符', price: 1500, description: '怪物掉落率+20%（当次探索）。', unlockGoalCount: 5 },
-  { itemId: 'warriors_feast', name: '勇者盛宴', price: 1000, description: '恢复50体力和50HP。', unlockGoalCount: 10 },
-  { itemId: 'monster_lure', name: '怪物诱饵', price: 2000, description: '本层怪物数量翻倍。', unlockGoalCount: 15 },
-  { itemId: 'guild_badge', name: '公会徽章', price: 5000, description: '攻击力永久+3。', unlockGoalCount: 21 }
+  { itemId: 'warriors_feast', name: '勇者盛宴', price: 1000, description: '恢复50体力和50HP。', unlockGuildLevel: 5 },
+  { itemId: 'slayer_charm', name: '猎魔符', price: 1500, description: '怪物掉落率+20%（当次探索）。', unlockGuildLevel: 3 },
+  { itemId: 'stamina_elixir', name: '精力药剂', price: 600, description: '恢复120点体力。', unlockGuildLevel: 4 },
+  { itemId: 'monster_lure', name: '怪物诱饵', price: 2000, description: '本层怪物数量翻倍。', unlockGuildLevel: 7 },
+  // --- 装备（贡献点+材料，限购1件）---
+  {
+    itemId: 'guild_war_ring',
+    name: '公会战戒',
+    price: 0,
+    contributionCost: 200,
+    description: '攻击+4，防御+6%。',
+    unlockGuildLevel: 5,
+    totalLimit: 1,
+    equipType: 'ring',
+    materials: [
+      { itemId: 'gold_bar', quantity: 5 },
+      { itemId: 'ruby', quantity: 2 }
+    ]
+  },
+  {
+    itemId: 'guild_war_helm',
+    name: '公会战盔',
+    price: 0,
+    contributionCost: 250,
+    description: '攻击+3，HP+15。',
+    unlockGuildLevel: 6,
+    totalLimit: 1,
+    equipType: 'hat',
+    materials: [
+      { itemId: 'gold_bar', quantity: 5 },
+      { itemId: 'moonstone', quantity: 1 }
+    ]
+  },
+  {
+    itemId: 'guild_war_boots',
+    name: '公会战靴',
+    price: 0,
+    contributionCost: 250,
+    description: '攻击+2，防御+5%，移速+10%。',
+    unlockGuildLevel: 7,
+    totalLimit: 1,
+    equipType: 'shoe',
+    materials: [
+      { itemId: 'gold_bar', quantity: 5 },
+      { itemId: 'obsidian', quantity: 1 }
+    ]
+  },
+  {
+    itemId: 'guild_war_blade',
+    name: '公会战刃',
+    price: 0,
+    contributionCost: 350,
+    description: '攻击力36，暴击率10%。',
+    unlockGuildLevel: 9,
+    totalLimit: 1,
+    equipType: 'weapon',
+    materials: [
+      { itemId: 'gold_bar', quantity: 10 },
+      { itemId: 'dragon_jade', quantity: 1 }
+    ]
+  },
+  // --- 永久品（贡献点购买，每日限购）---
+  {
+    itemId: 'guild_badge',
+    name: '公会徽章',
+    price: 0,
+    contributionCost: 150,
+    description: '攻击力永久+3。',
+    unlockGuildLevel: 6,
+    dailyLimit: 1
+  },
+  {
+    itemId: 'life_talisman',
+    name: '生命护符',
+    price: 0,
+    contributionCost: 200,
+    description: '最大生命值永久+15。',
+    unlockGuildLevel: 8,
+    dailyLimit: 1,
+    totalLimit: 100
+  },
+  {
+    itemId: 'defense_charm',
+    name: '守护符',
+    price: 0,
+    contributionCost: 180,
+    description: '防御永久+3%。',
+    unlockGuildLevel: 7,
+    weeklyLimit: 3,
+    totalLimit: 10
+  },
+  {
+    itemId: 'lucky_coin',
+    name: '幸运铜钱',
+    price: 0,
+    contributionCost: 300,
+    description: '怪物掉落率永久+5%。',
+    unlockGuildLevel: 10,
+    weeklyLimit: 3,
+    totalLimit: 10
+  }
 ]
+
+/** 捐献物品表 */
+export const GUILD_DONATIONS: GuildDonationDef[] = [
+  // 矿石
+  { itemId: 'copper_ore', points: 2 },
+  { itemId: 'iron_ore', points: 4 },
+  { itemId: 'gold_ore', points: 8 },
+  { itemId: 'crystal_ore', points: 12 },
+  { itemId: 'shadow_ore', points: 18 },
+  { itemId: 'void_ore', points: 25 },
+  { itemId: 'iridium_ore', points: 35 },
+  // 宝石
+  { itemId: 'quartz', points: 4 },
+  { itemId: 'jade', points: 12 },
+  { itemId: 'ruby', points: 18 },
+  { itemId: 'moonstone', points: 25 },
+  { itemId: 'obsidian', points: 35 },
+  { itemId: 'dragon_jade', points: 50 },
+  { itemId: 'prismatic_shard', points: 80 }
+]
+
+/** 公会等级表（10级） */
+export const GUILD_LEVELS: GuildLevelDef[] = [
+  { level: 1, expRequired: 100 },
+  { level: 2, expRequired: 300 },
+  { level: 3, expRequired: 600 },
+  { level: 4, expRequired: 1000 },
+  { level: 5, expRequired: 1500 },
+  { level: 6, expRequired: 2200 },
+  { level: 7, expRequired: 3000 },
+  { level: 8, expRequired: 4000 },
+  { level: 9, expRequired: 5500 },
+  { level: 10, expRequired: 7500 }
+]
+
+/** 每公会等级的被动增益 */
+export const GUILD_BONUS_PER_LEVEL = {
+  attack: 1, // 每级+1攻击力
+  maxHp: 5 // 每级+5最大生命值
+}
 
 /** 根据怪物ID查找讨伐目标 */
 export const getMonsterGoal = (monsterId: string): MonsterGoalDef | undefined => MONSTER_GOALS.find(g => g.monsterId === monsterId)

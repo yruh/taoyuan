@@ -43,9 +43,10 @@
         <div
           v-for="(item, idx) in filteredItems"
           :key="idx"
-          class="border border-accent/20 rounded-xs p-1.5 text-center cursor-pointer hover:bg-accent/5 transition-colors"
+          class="border border-accent/20 rounded-xs p-1.5 text-center cursor-pointer hover:bg-accent/5 transition-colors relative"
           @click="activeItemKey = item.itemId + ':' + item.quality"
         >
+          <Lock v-if="item.locked" :size="10" class="absolute top-0.5 left-0.5 text-accent/60" />
           <div
             class="text-xs truncate"
             :class="{
@@ -132,7 +133,7 @@
           <div
             v-for="(weapon, idx) in inventoryStore.ownedWeapons"
             :key="idx"
-            class="flex items-center justify-between border rounded-xs px-2 py-1 cursor-pointer hover:bg-accent/5"
+            class="flex items-center justify-between border rounded-xs px-2 py-1 mr-1 cursor-pointer hover:bg-accent/5"
             :class="idx === inventoryStore.equippedWeaponIndex ? 'border-accent/30' : 'border-accent/10'"
             @click="activeWeaponIdx = idx"
           >
@@ -161,7 +162,7 @@
             <div
               v-for="(hat, idx) in inventoryStore.ownedHats"
               :key="idx"
-              class="flex items-center justify-between border rounded-xs px-2 py-1 cursor-pointer hover:bg-accent/5"
+              class="flex items-center justify-between border rounded-xs px-2 py-1 mr-1 cursor-pointer hover:bg-accent/5"
               :class="inventoryStore.equippedHatIndex === idx ? 'border-accent/30' : 'border-accent/10'"
               @click="activeHatIdx = idx"
             >
@@ -200,7 +201,7 @@
             <div
               v-for="(shoe, idx) in inventoryStore.ownedShoes"
               :key="idx"
-              class="flex items-center justify-between border rounded-xs px-2 py-1 cursor-pointer hover:bg-accent/5"
+              class="flex items-center justify-between border rounded-xs px-2 py-1 mr-1 cursor-pointer hover:bg-accent/5"
               :class="inventoryStore.equippedShoeIndex === idx ? 'border-accent/30' : 'border-accent/10'"
               @click="activeShoeIdx = idx"
             >
@@ -247,7 +248,7 @@
             <div
               v-for="(ring, idx) in inventoryStore.ownedRings"
               :key="idx"
-              class="flex items-center justify-between border rounded-xs px-2 py-1 cursor-pointer hover:bg-accent/5"
+              class="flex items-center justify-between border rounded-xs px-2 py-1 mr-1 cursor-pointer hover:bg-accent/5"
               :class="isRingEquipped(idx) ? 'border-accent/30' : 'border-accent/10'"
               @click="activeRingIdx = idx"
             >
@@ -528,6 +529,14 @@
 
           <div class="flex flex-col space-y-1.5">
             <Button
+              class="w-full justify-center"
+              :icon="activeItem.locked ? LockOpen : Lock"
+              :icon-size="12"
+              @click="inventoryStore.toggleLock(activeItem.itemId, activeItem.quality)"
+            >
+              {{ activeItem.locked ? '解锁' : '锁定' }}
+            </Button>
+            <Button
               v-if="isEdible(activeItem.itemId)"
               class="w-full justify-center"
               :icon="Apple"
@@ -736,7 +745,7 @@
 
 <script setup lang="ts">
   import { ref, computed } from 'vue'
-  import { Apple, Archive, ArrowDown01, ArrowRight, BookMarked, Filter, Package, X, Zap } from 'lucide-vue-next'
+  import { Apple, Archive, ArrowDown01, ArrowRight, BookMarked, Filter, Lock, LockOpen, Package, X, Zap } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
   import { useCookingStore } from '@/stores/useCookingStore'
   import { useGameStore } from '@/stores/useGameStore'
@@ -1229,7 +1238,7 @@
     // 烹饪品走 cookingStore.eat()，以正确应用buff、厨房加成等
     if (itemId.startsWith('food_')) {
       const recipeId = itemId.slice(5) // 去掉 'food_' 前缀
-      const result = cookingStore.eat(recipeId)
+      const result = cookingStore.eat(recipeId, quality)
       if (result.success) {
         addLog(result.message)
       } else {

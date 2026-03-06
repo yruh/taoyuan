@@ -179,14 +179,14 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     name: '百年好合',
     description: '与心仪之人结为夫妇。',
     condition: { type: 'married' },
-    reward: { money: 500 }
+    reward: { money: 1314 }
   },
   {
     id: 'parent',
     name: '天伦之乐',
     description: '迎来第一个孩子。',
     condition: { type: 'hasChild' },
-    reward: { money: 300 }
+    reward: { money: 520 }
   },
   // 怪物击杀
   {
@@ -284,7 +284,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     condition: { type: 'fishCaught', count: 200 },
     reward: { money: 2000 }
   },
-  // 全技能 & 全社区
+  // 全技能 & 全祠堂
   {
     id: 'all_skills',
     name: '全能大师',
@@ -295,7 +295,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'all_bundles',
     name: '乡情圆满',
-    description: '完成所有社区任务。',
+    description: '完成所有祠堂任务。',
     condition: { type: 'allBundlesComplete' },
     reward: { money: 5000 }
   },
@@ -888,9 +888,16 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'museum_36',
     name: '博物馆之星',
-    description: '完成博物馆全部36件收藏。',
+    description: '向博物馆捐赠36件物品。',
     condition: { type: 'museumDonations', count: 36 },
     reward: { money: 5000, items: [{ itemId: 'prismatic_shard', quantity: 1 }] }
+  },
+  {
+    id: 'museum_40',
+    name: '灵物全鉴',
+    description: '完成博物馆全部40件收藏（含仙灵物品）。',
+    condition: { type: 'museumDonations', count: 40 },
+    reward: { money: 8000 }
   },
   // 冒险家公会
   {
@@ -906,10 +913,60 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: '完成全部21个讨伐目标。',
     condition: { type: 'guildGoalsCompleted', count: 21 },
     reward: { money: 10000, items: [{ itemId: 'iridium_bar', quantity: 5 }] }
+  },
+  // 仙灵
+  {
+    id: 'spirit_first',
+    name: '灵觉初开',
+    description: '发现第1位仙灵。',
+    condition: { type: 'hiddenNpcRevealed', count: 1 },
+    reward: { money: 500 }
+  },
+  {
+    id: 'spirit_three',
+    name: '通灵之人',
+    description: '发现3位仙灵。',
+    condition: { type: 'hiddenNpcRevealed', count: 3 },
+    reward: { money: 2000 }
+  },
+  {
+    id: 'spirit_all',
+    name: '万灵归心',
+    description: '发现全部6位仙灵。',
+    condition: { type: 'hiddenNpcRevealed', count: 6 },
+    reward: { money: 5000, items: [{ itemId: 'prismatic_shard', quantity: 1 }] }
+  },
+  {
+    id: 'spirit_bonded',
+    name: '仙缘天定',
+    description: '与一位仙灵结缘。',
+    condition: { type: 'hiddenNpcBonded' },
+    reward: { money: 1314 }
+  },
+  {
+    id: 'spirit_peach_found',
+    name: '灵桃仙味',
+    description: '获得灵桃。',
+    condition: { type: 'itemDiscovered', itemId: 'spirit_peach' },
+    reward: { money: 300 }
+  },
+  {
+    id: 'moon_herb_found',
+    name: '月华初采',
+    description: '获得月草。',
+    condition: { type: 'itemDiscovered', itemId: 'moon_herb' },
+    reward: { money: 300 }
+  },
+  {
+    id: 'dream_silk_found',
+    name: '梦丝如缎',
+    description: '获得梦丝。',
+    condition: { type: 'itemDiscovered', itemId: 'dream_silk' },
+    reward: { money: 300 }
   }
 ]
 
-/** 社区任务板 */
+/** 祠堂任务板 */
 export const COMMUNITY_BUNDLES: CommunityBundleDef[] = [
   {
     id: 'spring_bundle',

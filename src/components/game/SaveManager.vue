@@ -4,8 +4,7 @@
       <button class="absolute top-2 right-2 text-muted hover:text-text" @click="$emit('close')">
         <X :size="14" />
       </button>
-      <p class="text-accent text-sm mb-4">—— 存档管理 ——</p>
-
+      <Divider title class="my-4" label="存档管理" />
       <div class="flex-1 flex flex-col space-y-2 mb-3" @click="menuOpen = null">
         <div v-for="info in slots" :key="info.slot">
           <div v-if="info.exists" class="flex space-x-1 w-full">
@@ -43,13 +42,33 @@
                 class="absolute right-0 top-full mt-1 z-10 flex flex-col border border-accent/30 rounded-xs overflow-hidden w-30"
               >
                 <Button
+                  v-if="webdavReady"
+                  :icon="CloudUpload"
+                  :icon-size="12"
+                  class="text-center !rounded-none justify-center text-sm"
+                  :disabled="uploading"
+                  @click="handleUpload(info.slot)"
+                >
+                  {{ uploading ? '上传中...' : '上传云端' }}
+                </Button>
+                <Button
+                  v-if="webdavReady"
+                  :icon="CloudDownload"
+                  :icon-size="12"
+                  class="text-center !rounded-none justify-center text-sm"
+                  :disabled="downloading"
+                  @click="handleDownload(info.slot)"
+                >
+                  {{ downloading ? '下载中...' : '云端下载' }}
+                </Button>
+                <Button
                   v-if="!Capacitor.isNativePlatform()"
                   :icon="Download"
                   :icon-size="12"
                   class="text-center !rounded-none justify-center text-sm"
                   @click="handleExport(info.slot)"
                 >
-                  导出
+                  导出存档
                 </Button>
                 <Button
                   :icon="Trash2"
@@ -57,12 +76,24 @@
                   class="btn-danger !rounded-none text-center justify-center text-sm"
                   @click="handleDelete(info.slot)"
                 >
-                  删除
+                  删除存档
                 </Button>
               </div>
             </div>
           </div>
-          <div v-else class="text-xs text-muted border border-accent/10 rounded-xs px-3 py-2">存档 {{ info.slot + 1 }} — 空</div>
+          <div v-else class="flex space-x-1 w-full">
+            <div class="text-xs text-muted border border-accent/10 rounded-xs px-3 py-2 flex-1">存档 {{ info.slot + 1 }} — 空</div>
+            <Button
+              v-if="webdavReady"
+              :icon="CloudDownload"
+              :icon-size="12"
+              class="px-2"
+              :disabled="downloading"
+              @click="handleDownload(info.slot)"
+            >
+              <span class="text-xs">{{ downloading ? '下载中...' : '云端' }}</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -95,20 +126,25 @@
 
 <script setup lang="ts">
   import { ref } from 'vue'
-  import { X, FolderOpen, Settings, Download, Trash2, Upload } from 'lucide-vue-next'
+  import { X, FolderOpen, Settings, Download, Trash2, Upload, CloudUpload, CloudDownload } from 'lucide-vue-next'
   import Button from '@/components/game/Button.vue'
+  import Divider from '@/components/game/Divider.vue'
   import { SEASON_NAMES } from '@/stores/useGameStore'
   import { useSaveStore, type SaveSlotInfo } from '@/stores/useSaveStore'
   import { showFloat } from '@/composables/useGameLog'
+  import { useWebdav } from '@/composables/useWebdav'
   import { Capacitor } from '@capacitor/core'
 
   defineProps<{ allowLoad?: boolean }>()
   const emit = defineEmits<{ close: []; load: [slot: number]; change: [] }>()
 
   const saveStore = useSaveStore()
+  const { webdavReady, uploadSave, downloadSave } = useWebdav()
 
   const slots = ref<SaveSlotInfo[]>([])
   const menuOpen = ref<number | null>(null)
+  const uploading = ref(false)
+  const downloading = ref(false)
 
   const refreshSlots = async () => {
     slots.value = await saveStore.getSlots()
@@ -163,5 +199,25 @@
       input.value = ''
     }
     reader.readAsText(file)
+  }
+
+  const handleUpload = async (slot: number) => {
+    uploading.value = true
+    const result = await uploadSave(slot)
+    uploading.value = false
+    showFloat(result.message, result.success ? 'success' : 'danger')
+    menuOpen.value = null
+  }
+
+  const handleDownload = async (slot: number) => {
+    downloading.value = true
+    const result = await downloadSave(slot)
+    downloading.value = false
+    if (result.success) {
+      refreshSlots()
+      emit('change')
+    }
+    showFloat(result.message, result.success ? 'success' : 'danger')
+    menuOpen.value = null
   }
 </script>

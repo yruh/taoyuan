@@ -190,6 +190,12 @@ export const useInventoryStore = defineStore('inventory', () => {
     if (remaining > 0) {
       const name = getItemById(itemId)?.name ?? itemId
       showFloat(`背包已满！${name}×${remaining}丢失了`, 'danger')
+    } else {
+      // 背包快满预警：剩余格数 ≤ 3 时提示一次
+      const freeSlots = capacity.value - items.value.length
+      if (freeSlots <= 3) {
+        showFloat(`背包快满了！剩余${freeSlots}格`, 'accent')
+      }
     }
 
     return remaining <= 0
@@ -258,25 +264,32 @@ export const useInventoryStore = defineStore('inventory', () => {
     misc: 20
   }
 
+  /** 切换物品锁定状态 */
+  const toggleLock = (itemId: string, quality: Quality) => {
+    const slot = items.value.find(i => i.itemId === itemId && i.quality === quality)
+    if (slot) slot.locked = !slot.locked
+  }
+
   /** 一键整理背包（按分类→物品ID→品质排序，合并同类栈） */
   const sortItems = () => {
-    // 先合并同类栈
+    // 先合并同类栈（任一栈锁定则合并后保持锁定）
     const merged: InventoryItem[] = []
     for (const item of items.value) {
       const existing = merged.find(m => m.itemId === item.itemId && m.quality === item.quality)
       if (existing) {
         existing.quantity += item.quantity
+        if (item.locked) existing.locked = true
       } else {
         merged.push({ ...item })
       }
     }
-    // 拆分超过 MAX_STACK 的栈
+    // 拆分超过 MAX_STACK 的栈（保留锁定状态）
     const split: InventoryItem[] = []
     for (const item of merged) {
       let remaining = item.quantity
       while (remaining > 0) {
         const batch = Math.min(remaining, MAX_STACK)
-        split.push({ itemId: item.itemId, quantity: batch, quality: item.quality })
+        split.push({ itemId: item.itemId, quantity: batch, quality: item.quality, locked: item.locked })
         remaining -= batch
       }
     }
@@ -532,6 +545,11 @@ export const useInventoryStore = defineStore('inventory', () => {
   /** 计算当前装备中每个套装的激活件数 */
   const _getSetPieceCount = (set: (typeof EQUIPMENT_SETS)[number]): number => {
     let count = 0
+    // 武器（可选字段）
+    if (set.pieces.weapon) {
+      const w = ownedWeapons.value[equippedWeaponIndex.value]
+      if (w && w.defId === set.pieces.weapon) count++
+    }
     // 戒指：两个槽位只算一次（避免两个同ID戒指重复计数）
     let ringMatched = false
     for (const idx of [equippedRingSlot1.value, equippedRingSlot2.value]) {
@@ -598,10 +616,10 @@ export const useInventoryStore = defineStore('inventory', () => {
       }
     }
 
-    // 检查金币（延迟导入避免循环依赖）
+    // 检查铜钱（延迟导入避免循环依赖）
     const playerStore = usePlayerStore()
     if (playerStore.money < def.recipeMoney) {
-      return { success: false, message: `金币不足（需要${def.recipeMoney}文）。` }
+      return { success: false, message: `铜钱不足（需要${def.recipeMoney}文）。` }
     }
 
     // 消耗材料
@@ -673,7 +691,7 @@ export const useInventoryStore = defineStore('inventory', () => {
     }
     const playerStore = usePlayerStore()
     if (playerStore.money < def.recipeMoney) {
-      return { success: false, message: `金币不足（需要${def.recipeMoney}文）。` }
+      return { success: false, message: `铜钱不足（需要${def.recipeMoney}文）。` }
     }
     for (const mat of def.recipe) {
       removeItem(mat.itemId, mat.quantity)
@@ -741,7 +759,7 @@ export const useInventoryStore = defineStore('inventory', () => {
     }
     const playerStore = usePlayerStore()
     if (playerStore.money < def.recipeMoney) {
-      return { success: false, message: `金币不足（需要${def.recipeMoney}文）。` }
+      return { success: false, message: `铜钱不足（需要${def.recipeMoney}文）。` }
     }
     for (const mat of def.recipe) {
       removeItem(mat.itemId, mat.quantity)
@@ -971,6 +989,7 @@ export const useInventoryStore = defineStore('inventory', () => {
     moveAllFromTemp,
     discardTempItem,
     sortItems,
+    toggleLock,
     getTool,
     getToolStaminaMultiplier,
     getToolBatchCount,

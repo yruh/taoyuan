@@ -83,7 +83,7 @@
           <Target :size="12" class="inline" />
           抛竿
         </span>
-        <span class="text-xs text-muted">消耗体力</span>
+        <span class="text-xs text-muted">消耗体力 · {{ fishTimeLabel }}</span>
       </div>
     </div>
 
@@ -172,7 +172,7 @@
           @click="handlePan"
         >
           <span class="text-xs">淘金一次</span>
-          <span class="text-xs text-muted">消耗体力</span>
+          <span class="text-xs text-muted">消耗体力 · {{ Math.round(panTime * 60) }}分钟</span>
         </div>
         <div v-if="panResult" class="border border-accent/10 rounded-xs px-3 py-1.5 mt-1">
           <span class="text-xs">{{ panResult }}</span>
@@ -303,6 +303,65 @@
       </div>
     </Transition>
 
+    <!-- 钓鱼结果弹窗 -->
+    <Transition name="panel-fade">
+      <div v-if="catchResult" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div class="game-panel max-w-xs w-full relative">
+          <button class="absolute top-2 right-2 text-muted hover:text-text" @click="dismissCatchResult">
+            <X :size="14" />
+          </button>
+
+          <p
+            class="text-sm mb-2"
+            :class="
+              catchResult.success && catchResult.quality
+                ? QUALITY_COLORS[catchResult.quality]
+                : catchResult.success
+                  ? 'text-accent'
+                  : 'text-danger'
+            "
+          >
+            {{ catchResult.fishName }}
+          </p>
+
+          <div v-if="catchResult.description" class="border border-accent/10 rounded-xs p-2 mb-2">
+            <p class="text-xs text-muted">{{ catchResult.description }}</p>
+          </div>
+
+          <div class="border border-accent/10 rounded-xs p-2 mb-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-muted">结果</span>
+              <span class="text-xs" :class="catchResult.success ? 'text-success' : 'text-danger'">
+                {{ catchResult.success ? '成功捕获' : '鱼跑了' }}
+              </span>
+            </div>
+            <div v-if="catchResult.success && catchResult.quantity" class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">数量</span>
+              <span class="text-xs">×{{ catchResult.quantity }}</span>
+            </div>
+            <div v-if="catchResult.success && catchResult.quality" class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">品质</span>
+              <span class="text-xs" :class="QUALITY_COLORS[catchResult.quality]">{{ QUALITY_NAMES[catchResult.quality] }}</span>
+            </div>
+            <div v-if="catchResult.difficulty" class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">难度</span>
+              <span class="text-xs" :class="DIFFICULTY_COLORS[catchResult.difficulty]">{{ DIFFICULTY_NAMES[catchResult.difficulty] }}</span>
+            </div>
+            <div v-if="catchResult.sellPrice" class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">售价</span>
+              <span class="text-xs text-accent">{{ catchResult.sellPrice }}文</span>
+            </div>
+          </div>
+
+          <p v-if="catchResult.message.includes('宝箱')" class="text-xs text-accent mb-2">
+            {{ catchResult.message.slice(catchResult.message.indexOf('宝箱')) }}
+          </p>
+
+          <Button class="w-full justify-center !bg-accent !text-bg" @click="dismissCatchResult">确认</Button>
+        </div>
+      </div>
+    </Transition>
+
     <!-- 鱼类详情弹窗 -->
     <Transition name="panel-fade">
       <div
@@ -358,8 +417,8 @@
   import { useTutorialStore } from '@/stores/useTutorialStore'
   import { getBaitById, getTackleById } from '@/data/processing'
   import { FISHING_LOCATIONS } from '@/data/fish'
-  import type { BaitType, TackleType, FishingLocation, FishDef, MiniGameParams, MiniGameResult } from '@/types'
-  import { ACTION_TIME_COSTS } from '@/data/timeConstants'
+  import type { BaitType, TackleType, FishingLocation, FishDef, MiniGameParams, MiniGameResult, Quality } from '@/types'
+  import { ACTION_TIME_COSTS, TOOL_TIME_SAVINGS, SKILL_TIME_REDUCTION_PER_LEVEL, MIN_ACTION_MINUTES } from '@/data/timeConstants'
   import { sfxFishCatch, sfxLineBroken, sfxClick } from '@/composables/useAudio'
   import { addLog } from '@/composables/useGameLog'
   import { handleEndDay } from '@/composables/useEndDay'
@@ -392,8 +451,39 @@
   const showCloseConfirm = ref(false)
   const miniGameCompleted = ref(false)
   const selectedFish = ref<FishDef | null>(null)
+  const catchResult = ref<{
+    fishName: string
+    fishId?: string
+    difficulty?: string
+    sellPrice?: number
+    description?: string
+    quality?: Quality
+    quantity?: number
+    success: boolean
+    message: string
+  } | null>(null)
 
   // === Computed ===
+
+  /** 钓鱼耗时（小时），受工具和技能减免 */
+  const fishTime = computed(() => {
+    const baseMin = ACTION_TIME_COSTS.fishStart * 60
+    const toolTier = inventoryStore.getTool('fishingRod')?.tier ?? 'basic'
+    const saving = TOOL_TIME_SAVINGS[toolTier] ?? 0
+    const skillReduction = skillStore.getSkill('fishing').level * SKILL_TIME_REDUCTION_PER_LEVEL
+    return Math.max(MIN_ACTION_MINUTES, Math.round((baseMin - saving) * (1 - skillReduction))) / 60
+  })
+
+  const fishTimeLabel = computed(() => `${Math.round(fishTime.value * 60)}分钟`)
+
+  /** 淘金耗时（小时），受工具和技能减免 */
+  const panTime = computed(() => {
+    const baseMin = ACTION_TIME_COSTS.pan * 60
+    const toolTier = inventoryStore.getTool('pan')?.tier ?? 'basic'
+    const saving = TOOL_TIME_SAVINGS[toolTier] ?? 0
+    const skillReduction = skillStore.getSkill('fishing').level * SKILL_TIME_REDUCTION_PER_LEVEL
+    return Math.max(MIN_ACTION_MINUTES, Math.round((baseMin - saving) * (1 - skillReduction))) / 60
+  })
 
   const currentLocationName = computed(() => {
     return FISHING_LOCATIONS.find(l => l.id === fishingStore.fishingLocation)?.name ?? '溪流'
@@ -524,7 +614,7 @@
     const result = fishingStore.startFishing()
     if (result.success) {
       sfxClick()
-      const tr = gameStore.advanceTime(ACTION_TIME_COSTS.fishStart)
+      const tr = gameStore.advanceTime(fishTime.value)
       if (tr.message) addLog(tr.message)
       if (tr.passedOut) {
         void handleEndDay()
@@ -546,6 +636,20 @@
     }
   }
 
+  const QUALITY_NAMES: Record<Quality, string> = {
+    normal: '普通',
+    fine: '优良',
+    excellent: '优质',
+    supreme: '极品'
+  }
+
+  const QUALITY_COLORS: Record<Quality, string> = {
+    normal: 'text-muted',
+    fine: 'text-quality-fine',
+    excellent: 'text-quality-excellent',
+    supreme: 'text-quality-supreme'
+  }
+
   const handleMiniGameComplete = (result: MiniGameResult) => {
     miniGameCompleted.value = true
 
@@ -557,17 +661,34 @@
     }
     addLog(`小游戏评级：${ratingNames[result.rating]}！`)
 
-    const catchResult = fishingStore.completeFishing(result.rating)
-    if (catchResult) {
-      addLog(catchResult.message)
-      lastResult.value = catchResult.message
-      if (catchResult.message.includes('钓上')) sfxFishCatch()
-      else if (catchResult.message.includes('跑')) sfxLineBroken()
+    const catchData = fishingStore.completeFishing(result.rating)
+    if (catchData) {
+      addLog(catchData.message)
+      lastResult.value = catchData.message
+      if (catchData.success) sfxFishCatch()
+      else sfxLineBroken()
+
+      // 显示结果弹窗
+      catchResult.value = {
+        fishName: catchData.fishName ?? '',
+        fishId: catchData.fishId,
+        difficulty: catchData.difficulty,
+        sellPrice: catchData.sellPrice,
+        description: catchData.description,
+        quality: catchData.quality,
+        quantity: catchData.quantity,
+        success: catchData.success,
+        message: catchData.message
+      }
     }
 
     showFishingModal.value = false
     showCloseConfirm.value = false
     miniGameParams.value = null
+  }
+
+  const dismissCatchResult = () => {
+    catchResult.value = null
   }
 
   const handleCloseFishingModal = () => {
@@ -677,7 +798,7 @@
     panResult.value = `淘到了${name}！(-${cost}体力)`
     addLog(`淘金获得了${name}。(-${cost}体力)`)
 
-    const tr = gameStore.advanceTime(ACTION_TIME_COSTS.pan)
+    const tr = gameStore.advanceTime(panTime.value)
     if (tr.message) addLog(tr.message)
     if (tr.passedOut) void handleEndDay()
   }

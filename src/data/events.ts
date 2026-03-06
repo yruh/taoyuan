@@ -10,7 +10,7 @@ export interface SeasonEventDef {
   /** 事件效果 */
   effects: {
     friendshipBonus?: number // 所有NPC好感加成
-    moneyReward?: number // 金币奖励
+    moneyReward?: number // 铜钱奖励
     itemReward?: { itemId: string; quantity: number }[]
     staminaBonus?: number // 额外体力恢复
   }
@@ -112,7 +112,7 @@ export const SEASON_EVENTS: SeasonEventDef[] = [
       '阿石笨拙地递过一个红包：「……新年快乐。」',
       '秋月和小满在院子里放起了鞭炮，欢笑声响彻夜空。',
       '「新的一年，桃源乡会越来越好的。」林老说。',
-      '这是你在桃源乡度过的第一个新年。',
+      '这是你在桃源乡度过的第{year}个新年。',
       '收到红包300文和村民的礼物。所有村民好感度+10。'
     ]
   },

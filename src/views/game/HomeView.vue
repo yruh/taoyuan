@@ -123,23 +123,25 @@
               </div>
               <div class="flex items-center space-x-1.5">
                 <span class="text-[10px] text-muted">{{ chest.items.length }}/{{ CHEST_DEFS[chest.tier].capacity }}</span>
-                <button v-if="chest.items.length === 0" class="text-muted hover:text-danger" @click.stop="handleRemoveChest(chest.id)">
+                <button class="text-muted hover:text-danger" @click.stop="openDismantleConfirm(chest.id)">
                   <Trash2 :size="10" />
                 </button>
               </div>
             </div>
             <!-- 虚空箱角色 -->
-            <div v-if="chest.tier === 'void'" class="flex items-center space-x-1 mt-1" @click.stop>
-              <button
-                v-for="role in VOID_ROLES"
-                :key="role.value"
-                class="text-[10px] px-1 rounded-xs border"
-                :class="chest.voidRole === role.value ? 'border-accent text-accent' : 'border-accent/20 text-muted'"
-                @click="handleSetVoidRole(chest.id, role.value)"
-              >
-                {{ role.label }}
-              </button>
-            </div>
+            <template v-if="chest.tier === 'void'">
+              <div class="flex items-center space-x-1 mt-1">
+                <button
+                  v-for="role in VOID_ROLES"
+                  :key="role.value"
+                  class="text-[10px] px-1 rounded-xs border"
+                  :class="chest.voidRole === role.value ? 'border-accent text-accent' : 'border-accent/20 text-muted'"
+                  @click.stop="handleSetVoidRole(chest.id, role.value)"
+                >
+                  {{ role.label }}
+                </button>
+              </div>
+            </template>
           </div>
         </div>
         <div v-else class="flex flex-col items-center justify-center py-4 text-muted mb-2">
@@ -187,7 +189,7 @@
               </span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-xs text-muted">金币</span>
+              <span class="text-xs text-muted">铜钱</span>
               <span class="text-xs" :class="playerStore.money >= GREENHOUSE_UNLOCK_COST ? '' : 'text-danger'">
                 {{ GREENHOUSE_UNLOCK_COST }}文
               </span>
@@ -234,7 +236,7 @@
               </span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-xs text-muted">金币</span>
+              <span class="text-xs text-muted">铜钱</span>
               <span class="text-xs" :class="playerStore.money >= warehouseStore.UNLOCK_COST ? '' : 'text-danger'">
                 {{ warehouseStore.UNLOCK_COST }}文
               </span>
@@ -280,20 +282,39 @@
             <div
               v-for="(item, idx) in currentOpenChest.items"
               :key="idx"
-              class="flex items-center justify-between border border-accent/10 rounded-xs px-2 py-1"
+              class="flex items-center justify-between border border-accent/10 rounded-xs px-2 py-1 mr-1"
+              @click="chestItemDetail = { itemId: item.itemId, quality: item.quality, quantity: item.quantity }"
             >
-              <span class="text-xs truncate mr-2" :class="qualityTextClass(item.quality)">
+              <span class="text-xs truncate mr-2 cursor-pointer hover:underline" :class="qualityTextClass(item.quality)">
                 {{ getItemName(item.itemId) }}
-                <span v-if="item.quality !== 'normal'" class="text-[10px]">({{ QUALITY_LABEL[item.quality] }})</span>
+                <span class="text-xs text-muted">&times;{{ item.quantity }}</span>
               </span>
               <div class="flex items-center space-x-1.5">
-                <span class="text-xs text-muted">&times;{{ item.quantity }}</span>
-                <Button class="py-0 px-1" @click="handleWithdrawFromChest(openChestId!, item.itemId, item.quality)">取出</Button>
+                <Button
+                  class="py-0 px-1"
+                  @click.stop="openChestQtyModal('withdraw', openChestId!, item.itemId, item.quality, item.quantity)"
+                >
+                  取出
+                </Button>
               </div>
             </div>
           </div>
-          <div v-else class="text-xs text-muted text-center py-4 mb-2">空箱子</div>
+          <div v-else class="flex flex-col items-center justify-center py-6 mb-2">
+            <Warehouse :size="36" class="text-accent/20 mb-2" />
+            <p class="text-xs text-muted">箱子是空的</p>
+            <p class="text-[10px] text-muted/50 mt-0.5">点击下方「存入物品」添加</p>
+          </div>
 
+          <!-- 一键存入重复物品 -->
+          <Button
+            v-if="duplicateDepositItems.length > 0"
+            class="w-full mb-1"
+            :icon="ArrowDownToLine"
+            :icon-size="12"
+            @click="handleDepositDuplicates"
+          >
+            一键存入重复物品
+          </Button>
           <!-- 存入按钮 -->
           <Button v-if="depositableItems.length > 0" class="w-full" :icon="ArrowDown" :icon-size="12" @click="showChestDepositModal = true">
             存入物品
@@ -319,13 +340,140 @@
               v-for="item in depositableItems"
               :key="item.itemId + item.quality"
               class="flex items-center justify-between border border-accent/20 rounded-xs px-3 py-1.5 cursor-pointer hover:bg-accent/5"
-              @click="handleDepositToChest(openChestId!, item.itemId, item.quality)"
+              @click="openChestQtyModal('deposit', openChestId!, item.itemId, item.quality, item.quantity)"
             >
               <span class="text-xs truncate mr-2" :class="qualityTextClass(item.quality)">
                 {{ getItemName(item.itemId) }}
                 <span v-if="item.quality !== 'normal'" class="text-[10px]">({{ QUALITY_LABEL[item.quality] }})</span>
               </span>
               <span class="text-xs text-muted">&times;{{ item.quantity }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 箱子数量选择弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="chestQtyModal"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4"
+        @click.self="chestQtyModal = null"
+      >
+        <div class="game-panel max-w-xs w-full">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm text-accent">{{ chestQtyModal.mode === 'withdraw' ? '取出' : '存入' }}</p>
+            <Button class="py-0 px-1" :icon="X" :icon-size="12" @click="chestQtyModal = null" />
+          </div>
+          <p class="text-xs mb-2" :class="qualityTextClass(chestQtyModal.quality)">
+            {{ getItemName(chestQtyModal.itemId) }}
+            <span v-if="chestQtyModal.quality !== 'normal'" class="text-[10px]">({{ QUALITY_LABEL[chestQtyModal.quality] }})</span>
+          </p>
+          <div class="border border-accent/10 rounded-xs p-2 mb-2">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs text-muted">数量</span>
+              <div class="flex items-center space-x-1">
+                <Button class="h-6 px-1.5 py-0.5 text-xs justify-center" :disabled="chestQty <= 1" @click="addChestQty(-1)">-</Button>
+                <input
+                  type="number"
+                  :value="chestQty"
+                  min="1"
+                  :max="chestQtyModal.max"
+                  class="w-24 h-6 px-2 py-0.5 bg-bg border border-accent/30 rounded-xs text-xs text-center text-accent outline-none"
+                  @input="onChestQtyInput"
+                />
+                <Button class="h-6 px-1.5 py-0.5 text-xs justify-center" :disabled="chestQty >= chestQtyModal.max" @click="addChestQty(1)">
+                  +
+                </Button>
+              </div>
+            </div>
+            <div class="flex space-x-1">
+              <Button class="flex-1 justify-center" :disabled="chestQty <= 1" @click="setChestQty(1)">最少</Button>
+              <Button class="flex-1 justify-center" :disabled="chestQty >= chestQtyModal.max" @click="setChestQty(chestQtyModal!.max)">
+                最多
+              </Button>
+            </div>
+          </div>
+          <Button class="w-full justify-center !bg-accent !text-bg" @click="confirmChestQty">
+            {{ chestQtyModal.mode === 'withdraw' ? '取出' : '存入' }} &times;{{ chestQty }}
+          </Button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 拆卸箱子确认弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="dismantleChestId"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+        @click.self="dismantleChestId = null"
+      >
+        <div class="game-panel max-w-xs w-full">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm text-accent">拆卸确认</p>
+            <Button class="py-0 px-1" :icon="X" :icon-size="12" @click="dismantleChestId = null" />
+          </div>
+          <template v-if="dismantleChestInfo">
+            <p class="text-xs mb-2">
+              确定要拆卸「{{ dismantleChestInfo.label }}」吗？
+              <span v-if="dismantleChestInfo.itemCount > 0" class="text-danger">
+                箱内{{ dismantleChestInfo.itemCount }}格物品将返还背包。
+              </span>
+            </p>
+            <div class="border border-accent/10 rounded-xs p-2 mb-3">
+              <p class="text-[10px] text-muted mb-1">返还材料（50%）</p>
+              <div class="flex flex-wrap gap-x-3 gap-y-0.5">
+                <span v-for="mat in dismantleChestInfo.refund" :key="mat.itemId" class="text-[10px] text-success">
+                  {{ getItemName(mat.itemId) }} ×{{ mat.quantity }}
+                </span>
+                <span v-if="dismantleChestInfo.refund.length === 0" class="text-[10px] text-muted">无</span>
+              </div>
+            </div>
+            <div class="flex space-x-3 justify-center">
+              <Button @click="dismantleChestId = null">取消</Button>
+              <Button class="btn-danger" :icon="Trash2" :icon-size="12" @click="confirmDismantle">拆卸</Button>
+            </div>
+          </template>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 箱子道具信息弹窗 -->
+    <Transition name="panel-fade">
+      <div
+        v-if="chestItemDetail && chestItemDef"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+        @click.self="chestItemDetail = null"
+      >
+        <div class="game-panel max-w-xs w-full relative">
+          <button class="absolute top-2 right-2 text-muted hover:text-text" @click="chestItemDetail = null">
+            <X :size="14" />
+          </button>
+          <p class="text-sm mb-2" :class="qualityTextClass(chestItemDetail.quality, 'text-accent')">
+            {{ chestItemDef.name }}
+          </p>
+          <div class="border border-accent/10 rounded-xs p-2 mb-2">
+            <p class="text-xs text-muted">{{ chestItemDef.description }}</p>
+          </div>
+          <div class="border border-accent/10 rounded-xs p-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-muted">数量</span>
+              <span class="text-xs">×{{ chestItemDetail.quantity }}</span>
+            </div>
+            <div v-if="chestItemDetail.quality !== 'normal'" class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">品质</span>
+              <span class="text-xs" :class="qualityTextClass(chestItemDetail.quality)">{{ QUALITY_LABEL[chestItemDetail.quality] }}</span>
+            </div>
+            <div v-if="chestItemDef.sellPrice" class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">售价</span>
+              <span class="text-xs text-accent">{{ chestItemDef.sellPrice }}文</span>
+            </div>
+            <div v-if="chestItemDef.staminaRestore" class="flex items-center justify-between mt-0.5">
+              <span class="text-xs text-muted">恢复</span>
+              <span class="text-xs text-success">
+                +{{ chestItemDef.staminaRestore }}体力
+                <template v-if="chestItemDef.healthRestore">/ +{{ chestItemDef.healthRestore }}HP</template>
+              </span>
             </div>
           </div>
         </div>
@@ -386,7 +534,7 @@
 
 <script setup lang="ts">
   import { computed, ref } from 'vue'
-  import { ArrowDown, Building, Mountain, Leaf, Pencil, Plus, Trash2, Unlock, Warehouse, X } from 'lucide-vue-next'
+  import { ArrowDown, ArrowDownToLine, Building, Mountain, Leaf, Pencil, Plus, Trash2, Unlock, Warehouse, X } from 'lucide-vue-next'
   import { useHomeStore } from '@/stores/useHomeStore'
   import { useInventoryStore } from '@/stores/useInventoryStore'
   import { usePlayerStore } from '@/stores/usePlayerStore'
@@ -439,7 +587,7 @@
       addLog('温室已解锁！可在农场面板中切换至温室进行种植。')
       showGreenhouseModal.value = false
     } else {
-      addLog('金币或材料不足，无法解锁温室。')
+      addLog('铜钱或材料不足，无法解锁温室。')
     }
   }
 
@@ -453,7 +601,7 @@
   const handleUnlockWarehouse = () => {
     if (warehouseStore.unlocked) return
     if (!canUnlockWarehouse.value) {
-      addLog('金币或材料不足，无法解锁仓库。')
+      addLog('铜钱或材料不足，无法解锁仓库。')
       return
     }
     for (const mat of WAREHOUSE_UNLOCK_MATERIALS) {
@@ -466,6 +614,13 @@
   }
 
   // === 箱子管理 ===
+
+  /** 箱子道具信息弹窗 */
+  const chestItemDetail = ref<{ itemId: string; quality: Quality; quantity: number } | null>(null)
+  const chestItemDef = computed(() => {
+    if (!chestItemDetail.value) return null
+    return getItemById(chestItemDetail.value.itemId) ?? null
+  })
 
   const QUALITY_LABEL: Record<Quality, string> = {
     normal: '普通',
@@ -492,13 +647,26 @@
     return warehouseStore.getChest(openChestId.value) ?? null
   })
 
-  /** 背包中可存入箱子的物品（排除种子） */
+  /** 背包中可存入箱子的物品（排除种子和锁定物品） */
   const depositableItems = computed(() =>
     inventoryStore.items.filter(i => {
+      if (i.locked) return false
       const def = getItemById(i.itemId)
       return def && def.category !== 'seed'
     })
   )
+
+  /** 背包中可一键存入的重复物品（箱子中已有且未锁定、非种子） */
+  const duplicateDepositItems = computed(() => {
+    if (!currentOpenChest.value) return []
+    const chestItemIds = new Set(currentOpenChest.value.items.map(i => i.itemId))
+    return inventoryStore.items.filter(i => {
+      if (i.locked) return false
+      const def = getItemById(i.itemId)
+      if (!def || def.category === 'seed') return false
+      return chestItemIds.has(i.itemId)
+    })
+  })
 
   /** 制作箱子 */
   const canCraftChest = (tier: ChestTier): boolean => {
@@ -508,7 +676,7 @@
 
   const handleCraftChest = (tier: ChestTier) => {
     if (!canCraftChest(tier)) {
-      addLog('材料或金币不足。')
+      addLog('材料或铜钱不足。')
       return
     }
     if (!processingStore.consumeCraftMaterials(CHEST_DEFS[tier].craftCost, CHEST_DEFS[tier].craftMoney)) return
@@ -519,17 +687,50 @@
     }
   }
 
-  /** 删除箱子 */
-  const handleRemoveChest = (chestId: string) => {
+  /** 拆卸箱子确认 */
+  const dismantleChestId = ref<string | null>(null)
+
+  const dismantleChestInfo = computed(() => {
+    if (!dismantleChestId.value) return null
+    const chest = warehouseStore.getChest(dismantleChestId.value)
+    if (!chest) return null
+    const def = CHEST_DEFS[chest.tier]
+    const refund = def.craftCost
+      .map(mat => ({
+        itemId: mat.itemId,
+        quantity: Math.floor(mat.quantity * 0.5)
+      }))
+      .filter(m => m.quantity > 0)
+    return { label: chest.label, tier: chest.tier, itemCount: chest.items.length, refund }
+  })
+
+  const openDismantleConfirm = (chestId: string) => {
+    dismantleChestId.value = chestId
+  }
+
+  const confirmDismantle = () => {
+    const chestId = dismantleChestId.value
+    if (!chestId) return
     const chest = warehouseStore.getChest(chestId)
     if (!chest) return
-    if (chest.items.length > 0) {
-      addLog('箱子不为空，无法删除。')
-      return
+    const info = dismantleChestInfo.value
+    if (!info) return
+    // 箱内物品返还背包
+    for (const item of [...chest.items]) {
+      inventoryStore.addItem(item.itemId, item.quantity, item.quality)
     }
+    chest.items.length = 0
+    // 拆除箱子
     const name = chest.label
     warehouseStore.removeChest(chestId)
-    addLog(`拆除了${name}。`)
+    // 返还50%材料
+    for (const mat of info.refund) {
+      inventoryStore.addItem(mat.itemId, mat.quantity)
+    }
+    const refundText = info.refund.map(m => `${getItemName(m.itemId)}×${m.quantity}`).join('、')
+    addLog(`拆卸了${name}。${refundText ? `返还了${refundText}。` : ''}`)
+    dismantleChestId.value = null
+    if (openChestId.value === chestId) openChestId.value = null
   }
 
   /** 重命名箱子 */
@@ -555,11 +756,47 @@
     else addLog(`${chest.label}已设为成品箱，作坊产品将自动放入此箱。`)
   }
 
-  /** 存入箱子 */
-  const handleDepositToChest = (chestId: string, itemId: string, quality: Quality) => {
-    const slot = inventoryStore.items.find(i => i.itemId === itemId && i.quality === quality)
-    if (!slot) return
-    const actualQty = warehouseStore.depositToChest(chestId, itemId, slot.quantity, quality)
+  // === 箱子数量选择 ===
+  interface ChestQtyModalData {
+    mode: 'withdraw' | 'deposit'
+    chestId: string
+    itemId: string
+    quality: Quality
+    max: number
+  }
+  const chestQtyModal = ref<ChestQtyModalData | null>(null)
+  const chestQty = ref(1)
+
+  const openChestQtyModal = (mode: 'withdraw' | 'deposit', chestId: string, itemId: string, quality: Quality, max: number) => {
+    if (max <= 1) {
+      if (mode === 'withdraw') executeChestWithdraw(chestId, itemId, quality, 1)
+      else executeChestDeposit(chestId, itemId, quality, 1)
+      return
+    }
+    chestQtyModal.value = { mode, chestId, itemId, quality, max }
+    chestQty.value = max
+  }
+
+  const setChestQty = (val: number) => {
+    if (!chestQtyModal.value) return
+    chestQty.value = Math.max(1, Math.min(val, chestQtyModal.value.max))
+  }
+  const addChestQty = (delta: number) => setChestQty(chestQty.value + delta)
+  const onChestQtyInput = (e: Event) => {
+    const val = parseInt((e.target as HTMLInputElement).value, 10)
+    if (!isNaN(val)) setChestQty(val)
+  }
+
+  const executeChestWithdraw = (chestId: string, itemId: string, quality: Quality, qty: number) => {
+    if (!warehouseStore.withdrawFromChest(chestId, itemId, qty, quality)) {
+      addLog('背包已满，无法取出。')
+      return
+    }
+    addLog(`取出了${getItemName(itemId)}×${qty}。`)
+  }
+
+  const executeChestDeposit = (chestId: string, itemId: string, quality: Quality, qty: number) => {
+    const actualQty = warehouseStore.depositToChest(chestId, itemId, qty, quality)
     if (actualQty <= 0) {
       addLog('箱子已满，无法存入。')
       return
@@ -570,17 +807,32 @@
     }
   }
 
-  /** 从箱子取出 */
-  const handleWithdrawFromChest = (chestId: string, itemId: string, quality: Quality) => {
-    const chest = warehouseStore.getChest(chestId)
-    if (!chest) return
-    const slot = chest.items.find(i => i.itemId === itemId && i.quality === quality)
-    if (!slot) return
-    const qty = slot.quantity
-    if (!warehouseStore.withdrawFromChest(chestId, itemId, qty, quality)) {
-      addLog('背包已满，无法取出。')
-      return
+  const confirmChestQty = () => {
+    if (!chestQtyModal.value) return
+    const { mode, chestId, itemId, quality } = chestQtyModal.value
+    if (mode === 'withdraw') executeChestWithdraw(chestId, itemId, quality, chestQty.value)
+    else executeChestDeposit(chestId, itemId, quality, chestQty.value)
+    chestQtyModal.value = null
+  }
+
+  /** 一键存入重复物品 */
+  const handleDepositDuplicates = () => {
+    if (!openChestId.value) return
+    const chestId = openChestId.value
+    const snapshot = duplicateDepositItems.value.map(i => ({ itemId: i.itemId, quality: i.quality, quantity: i.quantity }))
+    let totalDeposited = 0
+    let kindCount = 0
+    for (const item of snapshot) {
+      const actual = warehouseStore.depositToChest(chestId, item.itemId, item.quantity, item.quality)
+      if (actual > 0) {
+        totalDeposited += actual
+        kindCount++
+      }
     }
-    addLog(`取出了${getItemName(itemId)}×${qty}。`)
+    if (totalDeposited > 0) {
+      addLog(`一键存入了${kindCount}种物品，共${totalDeposited}个。`)
+    } else {
+      addLog('箱子已满，无法存入。')
+    }
   }
 </script>
