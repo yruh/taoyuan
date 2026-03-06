@@ -175,16 +175,23 @@ export const useGameStore = defineStore('game', () => {
 
     const cost = getTravelCost(targetTab)
 
-    // 体力消耗：有马减半（向下取整）
+    // Travel stamina cost: horse halves it (rounded down).
     const key = `${currentLocationGroup.value}->${targetGroup}`
     const baseStamina = TRAVEL_STAMINA[key] ?? 1
     const animalStore = useAnimalStore()
     const staminaCost = animalStore.hasHorse ? Math.max(1, Math.floor(baseStamina / 2)) : baseStamina
     const playerStore = usePlayerStore()
-    playerStore.consumeStamina(staminaCost)
+    const targetName = getLocationGroupName(targetGroup)
+    if (!playerStore.consumeStamina(staminaCost)) {
+      return {
+        ok: false,
+        timeCost: 0,
+        passedOut: false,
+        message: `体力不足，无法前往${targetName}。`
+      }
+    }
 
     const result = advanceTime(cost)
-    const targetName = getLocationGroupName(targetGroup)
     currentLocationGroup.value = targetGroup
 
     const travelMsg = cost > 0 ? `前往${targetName}，路上花了${Math.round(cost * 60)}分钟，消耗${staminaCost}点体力。` : ''

@@ -35,6 +35,7 @@ import { MORNING_NARRATIONS, NARRATIONS_NO_LOSS, MORNING_CHOICE_EVENTS, MORNING_
 import { MORNING_TIPS } from '@/data/tutorials'
 import type { MorningEffect } from '@/data/farmEvents'
 import router from '@/router'
+import { getEndDayRecoveryMode } from './endDayRecovery'
 
 const NPC_NAME_MAP: Record<string, string> = {
   chen_bo: '陈伯',
@@ -392,16 +393,8 @@ export const handleEndDay = async () => {
 
   // 新手引导：记录体力低标记（在 dailyReset 之前）
   if (playerStore.stamina < 20) tutorialStore.setFlag('staminaWasLow')
-
-  // 恢复模式
-  let recoveryMode: 'normal' | 'late' | 'passout'
-  if (playerStore.stamina <= 0 || gameStore.hour >= 26) {
-    recoveryMode = 'passout'
-  } else if (gameStore.hour >= 24) {
-    recoveryMode = 'late'
-  } else {
-    recoveryMode = 'normal'
-  }
+  // Recovery mode is based on bedtime, not raw stamina left.
+  const recoveryMode = getEndDayRecoveryMode(gameStore.hour)
 
   // 矿洞强制退出：无论玩家是否在探索中，睡觉/晕厥后都重置矿洞状态
   const miningStore = useMiningStore()

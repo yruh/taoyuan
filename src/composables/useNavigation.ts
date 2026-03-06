@@ -109,6 +109,10 @@ export const navigateToPanel = (panelKey: PanelKey) => {
 
   // 旅行时间
   const travelResult = gameStore.travelTo(panelKey)
+  if (!travelResult.ok) {
+    showFloat(travelResult.message, 'danger')
+    return
+  }
   if (travelResult.timeCost > 0) {
     addLog(travelResult.message)
   }

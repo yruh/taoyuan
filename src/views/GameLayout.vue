@@ -456,6 +456,7 @@
     PASSOUT_MONEY_PENALTY_CAP
   } from '@/data/timeConstants'
   import { getNpcById, getItemById, getCropById } from '@/data'
+  import { getEndDayRecoveryMode } from '@/composables/endDayRecovery'
   import { CHEST_DEFS } from '@/data/items'
   import { useGameClock } from '@/composables/useGameClock'
   import { useAudio } from '@/composables/useAudio'
@@ -607,11 +608,13 @@
     return '休息'
   })
 
+  const sleepRecoveryMode = computed(() => getEndDayRecoveryMode(gameStore.hour))
+
   const sleepSummary = computed(() => {
-    if (playerStore.stamina <= 0 || gameStore.hour >= 26) {
+    if (sleepRecoveryMode.value === 'passout') {
       return '你已经精疲力竭……将在原地昏倒。'
     }
-    if (gameStore.hour >= 24) {
+    if (sleepRecoveryMode.value === 'late') {
       return '已经过了午夜，拖着疲惫的身体回家……'
     }
     return '回到家中，安稳入睡。明日又是新的一天。'
@@ -621,7 +624,7 @@
     const warnings: string[] = []
     const homeStore = useHomeStore()
     const staminaBonus = homeStore.getStaminaRecoveryBonus()
-    if (playerStore.stamina <= 0 || gameStore.hour >= 26) {
+    if (sleepRecoveryMode.value === 'passout') {
       const pct = Math.round(Math.min(PASSOUT_STAMINA_RECOVERY + staminaBonus, 1) * 100)
       const penaltyPct = Math.round(PASSOUT_MONEY_PENALTY_RATE * 100)
       if (pct < 100) {
@@ -629,7 +632,7 @@
       } else {
         warnings.push(`损失${penaltyPct}%铜钱（上限${PASSOUT_MONEY_PENALTY_CAP}文）`)
       }
-    } else if (gameStore.hour >= 24) {
+    } else if (sleepRecoveryMode.value === 'late') {
       const t = Math.min(Math.max(gameStore.hour - 24, 0), 1)
       const pct = Math.round(
         Math.min(LATE_NIGHT_RECOVERY_MAX - t * (LATE_NIGHT_RECOVERY_MAX - LATE_NIGHT_RECOVERY_MIN) + staminaBonus, 1) * 100
