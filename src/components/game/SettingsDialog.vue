@@ -132,8 +132,8 @@
                     >
                       {{ webdavTestStatus === 'testing' ? '测试中...' : '测试连接' }}
                     </Button>
-                    <p v-if="webdavTestStatus === 'success'" class="text-success text-xs text-center mt-1">连接成功</p>
-                    <p v-if="webdavTestStatus === 'failed'" class="text-danger text-xs text-center mt-1">
+                    <p v-if="webdavTestStatus === 'success'" class="text-success text-xs text-center mt-1 break-words">连接成功</p>
+                    <p v-if="webdavTestStatus === 'failed'" class="text-danger text-xs text-center mt-1 break-words">
                       {{ webdavTestError || '连接失败' }}
                     </p>
                     <div v-if="webdavTraceLogs.length" class="border border-accent/20 rounded-xs p-2 bg-bg/40">
