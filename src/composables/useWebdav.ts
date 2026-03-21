@@ -72,6 +72,29 @@ const formatUrlForLog = (url: string): string => {
   }
 }
 
+const extractErrorMessage = (e: unknown): string => {
+  if (e instanceof Error && e.message) return e.message
+  if (typeof e === 'string') return e
+  if (e && typeof e === 'object') {
+    const message = (e as { message?: unknown }).message
+    if (typeof message === 'string' && message) return message
+    try {
+      return JSON.stringify(e)
+    } catch {
+      return String(e)
+    }
+  }
+  return String(e)
+}
+
+const normalizeUserError = (msg: string): string => {
+  // 安卓原生 HttpURLConnection 在部分失败分支只返回 URL 文本，可读性很差
+  if (/^https?:\/\//i.test(msg.trim())) {
+    return '请求失败（服务器拒绝或路径不存在）'
+  }
+  return msg
+}
+
 /** 平台自适应 HTTP 请求：原生平台走 CapacitorHttp，dev 走 Vite 代理，Electron/生产 web 直连 */
 const webdavFetch = async (
   url: string,
@@ -104,7 +127,7 @@ const webdavFetch = async (
     pushTrace(`响应 ${method} ${res.status}`)
     return { status: res.status, data: await res.text() }
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e)
+    const msg = extractErrorMessage(e)
     pushTrace(`异常 ${method} ${msg}`)
     throw e
   }
@@ -176,29 +199,35 @@ export const useWebdav = () => {
   }
 
   /** 原生平台连接探测：尝试 PUT 临时文件并在成功后 DELETE */
-  const probeNativeWritable = async (dirUrl: string): Promise<number> => {
+  const probeNativeWritable = async (dirUrl: string): Promise<{ status: number; error: string }> => {
     // 避免使用点前缀隐藏文件名，一些 WebDAV 服务会拒绝该类文件
     const probeUrl = dirUrl + `taoyuan_probe_${Date.now()}.tyx`
     pushTrace('原生探测：尝试 PUT 临时文件')
-    const putRes = await webdavFetch(
-      probeUrl,
-      'PUT',
-      {
-        ...authHeaders(),
-        'Content-Type': 'application/octet-stream'
-      },
-      'probe'
-    )
-    if (putRes.status >= 200 && putRes.status < 300) {
-      try {
-        pushTrace('原生探测：PUT 成功，尝试 DELETE 临时文件')
-        await webdavFetch(probeUrl, 'DELETE', authHeaders())
-      } catch {
-        /* 忽略清理失败，避免影响测试结果 */
-        pushTrace('原生探测：DELETE 清理失败（忽略）')
+    try {
+      const putRes = await webdavFetch(
+        probeUrl,
+        'PUT',
+        {
+          ...authHeaders(),
+          'Content-Type': 'application/octet-stream'
+        },
+        'probe'
+      )
+      if (putRes.status >= 200 && putRes.status < 300) {
+        try {
+          pushTrace('原生探测：PUT 成功，尝试 DELETE 临时文件')
+          await webdavFetch(probeUrl, 'DELETE', authHeaders())
+        } catch {
+          /* 忽略清理失败，避免影响测试结果 */
+          pushTrace('原生探测：DELETE 清理失败（忽略）')
+        }
       }
+      return { status: putRes.status, error: '' }
+    } catch (e: unknown) {
+      const msg = normalizeUserError(extractErrorMessage(e))
+      pushTrace(`原生探测异常：${msg}`)
+      return { status: 0, error: msg }
     }
-    return putRes.status
   }
 
   /** 测试连接：Web/Electron 优先 PROPFIND；原生平台先 HEAD，失败后 fallback 到 PUT+DELETE 探测 */
@@ -233,36 +262,28 @@ export const useWebdav = () => {
         return false
       }
 
-      // 原生平台 CapacitorHttp 不支持 PROPFIND，先用 HEAD，失败后再用 PUT 探测可写性
-      pushTrace('策略：HEAD 检测目录')
-      const headRes = await webdavFetch(url, 'HEAD', authHeaders())
-      if (headRes.status >= 200 && headRes.status < 300) {
-        testStatus.value = 'success'
-        pushTrace('测试成功（HEAD）')
-        return true
-      }
-
-      if (headRes.status === 401 || headRes.status === 403) {
-        testStatus.value = 'failed'
-        setTestErrorByStatus(headRes.status, 'HEAD')
-        return false
-      }
-
-      const probeStatus = await probeNativeWritable(url)
-      if (probeStatus >= 200 && probeStatus < 300) {
+      // 原生平台跳过 HEAD：Android 上 HEAD 失败时常只抛 URL 文本异常，无法稳定拿到状态码
+      pushTrace('策略：PUT 探测目录可写性（安卓跳过 HEAD）')
+      const probe = await probeNativeWritable(url)
+      if (probe.status >= 200 && probe.status < 300) {
         testStatus.value = 'success'
         pushTrace('测试成功（PUT 探测）')
         return true
       }
 
+      if (probe.status > 0) {
+        testStatus.value = 'failed'
+        setTestErrorByStatus(probe.status, 'PUT')
+        return false
+      }
+
       testStatus.value = 'failed'
-      // 安卓场景输出双阶段状态，便于定位服务端兼容性问题
-      testError.value = `连接测试失败（HEAD=${headRes.status}，PUT=${probeStatus}）`
+      testError.value = probe.error || '连接失败（PUT 探测异常）'
       pushTrace(testError.value)
       return false
     } catch (e: unknown) {
       testStatus.value = 'failed'
-      const msg = e instanceof Error ? e.message : ''
+      const msg = normalizeUserError(extractErrorMessage(e))
       if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('fetch')) {
         testError.value = '网络错误，请检查地址是否正确'
       } else {
@@ -335,7 +356,7 @@ export const useWebdav = () => {
       pushTrace(`上传失败 slot=${slot} status=${res.status}`)
       return { success: false, message: `上传失败（${res.status}）。` }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '未知错误'
+      const msg = normalizeUserError(extractErrorMessage(e))
       pushTrace(`上传异常 slot=${slot} ${msg}`)
       return { success: false, message: `上传失败：${msg}` }
     }
@@ -359,7 +380,7 @@ export const useWebdav = () => {
       pushTrace(`下载成功 slot=${slot}`)
       return { success: true, message: `存档 ${slot + 1} 已从云端下载。` }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '未知错误'
+      const msg = normalizeUserError(extractErrorMessage(e))
       pushTrace(`下载异常 slot=${slot} ${msg}`)
       return { success: false, message: `下载失败：${msg}` }
     }

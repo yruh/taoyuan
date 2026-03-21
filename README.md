@@ -1,13 +1,11 @@
 <div align="center">
-  <img src="images/logo.png" alt="桃源乡" width="400" />
-
-  # 桃源乡
+  <img src="images/logo.png" alt="桃源乡" title="桃源乡" width="400" />
 
   > 传说在群山深处，有一处与世隔绝的村落——桃源乡。
   > 这里四季分明，民风淳朴，但近年来年轻人纷纷离去，村庄日渐冷清。
   > 你收到一封来自已故祖父的信，信中附有一把铜钥匙和一张泛黄的地契……
 
-  一款文字版田园模拟经营游戏，灵感来自星露谷物语，采用像素 + 中国风视觉设计。纯客户端运行，无需后端服务器。
+  一款文字版田园模拟经营游戏，灵感来自星露谷物语，采用像素 + 中国风视觉设计。
 
   [![GitHub Release](https://img.shields.io/github/v/release/setube/taoyuan?style=flat&logo=github&label=Release)](https://github.com/setube/taoyuan/releases/latest)
   [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0)
