@@ -95,7 +95,7 @@
             <p class="text-xs text-muted mb-1">给它取个名字：</p>
             <input
               v-model="petNameInput"
-              class="w-full bg-bg border border-accent/30 rounded-xs px-2 py-1 text-xs text-text"
+              class="w-full bg-bg border border-accent/30 rounded-xs px-2 py-1 text-xs text-text focus:border-accent accent outline-none placeholder:text-muted/40 transition-colors"
               :placeholder="petChoice === 'cat' ? '小花' : '旺财'"
               maxlength="8"
             />
@@ -546,7 +546,7 @@
   // 注册天数标签获取器
   _registerDayLabelGetter(() => `第${gameStore.year}年 ${SEASON_NAMES[gameStore.season]} 第${gameStore.day}天`)
 
-  /** 按天分组的日志（最新天在前） */
+  /** 按天分组的日志（最新天在前，每天内也倒序） */
   const groupedLogs = computed(() => {
     const groups: { label: string; messages: string[] }[] = []
     let currentLabel: string | null = null
@@ -557,6 +557,7 @@
       }
       groups[groups.length - 1]!.messages.push(entry.msg)
     }
+    for (const g of groups) g.messages.reverse()
     return groups.reverse()
   })
 
